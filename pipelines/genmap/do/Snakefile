@@ -1,0 +1,33 @@
+       
+envvars:
+    "GENOME",
+    "SPECIES",
+    "N_CPU"
+    
+# create the genmap index
+rule index:
+    threads: 8
+    message: "creating the genmap index"
+    input:
+        expand("../../iGenomes/{species}/UCSC/{genome}/Sequence/WholeGenomeFasta/genome.fa",
+               species = os.environ["SPECIES"], genome=os.environ["GENOME"])
+    output:
+        "index/index.ids.concat" 
+    shell:
+        "rm -r index; " + # since snakemake automatically creates the directory but genmap complains
+        "genmap index -F {input} -I index"
+
+# create the mappability map
+rule map:
+    threads: 8
+    message: "creating the mappability map"
+    params:
+        N_CPU = os.environ["N_CPU"]
+    input:
+        "index/index.ids.concat" 
+    output:
+        "maps/{genome}.mappability.k_{kmerLength}.e_{nErrors}.bedgraph"
+    shell:
+        "genmap map --threads {params.N_CPU} -K {wildcards.kmerLength} -E {wildcards.nErrors} " +
+            "-I index -O maps/{wildcards.genome}.mappability.k_{wildcards.kmerLength}.e_{wildcards.nErrors} " +
+            "-t -w -bg"

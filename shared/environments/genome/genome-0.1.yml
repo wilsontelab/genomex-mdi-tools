@@ -1,0 +1,9 @@
+---
+# current program versions as of January 2022
+dependencies:
+    
+    # parsers for common sequence file formats
+    - samtools=1.14
+    
+    # comparing genomic intervals and more
+    - bedtools=2.30.0

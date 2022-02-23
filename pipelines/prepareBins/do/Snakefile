@@ -1,0 +1,95 @@
+# all rules run in a single thread, but a few can run simultaneously
+
+envvars:
+    "MODULES_DIR",
+    "ACTION_DIR",
+    "GENOME",
+    "BIN_SIZE",
+    "KMER_LENGTH",
+    "N_ERRORS"
+
+# working directory is expected to be:
+#     $GENOMES_DIR/bins/$GENOME/fixed_width_bins
+    
+# reformat UCSC genome gaps file to BED format for intersection
+rule parse_gaps:
+    message: "reformatting UCSC genome gaps file to BED format"
+    params:
+        ACTION_DIR = os.environ["ACTION_DIR"]
+    input:
+        "../../../metadata/{genome}/UCSC/gap.txt.gz"
+    output:
+        "{genome}.gap.bed.gz"
+    shell:
+        "zcat {input} | bash {params.ACTION_DIR}/parse_gaps.sh > {output}"
+
+# reformat bad genomic regions to BED format for intersection
+rule merge_exclusions:
+    message: "reformatting bad genomic regions to BED format"
+    params:
+        ACTION_DIR = os.environ["ACTION_DIR"]
+    input:
+        "{genome}.gap.bed.gz",      
+        "../../../metadata/{genome}/ENCODE/{genome}-blacklist.v2.bed.gz"
+    output:
+        "{genome}.gap+bad_regions.bed.gz"
+    shell:
+        "zcat {input} | bash {params.ACTION_DIR}/parse_exclusions.sh > {output}"
+
+# aggregate GC percent per $BIN_SIZE bp bins
+rule collapse_gc5base:
+    message: "aggregating GC content into genomic bins"
+    params:
+        ACTION_DIR = os.environ["ACTION_DIR"]
+    threads: 1
+    input:
+        "../../../metadata/{genome}/UCSC/{genome}.gc5Base.wigVarStep.gz"
+    output:
+        "{genome}.gc5.size_{binSize}.bed.gz"
+    shell:
+        "slurp zcat {input} | perl {params.ACTION_DIR}/parse_gc5base.pl | gzip -c > {output}"
+
+# aggregate umap mappability per $BIN_SIZE bp bins
+rule collapse_umap:
+    message: "aggregating umap mappability into genomic bins"
+    params:
+        ACTION_DIR = os.environ["ACTION_DIR"]
+    threads: 1
+    input:
+        gaps = "{genome}.gap.bed.gz",  
+        mappability = "../../../metadata/{genome}/umap/k{kmerLength}.umap.bedgraph.gz"
+    output:
+        "{genome}.umap.size_{binSize}.k_{kmerLength}.bed.gz"
+    shell:
+        "slurp zcat {input.mappability} | bash {params.ACTION_DIR}/parse_mappability.sh > {output}"
+
+# aggregate genmap mappability per $BIN_SIZE bp bins
+rule collapse_genmap:
+    message: "aggregating genmap mappability into genomic bins"
+    params:
+        ACTION_DIR = os.environ["ACTION_DIR"]
+    threads: 1
+    input:
+        gaps = "{genome}.gap.bed.gz",  
+        mappability = "../../../genmap/{genome}/maps/{genome}.mappability.k_{kmerLength}.e_{nErrors}.bedgraph"
+    output:
+        "{genome}.genmap.size_{binSize}.k_{kmerLength}.e_{nErrors}.bed.gz"
+    shell:
+        "slurp {input.mappability} | bash {params.ACTION_DIR}/parse_mappability.sh > {output}"
+
+# assemble final bins
+rule make_bins:
+    message: "creating {wildcards.binSize} bp genomic bins with composite property values"
+    params:
+        ACTION_DIR = os.environ["ACTION_DIR"]
+    input:
+        gc5 = "{genome}.gc5.size_{binSize}.bed.gz",
+        gaps = "{genome}.gap.bed.gz",
+        bad_regions = "../../../metadata/{genome}/ENCODE/{genome}-blacklist.v2.bed.gz",
+        exclusions = "{genome}.gap+bad_regions.bed.gz",
+        umap = "{genome}.umap.size_{binSize}.k_{kmerLength}.bed.gz",
+        genmap = "{genome}.genmap.size_{binSize}.k_{kmerLength}.e_{nErrors}.bed.gz"
+    output:
+        "{genome}.bins.size_{binSize}.k_{kmerLength}.e_{nErrors}.bed.gz"
+    shell:
+        "zcat {input.gc5} | bash {params.ACTION_DIR}/parse_composite_bins.sh > {output}"

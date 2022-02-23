@@ -12,10 +12,6 @@
 Bootstrap: docker
 From: ubuntu:20.04
 Stage: build
-# alternatively, update a previous major.minor version of this pipeline's container:
-# Bootstrap: oras
-# From: ghcr.io/GIT_USER/SUITE_NAME/PIPELINE_NAME:v0.0
-# Stage: build
 
 # install system-level requirements such as libraries and common system utilities
 # do not install specialized programs here (use conda definitions in pipeline.yml)

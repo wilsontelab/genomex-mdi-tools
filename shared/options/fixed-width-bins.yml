@@ -1,0 +1,36 @@
+---
+#--------------------------------------------------------------------
+# options that define fixed-width bins in the reference genome
+#--------------------------------------------------------------------
+optionFamilies:
+    fixed-width-bins:
+        options:
+            bin-size: 
+                order: 1
+                short: z
+                type: integer
+                required: false
+                default: 1000000
+                description: "initial (smallest possible) bin size in bp, before any later bin merging"
+            kmer-length: 
+                order: 2
+                short: k
+                type: integer
+                required: false
+                default: 100
+                description: "kmer (i.e., read) length used to calculate bin mappability"
+            n-errors: 
+                order: 3
+                short: e
+                type: integer
+                required: false
+                default: 1
+                description: "number of errors (i.e., read mismatches) used to calculate bin mappability"
+            stranded: 
+                order: 4
+                short: s
+                type: boolean
+                required: false
+                default: false
+                description: "whether the input library is strand-specific"
+

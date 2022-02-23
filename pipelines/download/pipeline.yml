@@ -1,0 +1,156 @@
+---
+pipeline:
+    name: download
+    description: "download data files from common public data repositories"
+    version: v0.0.1 # OPTIONAL: version of this pipeline (not its suite); required if containers are used
+#--------------------------------------------------------------------
+actions:  
+    _global:       
+        condaFamilies:
+            - base-0.1
+            - r-essentials-4.1
+            - basespace
+            - sra-tools                        
+    basespace:
+        order: 1
+        thread: download
+        optionFamilies:
+            - basespace
+        resources:
+            required:
+                total-ram: 4G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 36:00:00
+        description: "download files from Illumina BaseSpace Sequence Hub"  
+    sra:
+        order: 2
+        thread: download
+        optionFamilies:
+            - sra
+        resources:
+            required:
+                total-ram: 4G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 36:00:00
+        description: "download files from NIH Sequence Read Archive (SRA)"  
+    iGenomes:
+        order: 3
+        thread: download
+        optionFamilies:
+            - iGenomes        
+        resources:
+            required:
+                total-ram: 4G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 24:00:00
+        description: "download one or more genome file sets from Illumina iGenomes" 
+    metadata:
+        order: 4
+        thread: download       
+        resources:
+            required:
+                total-ram: 4G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 24:00:00
+        description: "download various genome metadata files from UCSC and other sources" 
+#--------------------------------------------------------------------
+optionFamilies:
+    basespace:
+        options:
+            access-token: 
+                order: 1
+                short: A
+                type: string
+                required: true
+                default: null
+                description: "access token of your personal BaseSpace app; see README.md"   
+            project-id: 
+                order: 2
+                short: P
+                type: string
+                required: true
+                default: NA
+                description: "numeric Id of Project; use NA to list max-list-length Projects"            
+            sample-names: 
+                order: 3
+                short: S
+                type: string
+                required: true
+                default: NA
+                description: "comma-delimited list of Sample Name(s); use NA to list max-list-length Project Samples"
+            list-files: 
+                order: 4
+                short: l
+                type: boolean
+                required: false
+                default: false
+                description: "set to true to only list the target files and report sizes, not download them"
+            max-list-length: 
+                order: 5
+                short: L
+                type: integer
+                required: false
+                default: 1000
+                description: "list up to this many Projects and Samples when they are set to NA"
+            force-download: 
+                order: 6
+                short: F
+                type: boolean
+                required: false
+                default: false
+                description: "if true, will re-download existing files, otherwise they are skipped" 
+    sra:
+        options:
+            experiment-name: 
+                order: 1
+                short: X
+                type: string
+                required: true
+                default: null
+                description: "your name for the given Experiment; you can use the SRA/SRX id or change it"            
+            run-ids: 
+                order: 2
+                short: I
+                type: string
+                required: true
+                default: null
+                description: "comma-delimited list of Run(s) for the Experiment; each must begin with SRR"
+    iGenomes:
+        options:
+            urls: 
+                order: 1
+                short: U
+                type: string
+                required: true
+                default: null
+                description: "comma-delimited tar.gz url(s); https://support.illumina.com/sequencing/sequencing_software/igenome.html"     
+#--------------------------------------------------------------------
+condaFamilies:
+    basespace:
+        dependencies:
+            - bioconductor-basespacer=1.38.0
+    sra-tools:
+        dependencies:
+            - sra-tools=2.11.0
+#--------------------------------------------------------------------
+container:
+    supported: true        # set to true if you maintain a container registry for this pipeline [false]
+    registry:  ghcr.io     # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+    owner:     wilsontelab # REQUIRED: the name of the owner, e.g., user or organization, at 'registry'
+    installer: apt-get     # the installer program used by the container OS, typically apt-get or yum [apt-get]
