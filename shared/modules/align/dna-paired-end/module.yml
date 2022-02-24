@@ -1,0 +1,36 @@
+---
+name: align-dna-paired-end
+action:
+    condaFamilies: 
+        - base
+        - ...   
+
+
+    optionFamilies:
+        - base
+        - fastq-input
+        - trim-reads
+        - align
+
+    resources:
+        required:
+            total-ram: 16G
+        recommended: 
+            n-cpu: 16
+            ram-per-cpu: 4G
+    job-manager:
+        recommended:
+            time-limit: 48:00:00
+    description: "clean reads and align to reference genome; output name-sorted bam/cram"
+#optionFamilies: # similar to pipeline.yml if needed for families defined by the module
+#condaFamilies: 
+
+# TODO: make sure pipelines-framework handles action modules as a self-contained unit
+# pipeline.yml should never override conda or options set by the pipeline, even from _global
+
+# action modules should always resolve to their own suite's shared directory
+# not the calling pipeline's in the case that the action module is external
+
+# TODO: action modules should support containers independently of a pipeline?
+# essentially, an action module is a single-action pipeline
+# pipeline.yml _global should not apply to action modules, which must completely define themselves

@@ -33,4 +33,3 @@ optionFamilies:
                 required: false
                 default: false
                 description: "whether the input library is strand-specific"
-
