@@ -27,13 +27,14 @@ Thus, you assign a name to the module that is most informative in
 the context of your pipeline. You can also declare an 'order' and
 'thread' appropriate to your pipeline, as these are never set by
 the module. Do not set any of the other typical config values
-associated with actions (e.g. optionFamilies), they are defined
+associated with actions (e.g., optionFamilies), they are defined
 by the module.
 
 When writing an action module, use this format:
 
 ```yml
 # shared/modules/example/path-0.1/module.yml
+name: moduleName
 action:
     optionFamilies:
         - base
@@ -51,6 +52,12 @@ action:
 #optionFamilies: # similar to pipeline.yml if needed for families defined by the module
 #condaFamilies: 
 ```
+
+Therefore, the module developer has complete control over 
+the options and environment that support its action. Note that the 
+consuming pipeline, not the module's tools suite, are responsible for 
+building the required conda environment or Singularity container
+using the instructions provided by the module.
 
 ### Step modules
 
@@ -94,5 +101,4 @@ Care must be taken that file paths within external module scripts respect the fa
 that many environment variables, e.g., $MODULES_DIR, will be defined 
 relative to the calling pipelines suite, not the external suite. Thus, the 
 author of the external module must generally have anticipated it would be
-used by other pipelines by ensuring that all internal file paths will resolve
-properly.
+used by other pipelines by ensuring that all file paths will resolve properly.

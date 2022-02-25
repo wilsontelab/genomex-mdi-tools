@@ -26,11 +26,10 @@ action:
 #condaFamilies: 
 
 # TODO: make sure pipelines-framework handles action modules as a self-contained unit
-# pipeline.yml should never override conda or options set by the pipeline, even from _global
+# pipeline.yml should never override conda or options set by the module, even from _global
+# DONE
 
 # action modules should always resolve to their own suite's shared directory
+# when looking for optionFamilies and condaFamilies
 # not the calling pipeline's in the case that the action module is external
-
-# TODO: action modules should support containers independently of a pipeline?
-# essentially, an action module is a single-action pipeline
-# pipeline.yml _global should not apply to action modules, which must completely define themselves
+# PENDING
