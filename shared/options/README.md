@@ -27,7 +27,7 @@ optionFamilies:
                 order: 1
                 short: x
                 type: string
-                required: true
+                required: true # set to false if a default is provided
                 default: null
                 description: "short description of the option's effect"
 ```
@@ -38,6 +38,5 @@ shared option family for which the author needs to override some configuration
 detail such as changing 'required' from true to false while providing
 a 'default' value.
 
-The 'order' key:value pair allows you to control the order the families and their options are listed on help screens.
-
-Note that option families do not have or need version control.
+The 'order' key:value pairs allows you to control the order the families 
+and their options are listed on help screens.

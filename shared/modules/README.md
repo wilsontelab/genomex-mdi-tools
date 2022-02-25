@@ -4,7 +4,7 @@ published: false
 
 ## Code modules
 
-**\<suite\>/shared/modules** defines chunks of execution code that are relevant 
+**\<suite\>/shared/modules** defines chunks of execution code relevant 
 to multiple pipelines. There are two types of modules - action modules 
 and step modules. Each of those module types might also be used from 
 an external pipelines suite.
@@ -20,7 +20,7 @@ actions:
     actionName: # replace 'actionName' with the name of your action
         order: 1
         thread: name # optional
-        module: example/path-0.1 # relative path within 'shared/modules'
+        module: example/path # relative folder path within 'shared/modules'
 ```
 
 Thus, you assign a name to the module that is most informative in
@@ -28,36 +28,52 @@ the context of your pipeline. You can also declare an 'order' and
 'thread' appropriate to your pipeline, as these are never set by
 the module. Do not set any of the other typical config values
 associated with actions (e.g., optionFamilies), they are defined
-by the module.
+by the module. Similarly, _global definitions are not applied
+to shared action modules.
 
 When writing an action module, use this format:
 
 ```yml
-# shared/modules/example/path-0.1/module.yml
-name: moduleName
-action:
-    optionFamilies:
-        - base
-        - ...
+# shared/modules/example/path/module.yml
+---
+version: v0.0.0 # optional, for internal tracking
+action: # required
     condaFamilies: 
-        - base
-        - ...        
+        - <module-suite>//base
+        - xyz  
+    optionFamilies:
+        - <module-suite>//base
+        - xyz
     resources:
         required:
             total-ram: 4G
         recommended: 
             n-cpu: 1
             ram-per-cpu: 4G   
-    description: "generic description of the module"
-#optionFamilies: # similar to pipeline.yml if needed for families defined by the module
-#condaFamilies: 
+    description: "generic description of the module's action"
+condaFamilies: # if needed for declarations above
+    xyz:
+optionFamilies:
+    xyz:
 ```
 
-Therefore, the module developer has complete control over 
-the options and environment that support its action. Note that the 
-consuming pipeline, not the module's tools suite, are responsible for 
-building the required conda environment or Singularity container
-using the instructions provided by the module.
+All condaFamilies and optionFamilies are interpreted relative 
+to the calling suite, not the suite that contains the module. 
+Therefore, action module developers should specify shared condaFamilies 
+and optionFamilies in full syntax, e.g., 
+'condaFamilies: \<module-suite\>//\<family\>',
+in case the action module is called from another suite.
+
+If inline component families are specified within module.yml,
+they are appended at the end of the working pipeline.yml file 
+during execution and therefore override families of the same name 
+in the calling suite. Ultimately, it is the job of the calling
+suite to manage and account for any collisions in family names 
+between different actions. 
+
+The consuming pipeline and/or suite, not the module's tool suite, 
+are responsible for _building_ the required conda environment or Singularity 
+container using the instructions provided by the module.
 
 ### Step modules
 
@@ -68,9 +84,7 @@ case would be a module that provides a Snakefile useful to multiple pipelines:
 
 ```bash
 # Workflow.sh
-checkWorkflowStep 1 exampleName example/path
-snakemake --snakefile $MODULES_DIR/example/path-0.1/Snakefile
-finishWorkflowStep
+snakemake --snakefile $MODULES_DIR/example/path/Snakefile
 ```
 
 The environment variable $MODULES_DIR is available to all running pipelines 
@@ -78,8 +92,9 @@ to provide easy access to module files.
 
 ### External modules
 
-A pipeline may also use a module of either type from a different pipelines suite,
-which of course must also be installed into the working MDI directory.
+A pipeline may also use a module of either type from a different pipelines suite, 
+which must also be installed into the working MDI directory by setting 
+'suite_dependencies' in the calling suite's _config.yml file.
 
 To use an external action module in pipeline.yml, the syntax is:
 
@@ -87,18 +102,38 @@ To use an external action module in pipeline.yml, the syntax is:
 # pipeline.yml
 actions:
     actionName:
-        module: <suite>//example/path-0.1 
+        module: <suite>//example/path
 ```
 
 To use an external step module file in your pipeline scripts, the syntax is:
 
 ```bash
 # Workflow.sh
-$SUITES_DIR/<suite>/shared/modules/example/path-0.1/<file>
+$SUITES_DIR/<suite>/shared/modules/example/path/<file>
 ```
 
 Care must be taken that file paths within external module scripts respect the fact 
 that many environment variables, e.g., $MODULES_DIR, will be defined 
 relative to the calling pipelines suite, not the external suite. Thus, the 
 author of the external module must generally have anticipated it would be
-used by other pipelines by ensuring that all file paths will resolve properly.
+used by other suites by ensuring that all file paths resolve properly.
+
+## Module versioning
+
+The version of a shared module is implicitly derived from the version of 
+it's parent suite, i.e, setting the version of a tool suite always yields 
+the same, specific version of a module. 
+
+For external shared modules, the module version can be set by requiring 
+a specific version of the external suite at the pipeline level:
+
+```yml
+# pipeline.yml
+suiteVersions: 
+    suiteName: v0.0.0 
+```
+
+For internal shared modules, if two pipelines in your tool suite require different 
+versions of a similar module they must have different names so that
+they can be called differently by the two pipelines.
+Alternatively, one pipeline could recreate the module in its pipeline.yml file.
