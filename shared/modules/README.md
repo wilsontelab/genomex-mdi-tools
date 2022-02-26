@@ -9,7 +9,7 @@ to multiple pipelines. There are two types of modules - action modules
 and step modules. Each of those module types might also be used from 
 an external pipelines suite.
 
-### Action modules
+## Action modules
 
 Action modules are fully encapsulated actions that can be added to a 
 pipeline as follows:
@@ -58,24 +58,23 @@ optionFamilies:
 ```
 
 All condaFamilies and optionFamilies are interpreted relative 
-to the calling suite, not the suite that contains the module. 
-Therefore, action module developers should specify shared condaFamilies 
-and optionFamilies in full syntax, e.g., 
+to the calling suite, not the suite that defines the module. 
+Therefore, action module developers should specify shared  
+condaFamilies and optionFamilies in full syntax, e.g., 
 'condaFamilies: \<module-suite\>//\<family\>',
 in case the action module is called from another suite.
 
 If inline component families are specified within module.yml,
 they are appended at the end of the working pipeline.yml file 
 during execution and therefore override families of the same name 
-in the calling suite. Ultimately, it is the job of the calling
-suite to manage and account for any collisions in family names 
-between different actions. 
+in the calling suite. It is the job of the calling pipeline to  
+manage any collisions in family names between different actions. 
 
 The consuming pipeline and/or suite, not the module's tool suite, 
-are responsible for _building_ the required conda environment or Singularity 
-container using the instructions provided by the module.
+are responsible for _building_ the required conda environment or  
+Singularity container using the definitions provided by the module.
 
-### Step modules
+## Step modules
 
 Step modules provide reusable code files that can be called
 within a pipeline action that you configured yourself. Use of code in this 
@@ -90,7 +89,7 @@ snakemake --snakefile $MODULES_DIR/example/path/Snakefile
 The environment variable $MODULES_DIR is available to all running pipelines 
 to provide easy access to module files.
 
-### External modules
+## External modules
 
 A pipeline may also use a module of either type from a different pipelines suite, 
 which must also be installed into the working MDI directory by setting 
@@ -121,7 +120,7 @@ used by other suites by ensuring that all file paths resolve properly.
 ## Module versioning
 
 The version of a shared module is implicitly derived from the version of 
-it's parent suite, i.e, setting the version of a tool suite always yields 
+its parent suite, i.e., setting the version of a tool suite always yields 
 the same, specific version of a module. 
 
 For external shared modules, the module version can be set by requiring 

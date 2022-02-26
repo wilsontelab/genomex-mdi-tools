@@ -1,0 +1,10 @@
+---
+# determine the behavior of alignment algorithms
+options:
+    force-alignment:
+        order: 1
+        short: F
+        type: boolean
+        required: false
+        default: false
+        description: "set this flag to force read alignment, even if bam/cram already exists"

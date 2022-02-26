@@ -32,7 +32,8 @@ optionFamilies:
                 description: "short description of the option's effect"
 ```
 
-In the example above, 'shared-options' must exist as a shared component. 
+In the example above, 'shared-options' must exist as a shared component, 
+i.e., file 'shared/options/shared-options.yml' must exist. 
 'my-options' might be fully private to the pipeline, or could also be a 
 shared option family for which the author needs to override some configuration
 detail such as changing 'required' from true to false while providing
@@ -40,3 +41,37 @@ a 'default' value.
 
 The 'order' key:value pairs allows you to control the order the families 
 and their options are listed on help screens.
+
+## Creating shared option families
+
+Shared option families are defined in YAML configuration files in 
+one of two ways.
+
+In the simpler and more typical usage, a shared options
+file defines a single option family of the same name as the file:
+
+```yml
+# shared/options/NAME.yml = a single option family called NAME
+order: 1 # optional
+options: # required
+    option-1: ...
+    option-2: ...
+```
+
+Alternatively, you might sometimes prefer to include multiple
+option families in a single shared file, where the syntax is the
+same as pipeline.yml:
+
+```yml
+# shared/options/FILE.yml
+optionFamilies:
+    my-options-1:
+        order: 1
+        options:
+            option-1: ...
+            option-2: ...
+    my-options-2:
+        order: 2
+        options:
+            option-3: ...        
+```

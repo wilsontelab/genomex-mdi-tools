@@ -1,9 +1,6 @@
 ---
-# current program versions as of January 2022
+# programs used to extract alignments/spans and compare them to the genome
+# versions current as of January 2022
 dependencies:
-    
-    # parsers for common sequence file formats
     - samtools=1.14
-    
-    # comparing genomic intervals and more
     - bedtools=2.30.0

@@ -1,0 +1,19 @@
+---
+# set the path to the input fastq read files for alignment
+options:
+    input-dir: 
+        order: 1
+        short: i
+        type: string
+        required: true
+        default: null
+        directory:
+            must-exist: true
+        description: "expects to find <input-dir>/<input-name>/*.fastq.gz OR .../*.sra"
+    input-name:
+        order: 2
+        short: I
+        type: string
+        required: false
+        default: null
+        description: "see --input-dir for details; defaults to --data-name if null" 

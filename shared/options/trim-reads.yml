@@ -1,0 +1,17 @@
+---
+# set options passed to fastp for read trimming and cleaning
+options:
+    adapter-sequence:
+        order: 1
+        short: A
+        type: string
+        required: false
+        default: null
+        description: "3' adapter sequence to trim, same as fastp -a option"          
+    min-insert-size:
+        order: 2
+        short: Z
+        type: integer
+        required: false
+        default: 25
+        description: "discard read pairs with fewer than Z untrimmed bases"

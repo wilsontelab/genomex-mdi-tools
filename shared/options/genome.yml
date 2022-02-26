@@ -1,0 +1,19 @@
+---
+# set paths to the reference genome
+options:
+    genomes-dir:
+        order: 1
+        short: G
+        type: string
+        required: false
+        default: $MDI_DIR/resources/genomes
+        directory:
+            must-exist: TRUE
+        description: "directory with reference genome files, with sub-directories iGenomes, UCSC, etc."
+    genome: 
+        order: 2
+        short: g
+        type: string
+        required: false
+        default: hg38
+        description: "name of the UCSC-format reference genome to use (e.g., hg38)"

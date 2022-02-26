@@ -34,9 +34,9 @@ always loaded from the 'shared' folder.
 
 ### External components
 
-Component sharing can extend beyond a single pipelines suite, such that
-pipeline.yml may also attempt to load an environment, module, or option family from
-a different tool suite, which must also be installed into 
+Component sharing can extend beyond a single tool suite, such that
+pipeline.yml may also attempt to load an environment, module, or option 
+family from a different tool suite, which must also be installed into 
 the working MDI directory by setting 'suite_dependencies' in the calling suite's
 _config.yml file.
 
@@ -68,7 +68,7 @@ user will have an active fork of any given external repository.
 ## Shared component versioning
 
 Similar to pipelines, the version of a shared component is implicitly
-derived from the version of it's parent suite, i.e, setting the
+derived from the version of its parent suite, i.e., setting the
 version of a tool suite always yields the same, specific version of the component. 
 
 If your pipeline requires a specific version of an external tool suite

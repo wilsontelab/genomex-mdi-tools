@@ -1,0 +1,12 @@
+---
+# set the storage format for aligned reads
+optionFamilies: 
+    file-format:
+        options:
+            use-cram:
+                order: 1
+                short: C
+                type: boolean
+                required: false
+                default: false
+                description: "set this flag to read and write alignments as CRAM format files instead of BAM"

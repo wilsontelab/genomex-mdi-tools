@@ -22,18 +22,32 @@ condaFamilies:
             - xyz=1.16.3
 ```
 
-In the example above, 'base' must exist as a shared component. 'my-conda'
-might be fully private to the pipeline, or could also be a shared environment
+In the example above, 'base' must exist as a shared component, 
+i.e., file 'shared/environments/base.yml' must exist. 'my-conda' might 
+be fully private to the pipeline, or could also be a shared environment
 for which the author needs to override a dependency version, etc.
 
 The total set of condaFamilies is aggregated to create the final runtime
 environment, i.e., installed programs, available to the action. The order 
 in which the named conda families are listed under
-"actions: actionName: condaFamilies:" are the order they are
+"actions: actionName: condaFamilies:" is the order they are
 loaded, i.e., the last one has highest precedence (e.g., to override
-to a specific program version).
+to a specific program version). However, conda entries for an action
+in pipeline.yml will override entries in any shared environment file. 
 
-### Available conda families
+## Creating shared environments
+
+Shared environments are specified in YAML configuration files in 
+'shared/environments' using the following syntax, where 
+the name of the file is the name of the conda family. 
+
+```yml
+# shared/environments/NAME.yml = a single conda family called NAME
+channels: ... # often omitted if defined upstream
+dependencies: ...
+```
+
+## Available conda families
 
 The following environment families are provided by the MDI suite template
 as they are typical for many data analysis needs or support the 
@@ -46,14 +60,14 @@ demo, i.e., '_template', pipeline.
 ## Environment versioning
 
 The version of a shared conda family is implicitly derived from the version of 
-it's parent suite, i.e, setting the version of a tool suite always yields 
+its parent suite, i.e., setting the version of a tool suite always yields 
 the same, specific version of an environment config. 
 
 When a conda family changes the version of a program in its environment,
-it is important to remember to advance the minor version of any pipelines
-that use it as well as the parent tool suite, to reflect the new set of program 
-dependencies. Among other things, this ensures that container versions will be 
-updated to reflect the new conda environments.
+it is important to advance the minor version of any pipelines that use it 
+as well as the parent tool suite, to reflect the new set of program 
+dependencies. Among other things, this ensures that container versions  
+will be updated to reflect the new conda environments.
 
 For external shared conda families, the environment version can be set by requiring 
 a specific version of the external suite at the pipeline level:
