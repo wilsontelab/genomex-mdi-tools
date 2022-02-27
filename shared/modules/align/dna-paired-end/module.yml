@@ -3,13 +3,14 @@ version: v0.0.0 # optional, for internal tracking
 action: # required
     condaFamilies: 
         - base
-        - bwa  
+        - bwa
     optionFamilies:
-        - genome 
-        - bam-format  
-        - fastq-input  
-        - trim-reads  
+        - fastq-input
+        - umi
+        - trim-reads
         - alignment
+        - genome
+        - bam-format
     resources:
         required:
             total-ram: 32G

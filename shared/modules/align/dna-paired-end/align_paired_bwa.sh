@@ -9,6 +9,8 @@
 #     $ADAPTER_SEQUENCE [default: merge-inherent trimming only]
 #     $FORCE_ALIGNMENT  [default: don't overwrite NAME_BAM_FILE]
 #     $USE_CRAM         [default: creates .bam file]
+#     $UMI_FILE         [default: no UMIs]
+#     $UMI_SKIP_BASES
 # input:
 #     if FASTQ files are found (.fastq.gz) they are used
 #     otherwise searches for SRA (.sra) files that are converted to FASTQ in a stream
@@ -75,6 +77,9 @@ fastp \
 --merge --include_unmerged --correction \
 --html $FASTP_LOG_PREFIX.html --json $FASTP_LOG_PREFIX.json \
 --report_title \"$DATA_NAME\" 2>/dev/null |
+
+# tweak the way read pair merge status is reported in QNAME line
+perl $SHARED_MODULE_DIR/adjust_merge_tags.pl |
 
 # align to genome using BWA; soft-clip supplementary
 bwa mem -p -Y -t $N_CPU $BWA_GENOME_FASTA - 2>$BWA_LOG_FILE |

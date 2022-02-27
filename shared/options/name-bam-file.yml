@@ -1,0 +1,10 @@
+---
+# allow users to provide their own name-sorted bam file to various pipelines
+options:
+    bam-file:
+        order: 1
+        short: b
+        type: string
+        required: false
+        default: null
+        description: "optional full path to an externally-generated, name-sorted, bam/cram file"

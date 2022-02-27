@@ -10,7 +10,7 @@ use warnings;
 #     input as either paired fastq.gz files or a set of .sra files
 
 # initialize reporting
-our $action  = "prepare_reads";
+our $action  = "prepare_fastq";
 my ($nInputPairs, $nOutputPairs, $nInputReads,
     $nKnownUmis, $nInferredUmis, $nFailedUmis) = (0) x 10;
 
@@ -23,7 +23,8 @@ resetCountFile();
 fillEnvVar(\my $FASTQ_FILE1, 'FASTQ_FILE1');
 fillEnvVar(\my $FASTQ_FILE2, 'FASTQ_FILE2');
 fillEnvVar(\my $SRA_FILES,   'SRA_FILES');
-fillEnvVar(\my $UMI_FILE,    'UMI_FILE', 1, "");
+fillEnvVar(\my $UMI_FILE,       'UMI_FILE',       1, "");
+fillEnvVar(\my $UMI_SKIP_BASES, 'UMI_SKIP_BASES', 1, 1); # the single-base A addition used in library prep/1-base primer tail
 
 # constants
 use constant {
@@ -34,7 +35,7 @@ use constant {
 };
 
 # load the UMI library
-my (%knownUmis, %umis, $skipLen, $seqRegex);
+my (%knownUmis, %umis, $seqRegex);
 my ($umiLen, $nUmi, $nObsUmi) = (0) x 10;
 my $isFixedUmi = ($UMI_FILE ne "");
 if($isFixedUmi){
@@ -66,8 +67,7 @@ if($isFixedUmi){
     printCount($nObsUmi, 'nObsUmi', 'allowed UMI values (up to 1 base mismatch from expected)');  
 
     # declare the read pattern
-    $skipLen = 1; # the single-base A addition used in library prep/1-base primer tail
-    $seqRegex = qr/^(.{$umiLen}).{$skipLen}(.+)/;
+    $seqRegex = qr/^(.{$umiLen}).{$UMI_SKIP_BASES}(.+)/;
 }
 
 # set the file input handles
