@@ -141,7 +141,7 @@ sub getRead {
 }
 
 # print summary information
-printCount($nInputPairs,   'nInputPairs',   'total input read pairs');
+printCount($nInputPairs,   'nInputPairs',   'input read pairs');
 if($isFixedUmi){
     printCount($nOutputPairs,  'nOutputPairs',  'output read pairs');
     printCount($nInputReads,   'nInputReads',   'input reads');

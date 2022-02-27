@@ -10,9 +10,9 @@
 # activate it and run:
 #   Rscript -e 'library(foo); message("package foo OK\n")'
 
-# If the package is OK, add it to the list above. If
+# If the package is OK, add it to the documentation list above. If
 # you get an error that R can't find the package, you
-# need to add it to your conda dependencies.
+# need to add it to your pipeline's conda dependencies.
 
 dependencies:
     - r-base=4.1.1

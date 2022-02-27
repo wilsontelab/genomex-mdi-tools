@@ -1,5 +1,5 @@
 ---
-# set options passed to fastp for read trimming and cleaning
+# options passed to fastp for read trimming and cleaning
 options:
     adapter-sequence:
         order: 1

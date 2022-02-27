@@ -1,5 +1,5 @@
 ---
-# set the path to the input fastq read files for alignment
+# options that set the path to the input fastq read files for alignment
 options:
     input-dir: 
         order: 1

@@ -1,5 +1,5 @@
 ---
-# determine the behavior of alignment algorithms
+# options that determine the behavior of alignment algorithms
 options:
     force-alignment:
         order: 1

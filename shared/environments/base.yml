@@ -11,9 +11,4 @@ channels:
     - defaults
 
 dependencies:
-    
-    # workflow management
-    - snakemake=6.10.0
-    
-    # parallelization tools
-    - pigz=2.6
+    - pigz=2.6 # parallel handling of gzip files

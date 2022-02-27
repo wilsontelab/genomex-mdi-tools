@@ -10,3 +10,5 @@ source $SHARED_MODULES_DIR/align/set_alignment_vars.sh
 
 # align reads to genome and create temporary output files
 runWorkflowStep 1 align $SHARED_MODULE_DIR/align_paired_bwa.sh
+
+# TODO: add read sorting to this action, or defer elsewhere?

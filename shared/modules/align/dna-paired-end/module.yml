@@ -2,20 +2,17 @@
 version: v0.0.0 # optional, for internal tracking
 action: # required
     condaFamilies: 
-        - genomex-mdi-tools//system
-        - genomex-mdi-tools//bwa  
+        - base
+        - bwa  
     optionFamilies:
-        - genomex-mdi-tools//fastq-input  
-        - genomex-mdi-tools//trim-reads     
-        - genomex-mdi-tools//genome 
-        - genomex-mdi-tools//bam-format  
-
-        - fastq-input
-        - trim-reads
-        - align
+        - genome 
+        - bam-format  
+        - fastq-input  
+        - trim-reads  
+        - alignment
     resources:
         required:
-            total-ram: 16G
+            total-ram: 32G
         recommended: 
             n-cpu: 16
             ram-per-cpu: 4G
@@ -23,7 +20,3 @@ action: # required
         recommended:
             time-limit: 48:00:00            
     description: "clean paired-end reads and align to reference genome; output name-sorted bam/cram"
-# condaFamilies: # if needed for declarations above
-#     xyz:
-# optionFamilies:
-#     xyz:

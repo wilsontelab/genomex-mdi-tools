@@ -1,5 +1,5 @@
 ---
-# set paths to the reference genome
+# options that set paths to the reference genome
 options:
     genomes-dir:
         order: 1

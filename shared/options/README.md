@@ -58,17 +58,17 @@ options: # required
     option-2: ...
 ```
 
-Alternatively, you might sometimes prefer to include multiple
+Alternatively, you might sometimes include multiple
 option families in a single shared file, where the syntax is the
 same as pipeline.yml:
 
 ```yml
 # shared/options/FILE.yml
 optionFamilies:
-    my-options-1:
+    my-options-1: # a family name
         order: 1
         options:
-            option-1: ...
+            option-1: ... # an option name and definition
             option-2: ...
     my-options-2:
         order: 2

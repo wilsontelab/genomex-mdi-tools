@@ -1,0 +1,10 @@
+---
+# options used to restrict reads pulled from bam files
+options:
+    min-mapq:
+        order: 1
+        short: Q
+        type: integer
+        required: false
+        default: 20
+        description: "minimum read MAPQ to be used in further processing" 

@@ -6,7 +6,7 @@ published: false
 
 **\<suite\>/shared/modules** defines chunks of execution code relevant 
 to multiple pipelines. There are two types of modules - action modules 
-and step modules. Each of those module types might also be used from 
+and step modules. Each of module type might also be used from 
 an external pipelines suite.
 
 ## Action modules
@@ -29,7 +29,7 @@ the context of your pipeline. You can also declare an 'order' and
 the module. Do not set any of the other typical config values
 associated with actions (e.g., optionFamilies), they are defined
 by the module. Similarly, _global definitions are not applied
-to shared action modules.
+to shared action modules, which are intended to be self-contained.
 
 When writing an action module, use this format:
 
@@ -39,11 +39,11 @@ When writing an action module, use this format:
 version: v0.0.0 # optional, for internal tracking
 action: # required
     condaFamilies: 
-        - <module-suite>//base
-        - xyz  
+        - shared-family
+        - inline-family  
     optionFamilies:
-        - <module-suite>//base
-        - xyz
+        - shared-family
+        - inline-family
     resources:
         required:
             total-ram: 4G
@@ -52,17 +52,15 @@ action: # required
             ram-per-cpu: 4G   
     description: "generic description of the module's action"
 condaFamilies: # if needed for declarations above
-    xyz:
+    inline-family: ...
 optionFamilies:
-    xyz:
+    inline-family: ...
 ```
 
-All condaFamilies and optionFamilies are interpreted relative 
-to the calling suite, not the suite that defines the module. 
-Therefore, action module developers should specify shared  
-condaFamilies and optionFamilies in full syntax, e.g., 
-'condaFamilies: \<module-suite\>//\<family\>',
-in case the action module is called from another suite.
+All condaFamilies and optionFamilies in module.yml are interpreted 
+relative to the module's suite, not the calling suite, so that
+suite developers have complete control over a module's action
+even when it is called by another suite as an external module.
 
 If inline component families are specified within module.yml,
 they are appended at the end of the working pipeline.yml file 
@@ -70,9 +68,9 @@ during execution and therefore override families of the same name
 in the calling suite. It is the job of the calling pipeline to  
 manage any collisions in family names between different actions. 
 
-The consuming pipeline and/or suite, not the module's tool suite, 
-are responsible for _building_ the required conda environment or  
-Singularity container using the definitions provided by the module.
+The calling pipeline and/or suite, not the module's tool suite, 
+are responsible for _building_ the required conda environment or 
+Singularity container using the definitions provided by an action module.
 
 ## Step modules
 

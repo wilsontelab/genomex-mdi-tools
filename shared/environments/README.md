@@ -28,8 +28,8 @@ be fully private to the pipeline, or could also be a shared environment
 for which the author needs to override a dependency version, etc.
 
 The total set of condaFamilies is aggregated to create the final runtime
-environment, i.e., installed programs, available to the action. The order 
-in which the named conda families are listed under
+environment, i.e., installed programs, that are available to the action. 
+The order in which the named conda families are listed under
 "actions: actionName: condaFamilies:" is the order they are
 loaded, i.e., the last one has highest precedence (e.g., to override
 to a specific program version). However, conda entries for an action
@@ -37,7 +37,7 @@ in pipeline.yml will override entries in any shared environment file.
 
 ## Creating shared environments
 
-Shared environments are specified in YAML configuration files in 
+Shared environments are defined in YAML configuration files in 
 'shared/environments' using the following syntax, where 
 the name of the file is the name of the conda family. 
 
@@ -66,7 +66,7 @@ the same, specific version of an environment config.
 When a conda family changes the version of a program in its environment,
 it is important to advance the minor version of any pipelines that use it 
 as well as the parent tool suite, to reflect the new set of program 
-dependencies. Among other things, this ensures that container versions  
+dependencies. Among other things, this ensures that container versions 
 will be updated to reflect the new conda environments.
 
 For external shared conda families, the environment version can be set by requiring 

@@ -1,0 +1,17 @@
+---
+# options that determine allowed behaviors for alignment-guided merging
+options:
+    min-merge-overlap: 
+        order: 99
+        short: v
+        type: integer
+        required: false
+        default: 5
+        description: "No. of bases that must overlap between read ends for alignment-guided merging"       
+    min-merge-density: 
+        order: 99
+        short: m
+        type: double
+        required: false
+        default: 0.8
+        description: "fraction of matching overlap bases to accept an alignment-guided merge" 

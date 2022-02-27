@@ -1,5 +1,5 @@
 ---
-# set the storage format for aligned reads
+# options that set the storage format for aligned reads
 optionFamilies: 
     file-format:
         options:

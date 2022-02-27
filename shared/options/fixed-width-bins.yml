@@ -1,5 +1,5 @@
 ---
-# define fixed-width bins in the reference genome
+# options that define fixed-width bins in the reference genome
 options:
     bin-size: 
         order: 1
