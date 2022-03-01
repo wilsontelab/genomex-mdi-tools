@@ -2,8 +2,13 @@ use strict;
 use warnings;
 
 #----------------------------------------------------------
-# sequence manipulations
+# general sequence manipulations
 #----------------------------------------------------------
+
+# regular expressions to process read clips
+our $leftClip_  = qr/^(\d+)S/;
+our $rightClip_ = qr/(\d+)S$/;
+
 # reverse complement reads in place (i.e., by reference)
 sub rc { 
     my ($seq) = @_;

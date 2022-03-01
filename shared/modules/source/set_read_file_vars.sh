@@ -7,7 +7,7 @@
 #         $INPUT_DIR/$DATA_NAME/*.fastq.gz
 #         $INPUT_DIR/$DATA_NAME/*.sra
 # usage:
-#     source $MODULES_DIR/align/set_read_file_vars.sh
+#     source $MODULES_DIR/source/set_read_file_vars.sh
 
 # set the sequence read input directory
 if [[ "$INPUT_NAME" = "" || "$INPUT_NAME" = "null" ]]; then

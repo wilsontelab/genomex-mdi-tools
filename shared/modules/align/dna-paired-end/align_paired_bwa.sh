@@ -2,7 +2,7 @@
 #     align paired dna-seq read files to genome with read merging using fastp and bwa
 # expects:
 #     source $MODULES_DIR/genome/set_genome_vars.sh
-#     source $MODULES_DIR/align/set_read_file_vars.sh
+#     source $MODULES_DIR/source/set_read_file_vars.sh
 #     source $MODULES_DIR/align/set_alignment_vars.sh
 #     $MIN_INSERT_SIZE
 # optional:
@@ -88,6 +88,20 @@ bwa mem -p -Y -t $N_CPU $BWA_GENOME_FASTA - 2>$BWA_LOG_FILE |
 samtools fixmate -@ $N_CPU -m $CRAM_OUTPUT_OPTIONS - - |
 slurp -s 100M -o $NAME_BAM_FILE
 checkPipe
+
+#------------------------------------------------------------------
+# handle bam/cram file coordinate sorting, if requested
+#------------------------------------------------------------------
+if [[ "$BAM_SORT" = "coordinate" || "$BAM_SORT" = "both" ]]; then
+    echo "sorting alignments by coordinate"
+    slurp -s 500M $NAME_BAM_FILE |
+    samtools sort $CRAM_OUTPUT_OPTIONS --threads $N_CPU -m $SORT_RAM_PER_CPU_INT -T $TMP_FILE_PREFIX.samtools.sort - |
+    slurp -s 500M -o $COORDINATE_BAM_FILE
+    checkPipe
+    if [ "$BAM_SORT" = "coordinate" ]; then
+        rm -rf $NAME_BAM_FILE
+    fi
+fi
 
 echo "done"
 

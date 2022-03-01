@@ -40,16 +40,6 @@ use constant {
     QRY_END => 2
 };
 
-# initialize scoring parameters
-use vars qw($matchScore $mismatchPenalty $gapOpenPenalty $gapExtensionPenalty $maxShift
-            %baseMatches %ryswkmMatches %nMatches);
-setOption(\$matchScore,           1,   0);
-setOption(\$mismatchPenalty,     -1.5, 1);
-setOption(\$gapOpenPenalty,      -2.501, 1); # 0.001 ajustment gives slight preference to not opening a single-base terminal gap
-setOption(\$gapExtensionPenalty, -1,   1);
-setOption(\$maxShift,             3,   0);
-our %pairedBaseScores = initializePairScores();
-
 # set scoring metrics to user provided values or defaults
 sub setOption {
     my ($score, $default, $negate) = @_;
@@ -58,6 +48,9 @@ sub setOption {
 }
 
 # create the lookup table for match/mismatch score for all possible IUPAC code combinations
+use vars qw($matchScore $mismatchPenalty $gapOpenPenalty $gapExtensionPenalty $maxShift
+            %baseMatches %ryswkmMatches %nMatches
+            $suppressEarlyChecks); # used by svWGS to suppress a couple of lines...
 sub initializePairScores {
     my %scores;
     foreach my $key(keys %baseMatches)  { $scores{$key} = $matchScore } # e.g. A:A, full match
@@ -72,17 +65,25 @@ sub initializePairScores {
     }
     return %scores;
 }
+# initialize scoring parameters
+setOption(\$matchScore,           1,   0);
+setOption(\$mismatchPenalty,     -1.5, 1);
+setOption(\$gapOpenPenalty,      -2.501, 1); # 0.001 ajustment gives slight preference to not opening a single-base terminal gap
+setOption(\$gapExtensionPenalty, -1,   1);
+setOption(\$maxShift,             3,   0);
+our %pairedBaseScores = initializePairScores();
 
 # the Smith-Waterman algorithm itself
 sub smith_waterman {
 
     # collect sequence inputs
     my ($qry, $ref, $fast, $forceQryEnd) = @_; # setting $fast to truthy enforces register shift limitations
-    #$ref or die "smith_waterman error: ref missing\n"; # could turn these catches back on if needed in a different application
-    #if($qry eq $ref){ # shortcut the process if seqs are identical
-    #    my $n = length($qry);
-    #    return ([split('', $qry)], $matchScore * $n, 0, $n-1, 0, $n-1);  
-    #}
+    $qry or die "smith_waterman error: missing qry sequence\n";
+    $ref or die "smith_waterman error: missing ref sequence\n";
+    if($qry eq $ref){ # shortcut the process if seqs are identical
+       my $n = length($qry);
+       return ([split('', $qry)], $matchScore * $n, 0, $n-1, 0, $n-1);  
+    }
     my @qry = split('', $qry);
     my @ref = split('', $ref);
     my $nQ = @qry;

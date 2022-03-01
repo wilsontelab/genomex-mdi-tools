@@ -56,7 +56,8 @@ actions:
 In suite-centric mode, you will:
 - clone this tool suite repository
 - call its 'install.sh' script to create a suite-specific MDI installation
-- call its 'genomex' utility to use its tools
+- OPTIONAL: call 'alias.pl' to create an alias to the suite's 'run' utility
+- call its 'run' utility to use its tools
 
 ### Install this tool suite
 
@@ -66,13 +67,18 @@ cd genomex-mdi-tools
 ./install.sh
 ```
 
-### Execute a Stage 1 pipeline from the command line
-
-For help, call the 'genomex' utility with no arguments - 
-add the suite directory to PATH to run the tool suite from any directory.
+### Create an alias to the suite's 'run' utility
 
 ```bash
-./genomex
+perl alias.pl genomex # you can use a different alias name if you'd like
+```
+
+### Execute a Stage 1 pipeline from the command line
+
+For help, call the 'run' utility with no arguments.
+
+```bash
+genomex # assuming you created an alias as described above
 ```
 
 ---
@@ -127,5 +133,5 @@ the second time.
 For help, call the 'mdi' utility with no arguments.
 
 ```bash
-genomex
+genomex # assuming you created an alias as described above
 ```

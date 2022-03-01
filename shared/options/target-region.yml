@@ -1,0 +1,17 @@
+---
+# options used to describe genomic target regions
+options:
+    targets-bed:
+        order: 1
+        short: b
+        type: string
+        required: false
+        default: null
+        description: "full path to a BED file with the genomic target regions"          
+    region-padding:
+        order: 2
+        short: R
+        type: integer
+        required: false
+        default: 0
+        description: "this many bp on each side of target regions are considered adjacent"

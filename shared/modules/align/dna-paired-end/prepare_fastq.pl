@@ -6,7 +6,7 @@ use warnings;
 #     extract UMI sequences and skip base(s) in preparation for read alignment to genome
 #     if UMIs not in use, use dummy UMI index of 1 for all reads
 # expects:
-#     source $MODULES_DIR/align/set_read_file_vars.sh (sets FASTQ_FILE1, FASTQ_FILE2, SRA_FILES)
+#     source $MODULES_DIR/source/set_read_file_vars.sh (sets FASTQ_FILE1, FASTQ_FILE2, SRA_FILES)
 #     input as either paired fastq.gz files or a set of .sra files
 
 # initialize reporting

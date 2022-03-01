@@ -2,13 +2,13 @@
 pipeline:
     name: download
     description: "download data files from common public data repositories"
-    version: v0.0.1 # OPTIONAL: version of this pipeline (not its suite); required if containers are used
+    version: v0.0.1
 #--------------------------------------------------------------------
 actions:  
     _global:       
         condaFamilies:
-            - base-0.1
-            - r-essentials-4.1
+            - base
+            - r-4.1
             - basespace
             - sra-tools                        
     basespace:
@@ -69,6 +69,14 @@ actions:
             recommended:
                 time-limit: 24:00:00
         description: "download various genome metadata files from UCSC and other sources" 
+#--------------------------------------------------------------------
+condaFamilies:
+    basespace:
+        dependencies:
+            - bioconductor-basespacer=1.38.0
+    sra-tools:
+        dependencies:
+            - sra-tools=2.11.0
 #--------------------------------------------------------------------
 optionFamilies:
     basespace:
@@ -140,14 +148,6 @@ optionFamilies:
                 required: true
                 default: null
                 description: "comma-delimited tar.gz url(s); https://support.illumina.com/sequencing/sequencing_software/igenome.html"     
-#--------------------------------------------------------------------
-condaFamilies:
-    basespace:
-        dependencies:
-            - bioconductor-basespacer=1.38.0
-    sra-tools:
-        dependencies:
-            - sra-tools=2.11.0
 #--------------------------------------------------------------------
 container:
     supported: true        # set to true if you maintain a container registry for this pipeline [false]

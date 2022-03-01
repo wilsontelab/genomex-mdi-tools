@@ -2,17 +2,18 @@
 pipeline:
     name: genmap
     description: "run the genmap utility to create a genome mappability profile"
-    version: v0.0.2 # add 'threads' to Snakefile rules, change recommended n-cpu
+    version: v0.0.1
 actions: 
     do:
         order: 1
         description: "create a genome mappability profile for a combination of kmer-length and n-errors"
-        optionFamilies: 
-            - genmap        
-            - snakemake
         condaFamilies: 
-            - base-0.1
-            - genmap
+            - base
+            - snakemake
+            - genmap        
+        optionFamilies: 
+            - snakemake        
+            - genmap        
         resources:
             required:
                 total-ram: 32G
@@ -22,6 +23,10 @@ actions:
         job-manager:
             recommended:
                 time-limit: 12:00:00
+condaFamilies:
+    genmap:
+        dependencies:
+            - genmap=1.3.0                
 optionFamilies:
     output:
         options:
@@ -45,10 +50,6 @@ optionFamilies:
                 required: false
                 default: 1
                 description: "number of errors (i.e., read mismatches) used to calculate mappability"
-condaFamilies:
-    genmap:
-        dependencies:
-            - genmap=1.3.0
 container:
     supported: true        # set to true if you maintain a container registry for this pipeline [false]
     registry:  ghcr.io     # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]

@@ -8,3 +8,10 @@ options:
         required: false
         default: false
         description: "set this flag to force read alignment, even if bam/cram already exists"
+    bam-sort:
+        order: 2
+        short: s
+        type: string
+        required: false
+        default: name
+        description: "sort status of the output file(s) (name, coordinate, both)"
