@@ -65,7 +65,7 @@ fi
 #------------------------------------------------------------------
 
 # pull reads from various source types to a consistent interleaved format
-perl $SHARED_MODULE_DIR/prepare_reads.pl |
+perl $SHARED_MODULE_DIR/prepare_fastq.pl |
 
 # use fastp for one-pass adapter trimming, read merging and quality filtering
 # large numbers of threads do not improve the speed
