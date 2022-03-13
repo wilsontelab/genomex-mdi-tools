@@ -3,14 +3,14 @@
 options:
     min-merge-overlap: 
         order: 99
-        short: v
+        short: V
         type: integer
         required: false
         default: 5
         description: "No. of bases that must overlap between read ends for alignment-guided merging"       
     min-merge-density: 
         order: 99
-        short: m
+        short: M
         type: double
         required: false
         default: 0.8

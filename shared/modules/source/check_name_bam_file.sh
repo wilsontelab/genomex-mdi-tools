@@ -9,7 +9,7 @@
 
 # allow users to provide their own name-sorted bam file
 export IS_USER_BAM=0
-if [ "$BAM_FILE" != "" ]; then
+if [[ "$BAM_FILE" != "" && "$BAM_FILE" != "null" ]]; then
     export IS_USER_BAM=1
     export NAME_BAM_FILE=$BAM_FILE
 fi

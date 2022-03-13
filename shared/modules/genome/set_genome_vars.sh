@@ -25,10 +25,8 @@ export BWA_GENOME_FASTA=$IGENOME_DIR/Sequence/BWAIndex/genome.fa
 # bad genome regions
 export BAD_REGIONS_FILE=$GENOME_ENCODE_DIR/$GENOME-blacklist.v2.bed.gz
 
-# set values derived from inputs
-if [ -e $GENOME_FASTA.fai ]; then
-    export GENOME_SIZE=`awk '$1!~/_/{s+=$2}END{print s}' $GENOME_FASTA.fai`
-fi
+# genome size from canonical chromosomes
+export GENOME_SIZE=`awk '$1!~/_/{s+=$2}END{print s}' $GENOME_FASTA.fai`
 
 # chromosomes, including chr#, chrX, chrY, chrM
-export GENOME_CHROMS=`cat $BWA_GENOME_FASTA.fai | cut -f1 | grep -v _ | grep -v chrEBV | sort | uniq`
+export GENOME_CHROMS=`cat $GENOME_FASTA.fai | cut -f1 | grep -v _ | grep -v chrEBV | sort | uniq`    

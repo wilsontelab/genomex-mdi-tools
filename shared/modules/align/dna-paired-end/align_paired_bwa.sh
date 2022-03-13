@@ -45,13 +45,17 @@ else
 
 # provide log feedback
 echo "aligning paired end reads to genome $GENOME with pre-alignment merging"
-echo "  read length = $READ_LEN"
+echo "  read length: $READ_LEN"
 if [ "$FASTQ_FILE1" = "" ]; then
-    echo "  SRA files = $SRA_FILES" 
+    echo "  SRA files:" 
+    echo "$SRA_FILES" | perl -ne 'print "    ".join("\n    ", split(" ", $_)),"\n"'
 else
-    echo "  read #1 = $FASTQ_FILE1"
-    echo "  read #2 = $FASTQ_FILE2"    
+    echo "  read #1 fastq files:"
+    echo "$FASTQ_FILE1" | perl -ne 'print "    ".join("\n    ", split(" ", $_)),"\n"'
+    echo "  read #2 fastq files:"
+    echo "$FASTQ_FILE2" | perl -ne 'print "    ".join("\n    ", split(" ", $_)),"\n"'
 fi
+echo "  genome: $BWA_GENOME_FASTA" 
 
 # if requested, perform "extra" adapter trimming (in addition to merge-inherent trimming)
 if [[ "$ADAPTER_SEQUENCE" != "NA" && "$ADAPTER_SEQUENCE" != "null" && "$ADAPTER_SEQUENCE" != "" ]]; then

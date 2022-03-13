@@ -63,7 +63,7 @@ sub runReadPairs {
         $nInputPairs++;
         if($$read1[UMI] and $$read2[UMI]){ # both UMIs must be known to proceed; discard all other read pairs
             $nOutputPairs++;
-            my $name = join(":", $nOutputPairs, $$read1[UMI], $$read2[UMI]); # append paired UMIs to numeric read pair id
+            my $name = "@".join(":", $nOutputPairs, $$read1[UMI], $$read2[UMI]); # append paired UMIs to numeric read pair id
             print join("\n", $name, $$read1[SEQ], '+', $$read1[QUAL]), "\n"; # print interleaved read pairs
             print join("\n", $name, $$read2[SEQ], '+', $$read2[QUAL]), "\n";        
         }

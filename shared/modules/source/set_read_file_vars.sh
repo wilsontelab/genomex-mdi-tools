@@ -9,15 +9,11 @@
 # usage:
 #     source $MODULES_DIR/source/set_read_file_vars.sh
 
-# set the sequence read input directory
+# set the sequence read input directory (supports wildcards)
 if [[ "$INPUT_NAME" = "" || "$INPUT_NAME" = "null" ]]; then
     WORKING_INPUT_DIR=$INPUT_DIR/$DATA_NAME
 else
     WORKING_INPUT_DIR=$INPUT_DIR/$INPUT_NAME
-fi
-if [ ! -d  $WORKING_INPUT_DIR ]; then
-    echo "missing directory: $WORKING_INPUT_DIR"
-    exit 1
 fi
 
 # set the sequence read input files

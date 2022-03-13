@@ -3,14 +3,14 @@
 options:
     targets-bed:
         order: 1
-        short: b
+        short: B
         type: string
         required: false
         default: null
         description: "full path to a BED file with the genomic target regions"          
     region-padding:
         order: 2
-        short: R
+        short: P
         type: integer
         required: false
         default: 0

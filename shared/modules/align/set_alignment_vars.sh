@@ -27,5 +27,5 @@ else
     export COORDINATE_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.cram
     export NAME_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.name.realigned.cram
     export COORDINATE_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.realigned.cram
-    export CRAM_OUTPUT_OPTIONS="--output-fmt CRAM --reference $BWA_GENOME_FASTA"
+    export CRAM_OUTPUT_OPTIONS="--output-fmt CRAM --reference $GENOME_FASTA"
 fi
