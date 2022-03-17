@@ -24,7 +24,7 @@ defined $TARGET_SCALAR  or $TARGET_SCALAR  = 1;
 # load the target regions
 sub loadTargetRegions {
     my ($quiet) = @_;
-    $TARGETS_BED or return;
+    ($TARGETS_BED and $TARGETS_BED ne "null") or return;
 
     # first pass to record target regions (T=target type)
     $nRegions = loadTargetRegions_(\$sumTargetLens, 0, ON_TARGET);

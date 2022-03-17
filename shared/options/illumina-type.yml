@@ -1,12 +1,10 @@
 ---
 # options that communicate the format of an Illumina library
-optionFamilies: 
-    library:
-        options:
-            library-type:
-                order: 1
-                short: L
-                type: string
-                required: false
-                default: TruSeq
-                description: "construction type of source library (TruSeq | Nextera)" 
+options:
+    library-type:
+        order: 1
+        short: L
+        type: string
+        required: false
+        default: TruSeq
+        description: "construction type of source library (TruSeq | Nextera)" 
