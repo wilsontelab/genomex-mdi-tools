@@ -7,9 +7,6 @@
 # usage:
 #     source $MODULES_DIR/align/set_alignment_vars.sh
 
-# set the file prefix for genome-specific output files
-export DATA_GENOME_PREFIX=$DATA_FILE_PREFIX.$GENOME
-
 # set the alignment log files
 export FASTP_LOG_PREFIX=$LOG_FILE_PREFIX.fastp
 export BWA_LOG_FILE=$LOG_FILE_PREFIX.bwa.log

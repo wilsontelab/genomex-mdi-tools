@@ -2,8 +2,8 @@
 # genome manipulations
 #----------------------------------------------------------
 canonicalChroms <- character()
-chromIndex      <- list()
-revChromIndex   <- list()
+chromIndex      <- list() # 1-reference chromosome indices, e.g., chr3 => 3 ...
+revChromIndex   <- list() # ... and vice versa
 
 # parsers for restricting work to properly ordered canonical chromosomes
 setCanonicalChroms <- function(){ 
@@ -15,11 +15,11 @@ setCanonicalChroms <- function(){
     sapply(c(1:90, 'X'), addChrom)
     if(is.null(env$SUPPRESS_CHR_Y)) addChrom('Y') # chrY included unless specifically excluded
     if(!is.null(env$USE_CHR_M))     addChrom('M') # chrM excluded unless specifically included
-    maxI <- length(canonicalChroms) - 1
-    for(i in 0:maxI){
+    maxI <- length(canonicalChroms)
+    for(i in 1:maxI){
         chrom <- canonicalChroms[i]
         chromIndex[[chrom]] <<- i # special handling of unmapped reads
-        revChromIndex[[i]]  <<- chrom
+        revChromIndex[[i]] <<- chrom
     }
     chromIndex[['*']] <<- 99 # special handling of unmapped reads
     revChromIndex[[99]] <<- '*'

@@ -7,6 +7,9 @@
 # usage:
 #     source $MODULES_DIR/genome/set_genome_vars.sh
 
+# set the file prefix for genome-specific output files
+export DATA_GENOME_PREFIX=$DATA_FILE_PREFIX.$GENOME
+
 # root paths to genome for different data sources
 export IGENOME_DIR=`echo $GENOMES_DIR/iGenomes/*/UCSC/$GENOME`
 export SPECIES=`echo $IGENOME_DIR | awk 'BEGIN{FS="/"}{print $(NF-2)}'`
