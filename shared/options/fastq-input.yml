@@ -9,7 +9,7 @@ options:
         default: null
         directory:
             must-exist: true
-        description: "expects to find <input-dir>/<input-name>/*.fastq.gz OR .../*.sra"
+        description: "expects <input-dir>/<input-name>/*.fastq.gz, <input-dir>/<input-name>_*.fastq.gz, or .sra"
     input-name:
         order: 2
         short: I
