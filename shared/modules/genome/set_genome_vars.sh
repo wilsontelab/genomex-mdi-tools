@@ -24,6 +24,7 @@ export GENOME_UMAP_DIR=$GENOME_METADATA_DIR/umap
 # fasta files and aligner indices
 export GENOME_FASTA=$IGENOME_DIR/Sequence/WholeGenomeFasta/genome.fa
 export BWA_GENOME_FASTA=$IGENOME_DIR/Sequence/BWAIndex/genome.fa
+export CHROM_FASTA_DIR=$IGENOME_DIR/Sequence/Chromosomes
 
 # bad genome regions
 export BAD_REGIONS_FILE=$GENOME_ENCODE_DIR/$GENOME-blacklist.v2.bed.gz
