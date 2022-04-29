@@ -112,9 +112,9 @@ getRightClip <- function(cigar){
 }
 
 # reverse complement ACGTN and associated CIGAR strings
-rc_bases <- list(A = "T", C = "G", G = "C", T = "A", N = "N")
+CONSTANTS$rc_bases <- list(A = "T", C = "G", G = "C", T = "A", N = "N")
 rc <- Vectorize(function(SEQ){
-    paste(rev(unlist(rc_bases[ strsplit(SEQ, '')[[1]] ])), collapse = "")
+    paste(rev(unlist(CONSTANTS$rc_bases[ strsplit(SEQ, '')[[1]] ])), collapse = "")
 })
 rc_cigar <- Vectorize(function(cigar){
     operations <- unlist(regmatches(cigar, gregexpr('\\d+\\D',  cigar)))
