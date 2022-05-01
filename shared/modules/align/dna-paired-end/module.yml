@@ -6,7 +6,7 @@ action: # required
         - bwa
     optionFamilies:
         - fastq-input
-        - umi
+        - fixed-umi
         - trim-reads
         - alignment
         - genome
