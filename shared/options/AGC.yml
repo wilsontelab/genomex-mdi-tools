@@ -3,7 +3,7 @@
 options:
     manifest-file: 
         order: 1
-        short: m
+        short: M
         type: string
         required: false
         default: NA

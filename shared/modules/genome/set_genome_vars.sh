@@ -9,6 +9,7 @@
 
 # set the file prefix for genome-specific output files
 export DATA_GENOME_PREFIX=$DATA_FILE_PREFIX.$GENOME
+export PLOT_GENOME_PREFIX=$PLOT_PREFIX.$GENOME
 
 # root paths to genome for different data sources
 export IGENOME_DIR=`echo $GENOMES_DIR/iGenomes/*/UCSC/$GENOME`
