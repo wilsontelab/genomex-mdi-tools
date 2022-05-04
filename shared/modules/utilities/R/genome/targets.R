@@ -5,7 +5,10 @@
 # load the target regions as a table of all positions by region
 targetRegions <- NULL
 loadTargetRegions <- function(){
-    if(is.null(env$TARGETS_BED)) return(NULL)
+    if(is.null(env$TARGETS_BED) || 
+       env$TARGETS_BED == "" || 
+       env$TARGETS_BED == "NA" || 
+       env$TARGETS_BED == "null") return(NULL)
     message("initializing target regions")
     if(is.null(env$REGION_PADDING)) env$REGION_PADDING <- 1
     env$REGION_PADDING <- as.integer(env$REGION_PADDING)
