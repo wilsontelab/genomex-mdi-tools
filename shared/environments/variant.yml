@@ -1,0 +1,7 @@
+---
+# programs used to analyze sequence variants in alignment files
+# versions current as of May 2022
+dependencies:
+    - samtools=1.15.1
+    - bcftools=1.15.1
+    - r-vcfr=1.12.0

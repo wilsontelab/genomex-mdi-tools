@@ -1,0 +1,24 @@
+---
+# options used during variant calling
+options:
+    max-read-depth:
+        order: 1
+        short: D
+        type: integer
+        required: false
+        default: 1000
+        description: "maximum read depth; avoids excessive memory usage" 
+    ploidy:
+        order: 2
+        short: y
+        type: integer
+        required: false
+        default: 2
+        description: "expected copy number of the autosomes" 
+    min-variant-qual:
+        order: 3
+        short: V
+        type: integer
+        required: false
+        default: 50
+        description: "min QUAL value in VCF for variant to be considered real" 
