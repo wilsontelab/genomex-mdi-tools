@@ -22,3 +22,10 @@ options:
         required: false
         default: 50
         description: "min QUAL value in VCF for variant to be considered real" 
+    min-call-depth:
+        order: 4
+        short: c
+        type: integer
+        required: false
+        default: 5
+        description: "minimum read depth required to consider variant positions as informative" 
