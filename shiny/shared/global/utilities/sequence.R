@@ -111,8 +111,10 @@ getRightClip <- function(cigar){
     lengths[maxI]
 }
 
-# reverse complement ACGTN and associated CIGAR strings
-CONSTANTS$rc_bases <- list(A = "T", C = "G", G = "C", T = "A", N = "N")
+# reverse complement ACGTN-+~. and associated CIGAR strings
+CONSTANTS$rc_bases <- list(
+    A = "T", C = "G", G = "C", T = "A", N = "N",
+    "-" = "-", "+" = "+", "~" = "~", "." = ".", " " = " ")
 rc <- Vectorize(function(SEQ){
     paste(rev(unlist(CONSTANTS$rc_bases[ strsplit(SEQ, '')[[1]] ])), collapse = "")
 })
