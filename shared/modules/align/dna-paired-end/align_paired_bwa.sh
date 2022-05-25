@@ -21,7 +21,7 @@
 #------------------------------------------------------------------
 # set the product bam/cram file; abort silently if exists and not forced
 #------------------------------------------------------------------
-if [[ "$FORCE_ALIGNMENT" != "" && -e $NAME_BAM_FILE ]]; then
+if [[ "$FORCE_ALIGNMENT" != "" && "$FORCE_ALIGNMENT" != "0" && "$FORCE_ALIGNMENT" != "false" && -e $NAME_BAM_FILE ]]; then
     echo "forcing overwrite of bam/cram file: $NAME_BAM_FILE"
     rm -f $NAME_BAM_FILE
 fi
