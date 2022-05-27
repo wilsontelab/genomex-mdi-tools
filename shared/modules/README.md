@@ -50,6 +50,9 @@ action: # required
         recommended: 
             n-cpu: 1
             ram-per-cpu: 4G   
+    job-manager:
+        recommended:
+            time-limit: 48:00:00   
     description: "generic description of the module's action"
 condaFamilies: # if needed for declarations above
     inline-family: ...

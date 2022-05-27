@@ -44,11 +44,7 @@ and their options are listed on help screens.
 
 ## Creating shared option families
 
-Shared option families are defined in YAML configuration files in 
-one of two ways.
-
-In the simpler and more typical usage, a shared options
-file defines a single option family of the same name as the file:
+Shared option families are defined in YAML configuration files as follows:
 
 ```yml
 # shared/options/NAME.yml = a single option family called NAME
@@ -56,22 +52,4 @@ order: 1 # optional
 options: # required
     option-1: ...
     option-2: ...
-```
-
-Alternatively, you might sometimes include multiple
-option families in a single shared file, where the syntax is the
-same as pipeline.yml:
-
-```yml
-# shared/options/FILE.yml
-optionFamilies:
-    my-options-1: # a family name
-        order: 1
-        options:
-            option-1: ... # an option name and definition
-            option-2: ...
-    my-options-2:
-        order: 2
-        options:
-            option-3: ...        
 ```

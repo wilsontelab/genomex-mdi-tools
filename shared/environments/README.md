@@ -55,7 +55,7 @@ demo, i.e., '_template', pipeline.
 
 - **base** = establishes common conda channels and data tools
 - **empty** = establishes common conda channels only
-- **r-essentials** = adds R and a set of commonly used data packages
+- **r-4.1** = adds R and a set of commonly used data packages
 
 ## Environment versioning
 
