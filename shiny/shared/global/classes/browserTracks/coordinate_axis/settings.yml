@@ -1,0 +1,12 @@
+include:
+    - lineWidth
+    - scaleUnit
+settings:
+    Plot_Options:
+        Axis_Orientation:
+            type: selectInput
+            choices:
+                - top
+                - middle                
+                - bottom
+            value: top

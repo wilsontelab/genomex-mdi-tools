@@ -1,0 +1,103 @@
+#----------------------------------------------------------------------
+# ui
+#----------------------------------------------------------------------
+shortLabel:       "Track Browser" # shown on dashboard menu 
+shortDescription: "Visualize data inputs and analyses in a genome track browser." # shown on Overview page
+longLabel:        "Genome track browser" # shown at top of appStep page 
+
+#----------------------------------------------------------------------
+# server
+#----------------------------------------------------------------------
+types: # names of the type(s) of this module ...
+    - trackBrowser
+sourceTypes: null # ... and of the module(s) on which it depends
+    # - upload
+
+#----------------------------------------------------------------------
+# custom tracks to use in addition to the standard set, as S3 class name prefixes
+# defaults to all folder names in <suite>/shiny/shared/global/classes/browserTracks
+# all track class folders, i.e., .../browserTracks/<trackName>, must have files:
+#   - settings.yml, with the template for the relevant track settings
+#   - track.R, with constructors and methods below (script name IS NOT important)
+# all track classes must have a constructor as follows (function names ARE important):
+#   - new_<trackName>Track(settings, input), which returns a list with members:
+#       - plotFn(args), a function to draw the plot based on data-specific args
+#       - click, a logical indicating whether the track offers a click method
+#       - hover, a logical indicating whether the track offers a hover method
+# and must implement S3 method:
+#   - build.<trackName>Track(settings, input), which returns a list with members:
+#       - mar, a list of the minimum required top and bottom margins (unit = lines, i.e. par("mar"))
+#       - args, a list of parsed data arguments that should be passed to plotFn
+#       - height, the requested height of the rendered plot, exclusive of whitespace padding
+#       - ylim, the R plot(ylim), i.e., the range vector for the plot's Y axis (if using click/hover)
+#       - unit, unit for height, c("inches", "cm"), default = Browser_Options$Length_Unit (if using click/hover)
+# and may optionally implement the plot interaction methods:
+#   - click.<trackName>Track(track, xCoordinate, yPixel)
+#   - hover.<trackName>Track(track, xCoordinate, yPixel)
+#----------------------------------------------------------------------
+customTrackTypes: null 
+
+#----------------------------------------------------------------------
+# default (empty) track types to show on first load of browser
+#----------------------------------------------------------------------
+defaultTrackTypes: null
+
+#----------------------------------------------------------------------
+# dependencies
+#----------------------------------------------------------------------
+packages: # required R packages
+    R: null
+    Bioconductor:
+        - Rsamtools
+        - magick
+
+## optional data classes and UI modules this module will use
+## e.g., might expect to find shared/optional/classes/<classType>/<className>/<className>_*.R
+#classes:
+#    classType:
+#        - className            
+#modules: null
+
+#----------------------------------------------------------------------
+# module-level settings
+#----------------------------------------------------------------------
+settings:
+    Browser_Options:
+        Browser_Width:
+            type:   numericInput
+            value:  7
+            min:    1.5
+            max:    10
+            step:   0.5 
+        Driver_Width:
+            type:   numericInput
+            value:  6.5
+            min:    1.5
+            max:    10
+            step:   0.5 
+        Label_Width:
+            type:   numericInput
+            value:  1
+            min:    0
+            max:    5
+            step:   0.1
+        Legend_Width:
+            type:   numericInput
+            value:  0
+            min:    0
+            max:    5
+            step:   0.1
+        Length_Unit:
+            type:   selectInput
+            choices:
+                - inches 
+                - cm
+            value:  inches            
+        Font_Size:
+            type:   selectInput
+            choices: # chosen to work will with UCSC browser matching
+                - 6 
+                - 8
+                - 10
+                - 12
+            value:  8    

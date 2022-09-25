@@ -1,0 +1,8 @@
+settings:
+    Track_Options:
+        Plot_Title: 
+            type:   textInput
+            value:  MIBrowser Plot
+        Show_Line: 
+            type:   checkboxInput
+            value:  true

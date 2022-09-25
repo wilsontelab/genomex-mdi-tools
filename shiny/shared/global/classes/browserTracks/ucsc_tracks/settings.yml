@@ -1,0 +1,5 @@
+# settings:
+#     UCSC_Options:
+#         Track_Names:
+#             type: textInput
+#             value: ncbiRefSeq

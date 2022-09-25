@@ -1,0 +1,13 @@
+include:
+    - height 
+    - yAxisLimit    
+#     - box
+    - xyOptions
+    - colorPlotly
+settings:
+    Data_Options:
+        Data_File:
+            type:   fileInput
+            accept: 
+                - ".bed"
+                - ".bgz"

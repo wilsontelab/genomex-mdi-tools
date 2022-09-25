@@ -1,0 +1,126 @@
+#----------------------------------------------------------------------
+# standard track-level option sets, invoked in track type settings.yml as:
+#   include:
+#       - height 
+#       - xyOptions
+#       - etc.
+#----------------------------------------------------------------------
+
+#----------------------------------------------------------------------
+# options always added to all tracks (you don't need to include this option set)
+#----------------------------------------------------------------------
+allTracks: 
+    Track_Options:
+        Track_Name: 
+            type:   textInput
+            value:  null # populated by browserTrackServer
+        Top_Padding:
+            type:   numericInput
+            value:  0.02
+            min:    0
+            max:    1
+            step:   0.02            
+        Y_Axis_Label: 
+            type:   textInput
+            value:  auto # ylab is set by track.R when Y_Axis_Label = auto           
+        Bottom_Padding:
+            type:   numericInput
+            value:  0.02
+            min:    0
+            max:    1
+            step:   0.02
+
+#----------------------------------------------------------------------
+# option sets you may include as needed, i.e., that only apply to certain track types
+#----------------------------------------------------------------------
+height: 
+    Track_Options:
+        Height: 
+            type:   numericInput
+            value:  2
+            min:    1
+            max:    5
+            step:   0.5
+box: 
+    Track_Options:
+        Bounding_Box: 
+            type:   checkboxInput
+            value:  false 
+scaleUnit:  
+    Plot_Options: 
+        Scale_Unit:
+            type: selectInput
+            choices:
+                - auto
+                - Mb
+                - kb
+                - bp
+            value: auto
+yAxisLimit:
+    Track_Options:
+        Y_Limits:
+            type: textInput
+            value: auto # ylim is set by track.R when Y_Limits = auto                   
+xyOptions:
+    Plot_Options:
+        Plot_Type:
+            type: selectInput
+            choices:
+                - Points
+                - Lines 
+                - Both 
+                - Area 
+                - Histogram
+            value: Points
+        Point_Symbol:
+            type: selectInput
+            choices:
+                - Open Circles
+                - Filled Circles 
+                - Open Squares 
+                - Filled Squares
+            value: Filled Circles            
+        Line_Width:
+            type: numericInput
+            value:  1
+            min:    0.25
+            max:    5
+            step:   0.25         
+        Point_Size:
+            type: numericInput
+            value:  1
+            min:    0.25
+            max:    5
+            step:   0.25  
+lineWidth: 
+    Plot_Options:
+        Line_Width:
+            type: numericInput
+            value:  1
+            min:    0.25
+            max:    5
+            step:   0.25                
+colorPlotly:
+    Plot_Options:
+        Color:
+            type: selectInput
+            choices:
+                - blue
+                - orange
+                - green
+                - red
+                - purple
+                - brown
+                - pink
+                - gray
+                - yellow
+                - teal
+                - black
+                - grey 
+            value: blue
+# backgroundShading:
+#     Plot_Options:
+#         Background_Shading:
+#             type: selectInput
+#             choices:
+#                 - pending
