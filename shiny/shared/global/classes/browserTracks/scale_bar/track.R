@@ -7,6 +7,7 @@ new_scale_barTrack <- function() {
     list(
         click = FALSE,
         hover = FALSE,
+        brush = FALSE,
         items = FALSE
     )
 }

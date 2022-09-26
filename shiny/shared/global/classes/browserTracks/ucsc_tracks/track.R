@@ -7,6 +7,7 @@ new_ucsc_tracksTrack <- function() {
     list(
         click = FALSE,
         hover = FALSE,
+        brush = FALSE,
         items = TRUE
     )
 }

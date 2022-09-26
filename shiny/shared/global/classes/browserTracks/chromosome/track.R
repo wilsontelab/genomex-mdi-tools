@@ -7,6 +7,7 @@ new_chromosomeTrack <- function() {
     list(
         click = TRUE,
         hover = FALSE,
+        brush = TRUE,
         items = FALSE
     )
 }
@@ -96,4 +97,15 @@ click.chromosomeTrack <- function(track, x, y){
     d <- chromosomeTrackData
     req(d$coord)
     app$browser$center((x - d$coord$start) / d$coord$width * d$chromSize)  
+}
+brush.chromosomeTrack <- function(track, x1, y1, x2, y2){
+    d <- chromosomeTrackData
+    req(d$coord)
+    getX <- function(x) (x - d$coord$start) / d$coord$width * d$chromSize
+    app$browser$jumpToCoordinates(
+        d$coord$chromosome, 
+        getX(x1), 
+        getX(x2), 
+        strict = TRUE
+    )  
 }

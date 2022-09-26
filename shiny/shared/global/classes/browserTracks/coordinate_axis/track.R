@@ -7,6 +7,7 @@ new_coordinate_axisTrack <- function() {
     list(  
         click = TRUE,
         hover = FALSE,
+        brush = FALSE,
         items = FALSE
     )
 }

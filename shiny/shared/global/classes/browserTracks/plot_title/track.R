@@ -7,6 +7,7 @@ new_plot_titleTrack <- function() {
     list(
         click = FALSE,
         hover = FALSE,
+        brush = FALSE,
         items = FALSE
     )
 }

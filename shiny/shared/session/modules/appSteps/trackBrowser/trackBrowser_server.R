@@ -494,18 +494,29 @@ observeEvent(browser$click(), {
     d <- browser$click()
     # TODO: react to ctrl click via d$keys$ctrl, open track settings
     click(interactingTrack, d$coord$x, d$coord$y)
-}, ignoreInit = TRUE)
+})
 observeEvent(browser$hover(), {
     req(interactingTrack$hover)
     d <- browser$hover()
     hover(interactingTrack, d$coord$x, d$coord$y)
-}, ignoreInit = TRUE)
+})
 
-# transmit brush action to in-window zoom
+# transmit brush action to in-window zoom by default
 observeEvent(browser$brush(), {
-    d <- browser$brush()
-    jumpToCoordinates(input$chromosome, d$coord$x1, d$coord$x2)
-}, ignoreInit = TRUE)
+    d <- browser$brush()$coord   
+    brush <- interactingTrack$brush
+    if(is.null(brush) || !brush){
+        jumpToCoordinates(input$chromosome, d$x1, d$x2)
+    } else {
+        brush(
+            interactingTrack, 
+            x1 = min(d$x1, d$x2), 
+            y1 = min(d$y1, d$y2), 
+            x2 = max(d$x1, d$x2), 
+            y2 = max(d$y1, d$y2)
+        )
+    }
+})
 
 #----------------------------------------------------------------------
 # navigation support functions
