@@ -5,7 +5,7 @@
 # constructor for the S3 class
 new___MODULE_NAME__Track <- function() {
     list( # whether the track type has `click`, `hover`, and/or `items` methods
-        click = TRUE,
+        click = FALSE,
         hover = FALSE,
         brush = FALSE,
         items = FALSE
