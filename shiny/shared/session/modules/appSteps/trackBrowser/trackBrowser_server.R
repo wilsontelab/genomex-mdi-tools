@@ -205,8 +205,6 @@ customTrackTypes <- if(is.null(options$customTrackTypes)) {
 sapply(standardTrackTypes, addTrackType, standardTracksFolder)
 sapply(customTrackTypes,   addTrackType, customTracksFolder)
 
-dstr(trackTypes)
-
 # initialize available tracks
 initTrackTypes <- observe({ 
     names <- names(trackTypes)
