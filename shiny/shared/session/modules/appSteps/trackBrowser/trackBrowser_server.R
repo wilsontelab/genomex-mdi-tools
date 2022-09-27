@@ -322,7 +322,7 @@ observeEvent({
             if(!(trackId %in% newTrackIds)) tracks[[trackId]] <- NULL
         removeUI(".trackDeleteTarget .browserTrack")
     } else isRankListInit <<- TRUE
-}, ignoreInit = TRUE)
+})
 
 #----------------------------------------------------------------------
 # browser-level tracks metadata

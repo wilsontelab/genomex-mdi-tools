@@ -6,17 +6,22 @@
 # MDI (as opposed to UCSC) track image assembly
 #----------------------------------------------------------------------
 mdiTrackImage <- function(layout, height, plotFn, ...){
-    image <- magick::image_graph( 
-        width = layout$width,
-        height = height * layout$dpi, # provided by track in inches
-        bg = "white", 
-        pointsize = layout$pointsize, 
+    # NB: do not use magick::image_graph; it is buggy, especially on Linux
+    pngFile <- tempfile("trackBrowser", fileext = ".png")
+    png(
+        filename = pngFile,
+        width = layout$width, 
+        height = height * layout$dpi, 
+        units = "px", 
+        pointsize = layout$pointsize,
+        bg = "white",  
         res = layout$dpi, 
-        clip = FALSE, 
-        antialias = TRUE 
+        type = "cairo"
     )
     plotFn(...)
     dev.off()
+    image <- magick::image_read(pngFile)
+    unlink(pngFile)
     image
 }
 setMdiTrackMai <- function(layout, padding, mai = NULL, mar = NULL){ # layout set by browser, mai or mar set by track
