@@ -4,11 +4,13 @@
 
 # constructor for the S3 class
 new___MODULE_NAME__Track <- function() {
-    list( # whether the track type has `click`, `hover`, and/or `items` methods
-        click = FALSE,
+    list(
+        click = FALSE, # whether the track type has `click`, `hover`, and/or `items` methods
         hover = FALSE,
         brush = FALSE,
-        items = FALSE
+        items = FALSE,
+        navigation = FALSE, # whether the track offers a custom, additional row of within-track navigation inputs
+        genome = FALSE # whether the track supports a whole genome view
     )
 }
 

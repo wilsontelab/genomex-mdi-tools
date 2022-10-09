@@ -36,6 +36,9 @@ build <- function(x, ...) {
 items <- function(x, ...) {
     UseMethod("items", x)
 }
+navigation <- function(x, ...) {
+    UseMethod("navigation", x)
+}
 padding <- function(x, ...) {
     UseMethod("padding", x)
 }

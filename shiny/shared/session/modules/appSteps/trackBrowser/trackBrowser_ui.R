@@ -140,15 +140,25 @@ trackBrowserUI <- function(id, options) {
             ),
 
             #----------------------------------------------------------------------
-            # the browser output image
+            # the browser output area, with additional track nav options
             #----------------------------------------------------------------------
             tags$div(
                 style = "display: inline-block;",
+
+                # additional within-track navigation options, e.g., scrolling through a stack
+                tags$div(
+                    id = ns("trackNavWrapper"),
+                    uiOutput(ns("trackNavs"))
+                ),
+
+                # initialization message
                 tags$p(
                     id = ns("initMessage"),
                     style = "padding: 15px;",
                     tags$strong("Please wait 2 seconds for the browser to initialize.")
                 ),
+
+                # the browser output image
                 mdiInteractivePlotUI(id = ns("image"))              
             )
         )

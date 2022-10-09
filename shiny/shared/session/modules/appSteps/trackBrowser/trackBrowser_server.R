@@ -194,16 +194,17 @@ trackOrder <- reactiveVal(nullTrackOrder)
 addTrackType <- function(trackType, tracksFolder){
     trackTypes[[trackType]] <<- file.path(tracksFolder, trackType, "settings.yml")
 }
-relPath <- "shiny/shared/global/classes/browserTracks"
+addTrackTypes <- function(dir, classPath){
+    tracksFolder <- file.path(dir, classPath)
+    trackTypes <- list.dirs(tracksFolder, full.names = FALSE, recursive = FALSE)
+    sapply(trackTypes, addTrackType, tracksFolder)
+}
+classPath <- "shiny/shared/global/classes/browserTracks"
 genomexDirs <- parseExternalSuiteDirs(suite)
-standardTracksFolder <- file.path(genomexDirs$suiteDir,    relPath)
-customTracksFolder   <- file.path(gitStatusData$suite$dir, relPath)
-standardTrackTypes <- list.dirs(standardTracksFolder, full.names = FALSE, recursive = FALSE)
-customTrackTypes <- if(is.null(options$customTrackTypes)) {
-    list.dirs(customTracksFolder, full.names = FALSE, recursive = FALSE)
-} else options$customTrackTypes   
-sapply(standardTrackTypes, addTrackType, standardTracksFolder)
-sapply(customTrackTypes,   addTrackType, customTracksFolder)
+addTrackTypes(genomexDirs$suiteDir, classPath)
+addTrackTypes(gitStatusData$suite$dir, classPath)
+classPath <- "classes/browserTracks"
+addTrackTypes(app$DIRECTORY, classPath)
 
 # initialize available tracks
 initTrackTypes <- observe({ 
@@ -270,16 +271,19 @@ observeEvent(input$addTrack, {
 }, ignoreInit = TRUE)
 
 # handle track addition from duplication of an existing track
-output$duplicateTrack <- renderUI({
-    trackIds <- plotTrackIds()
-    req(trackIds)
-    names(trackIds) <- sapply(trackIds, function(trackId){
+getTrackNames <- function(trackIds){
+    sapply(trackIds, function(trackId){
         track <- tracks[[trackId]]
         trackType <- track$type
         trackName <- track$track$settings$get("Track_Options", "Track_Name")
         if(!is.null(trackName) && trackName != "auto" && trackName != "") trackName
         else trackType
     })
+}
+output$duplicateTrack <- renderUI({
+    trackIds <- plotTrackIds()
+    req(trackIds)
+    names(trackIds) <- getTrackNames(trackIds)
     promptId <- duplicateTrackPromptId
     names(promptId) <- duplicateTrackPrompt
     selectInput(session$ns("duplicateTrackSelect"), NULL, choices = c(promptId, trackIds))
@@ -519,7 +523,7 @@ observeEvent(browser$brush(), {
 })
 
 #----------------------------------------------------------------------
-# navigation support functions
+# browser navigation support functions
 #----------------------------------------------------------------------
 jumpToCoordinates <- function(chromosome, start, end, strict = FALSE){ # arguments are strict coordinates
     start <- as.integer(start)
@@ -584,6 +588,45 @@ center <- function(x){
         strict = TRUE
     )
 }
+
+#----------------------------------------------------------------------
+# additional within-track navigation actions, e.g., scrolling through a stack
+#----------------------------------------------------------------------
+output$trackNavs <- renderUI({
+
+    # process track list
+    trackIds <- plotTrackIds()
+    nTracks <- length(trackIds)    
+    req(nTracks > 0)
+    trackNames <- getTrackNames(trackIds)
+    names(trackNames) <- trackIds
+
+    # extract any required navigation input rows
+    nNavs <- 0
+    navs <- lapply(trackIds, function(trackId) {
+        track <- tracks[[trackId]]$track
+        hasNav <- !is.null(track$navigation) && track$navigation
+        if(!hasNav) return(NULL)
+        nNavs <<- nNavs + 1
+        list(
+            ui = navigation(track$settings, session),
+            name = trackNames[[trackId]]
+        )
+    })
+
+    # if needed, populate the trackNav rows
+    if(nNavs == 0) NULL else lapply(navs, function(nav){
+        if(is.null(nav)) return(NULL)
+        tags$div(
+            style = "margin-bottom: 8px;",
+            tags$p(
+                style = "display: inline-block; margin: 30px 10px 0px 10px",
+                tags$strong(nav$name)
+            ),
+            nav$ui
+        )
+    })
+})
 
 #----------------------------------------------------------------------
 # define bookmarking actions
