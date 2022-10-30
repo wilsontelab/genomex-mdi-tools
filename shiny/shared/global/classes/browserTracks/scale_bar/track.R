@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------
 
 # constructor for the S3 class
-new_scale_barTrack <- function() {
+new_scale_barTrack <- function(trackId) {
     list(
         click = FALSE,
         hover = FALSE,
@@ -13,8 +13,8 @@ new_scale_barTrack <- function() {
 }
 
 # build method for the S3 class
-build.scale_barTrack <- function(settings, input, reference, coord, layout){
-    padding <- padding(settings, layout)
+build.scale_barTrack <- function(track, reference, coord, layout){
+    padding <- padding(track, layout)
     height <- 1.5 / layout$linesPerInch + padding$total
     ylim <- c(0, 1)
     mai <- NULL
@@ -28,7 +28,7 @@ build.scale_barTrack <- function(settings, input, reference, coord, layout){
         exponent <- 9
         while(10^exponent > coord$width - strw) exponent <- exponent - 1
         barWidth <- 10^exponent
-        unit <- parseUnit(scaleUnit(settings), barWidth)
+        unit <- parseUnit(scaleUnit(track), barWidth)
         lab <- paste(" ", barWidth / unit$multiplier, " ", unit$unit, "  ", sep = "")
         strw <- strwidth(lab) * 1.1
         text(coord$start + strw / 2, 0.5, lab)

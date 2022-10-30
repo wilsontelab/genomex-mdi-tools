@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------
 
 # constructor for the S3 class
-new_coordinate_axisTrack <- function() {
+new_coordinate_axisTrack <- function(trackId) {
     list(  
         click = TRUE,
         hover = FALSE,
@@ -13,13 +13,13 @@ new_coordinate_axisTrack <- function() {
 }
 
 # build method for the S3 class
-build.coordinate_axisTrack <- function(settings, input, reference, coord, layout){
-    padding <- padding(settings, layout)
+build.coordinate_axisTrack <- function(track, reference, coord, layout){
+    padding <- padding(track, layout)
     height <- 3.3 / layout$linesPerInch + padding$total
-    unit <- parseUnit(scaleUnit(settings), coord$end)
+    unit <- parseUnit(scaleUnit(track), coord$end)
     xlab <- paste0(reference$genome, " ", coord$chromosome, " (", unit$unit, ")")   
-    axis <- getBrowserTrackSetting(settings, "Plot_Options", "Axis_Orientation", default = "bottom")        
-    lwd <- lwd(settings)
+    axis <- getBrowserTrackSetting(track, "Plot_Options", "Axis_Orientation", default = "bottom")        
+    lwd <- lwd(track)
     xlim <- coord$range / unit$multiplier
     ylim <- c(0, 1)
     bty <- switch(axis, top = "7", bottom = "l", "n")

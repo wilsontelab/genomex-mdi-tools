@@ -51,23 +51,36 @@ coordinates.browserInput <- function(input){
     if(length(end)   == 0 || end   == "") end   <- as.integer(start) + 10000 
     start <- as.integer(start)
     end   <- as.integer(end)
+    getBrowserCoord(input$chromosome, start, end)
+}
+
+#----------------------------------------------------------------------
+# override browser input values and settings for tracks where adjustsWidth == TRUE
+#----------------------------------------------------------------------
+getBrowserCoord <- function(chrom, start, end){
     list(
-        chromosome = input$chromosome,
+        chromosome = chrom,
         start  = start, 
         end    = end,
         width  = end - start + 1,
         range  = c(start, end),
-        region = paste0(input$chromosome, ":", start, "-", end)
+        region = paste0(chrom, ":", start, "-", end)
     )
+}
+adjustLayoutWidth <- function(layout, plotWidth){
+    layout$plotWidth <- plotWidth / layout$dpi
+    layout$browserWidth <- layout$plotWidth + layout$mai$left + layout$mai$right
+    layout$width <- layout$browserWidth * layout$dpi
+    layout
 }
 
 #----------------------------------------------------------------------
 # convert track settings to graphic options
 # typically, give priority to user setting with fallback to track default
-# helper methods for the trackSettings S3 class
+# helper methods for the browserTrack S3 class
 #----------------------------------------------------------------------
-getBrowserTrackSetting <- function(settings, optionFamily, option, default = NULL){
-    user <- settings[[optionFamily]]()[[option]]$value # track developer must ensure option is offered
+getBrowserTrackSetting <- function(track, optionFamily, option, default = NULL){
+    user <- track$settings[[optionFamily]]()[[option]]$value # track developer must ensure option is offered
     if(is.null(user)) return(default)
     if(typeof(user) == "character"){
         user <- trimws(user)
@@ -77,23 +90,23 @@ getBrowserTrackSetting <- function(settings, optionFamily, option, default = NUL
 }
 
 # Track_Options options family
-padding.trackSettings <- function(settings, layout){
-    top    <- getInches(settings$get("Track_Options", "Top_Padding"),    layout$lengthUnit)
-    bottom <- getInches(settings$get("Track_Options", "Bottom_Padding"), layout$lengthUnit)
+padding.browserTrack <- function(track, layout){
+    top    <- getInches(track$settings$get("Track_Options", "Top_Padding"),    layout$lengthUnit)
+    bottom <- getInches(track$settings$get("Track_Options", "Bottom_Padding"), layout$lengthUnit)
     list(
         top = top,
         bottom = bottom,
         total = top + bottom
     )
 }
-height.trackSettings <- function(settings, default){
-    getBrowserTrackSetting(settings, "Track_Options", "Height", default)
+height.browserTrack <- function(track, default){
+    getBrowserTrackSetting(track, "Track_Options", "Height", default)
 }
-ylab.trackSettings <- function(settings, default = ""){
-    getBrowserTrackSetting(settings, "Track_Options", "Y_Axis_Label", default)
+ylab.browserTrack <- function(track, default = ""){
+    getBrowserTrackSetting(track, "Track_Options", "Y_Axis_Label", default)
 }
-ylim.trackSettings <- function(settings, y){
-    user <- getBrowserTrackSetting(settings, "Track_Options", "Y_Limits")
+ylim.browserTrack <- function(track, y){
+    user <- getBrowserTrackSetting(track, "Track_Options", "Y_Limits")
     if(is.null(user)) return(paddedRange(y))
     user <- gsub('\\s', '', user)
     user <- gsub('to', '-', user)
@@ -102,18 +115,18 @@ ylim.trackSettings <- function(settings, y){
     if(is.na(user[2])) user[2] <- -user[1]
     sort(user)
 }
-bty.trackSettings <- function(settings, default){
-    user <- getBrowserTrackSetting(settings, "Track_Options", "Bounding_Box")
+bty.browserTrack <- function(track, default){
+    user <- getBrowserTrackSetting(track, "Track_Options", "Bounding_Box")
     if(is.null(user)) return(default)
     if(user) "o" else "n"
 }
 
 # Plot_Options options family
-scaleUnit.trackSettings <- function(settings, default = "auto"){
-    getBrowserTrackSetting(settings, "Plot_Options", "Scale_Unit", default)
+scaleUnit.browserTrack <- function(track, default = "auto"){
+    getBrowserTrackSetting(track, "Plot_Options", "Scale_Unit", default)
 }
-typ.trackSettings <- function(settings, default){
-    user <- getBrowserTrackSetting(settings, "Plot_Options", "Plot_Type")
+typ.browserTrack <- function(track, default){
+    user <- getBrowserTrackSetting(track, "Plot_Options", "Plot_Type")
     if(is.null(user)) return(default)
     switch(
         user,
@@ -124,8 +137,8 @@ typ.trackSettings <- function(settings, default){
         # TODO: implement special handling of area, histogram, 
     )
 }
-pch.trackSettings <- function(settings, default){
-    user <- getBrowserTrackSetting(settings, "Plot_Options", "Point_Symbol")
+pch.browserTrack <- function(track, default){
+    user <- getBrowserTrackSetting(track, "Plot_Options", "Point_Symbol")
     if(is.null(user)) return(default)
     switch(
         user,
@@ -135,18 +148,18 @@ pch.trackSettings <- function(settings, default){
         "Filled Squares" = 15
     )
 }
-lwd.trackSettings <- function(settings, default){
-    user <- getBrowserTrackSetting(settings, "Plot_Options", "Line_Width")
+lwd.browserTrack <- function(track, default){
+    user <- getBrowserTrackSetting(track, "Plot_Options", "Line_Width")
     if(is.null(user)) return(default)
     user
 }
-cex.trackSettings <- function(settings, default){
-    user <- getBrowserTrackSetting(settings, "Plot_Options", "Point_Size")
+cex.browserTrack <- function(track, default){
+    user <- getBrowserTrackSetting(track, "Plot_Options", "Point_Size")
     if(is.null(user)) return(default)
     user
 }
-col.trackSettings <- function(settings, default){
-    user <- getBrowserTrackSetting(settings, "Plot_Options", "Color")
+col.browserTrack <- function(track, default){
+    user <- getBrowserTrackSetting(track, "Plot_Options", "Color")
     if(is.null(user)) return(default)
     CONSTANTS$plotlyColor[[user]]
 }
@@ -157,8 +170,8 @@ col.trackSettings <- function(settings, default){
 #----------------------------------------------------------------------
 
 # plot XY data tracks
-plotXY.trackSettings <- function(
-    settings,
+plotXY.browserTrack <- function(
+    track,
     input,
     x, 
     y, 
@@ -173,13 +186,13 @@ plotXY.trackSettings <- function(
     col  = NULL,
     ... # additional arguments passed to plot()
 ){
-    if(is.null(ylab)) ylab <- ylab(settings, "")
-    if(is.null(typ)) typ <- typ(settings, "p")
-    if(is.null(bty)) bty <- bty(settings, "n")
-    if(is.null(pch)) pch <- pch(settings, 16)
-    if(is.null(lwd)) lwd <- lwd(settings, 1)
-    if(is.null(cex)) cex <- cex(settings, 1)
-    if(is.null(col)) col <- col(settings, "black")
+    if(is.null(ylab)) ylab <- ylab(track, "")
+    if(is.null(typ))  typ  <-  typ(track, "p")
+    if(is.null(bty))  bty  <-  bty(track, "n")
+    if(is.null(pch))  pch  <-  pch(track, 16)
+    if(is.null(lwd))  lwd  <-  lwd(track, 1)
+    if(is.null(cex))  cex  <-  cex(track, 1)
+    if(is.null(col))  col  <-  col(track, "black")
     plot(
         x = x,
         y = y,

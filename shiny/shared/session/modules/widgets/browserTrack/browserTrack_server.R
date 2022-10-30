@@ -51,12 +51,13 @@ settings <- settingsServer(
     cssId, 
     templates = list(template), 
     size = size,
-    s3Class = c(trackClass, "trackSettings"),
+    s3Class = "trackSettings",
     ...
 )
 class(browserInput) <- append("browserInput", class(browserInput))
 constructor <- paste0("new_", trackClass)
-track <- get(constructor)()
+track <- get(constructor)(trackId)
+class(track) <- unique(append(c("browserTrack", trackClass), class(track)))
 
 # initialize the track list items, e.g., samples or UCSC tracks
 if(!is.null(track$items) && track$items) {
@@ -66,7 +67,7 @@ if(!is.null(track$items) && track$items) {
             genome = genome(),
             annotation = annotation()
         )
-        tryCatch({ items(settings, session, input, reference, track) }, error = function(e) print(e))
+        tryCatch({ items(track, session, input, reference) }, error = function(e) print(e))
     })
 }
 
@@ -74,9 +75,9 @@ if(!is.null(track$items) && track$items) {
 track$id   <- trackId
 track$type <- trackType
 track$settings <- settings
-track$input <- browserInput
-track$build <- function(reference, coord, layout) build(settings, browserInput, reference, coord, layout)
-class(track) <- unique(append(c(trackClass, "browserTrack"), class(track)))
+track$browser <- browserInput
+track$adjustWidth <- function(reference, coord, layout) adjustWidth(track, reference, coord, layout)
+track$build <- function(reference, coord, layout) build(track, reference, coord, layout)
 
 # update the track display name based on settings changes
 observeEvent(settings$Track_Options(), {

@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------
 
 # constructor for the S3 class
-new___MODULE_NAME__Track <- function() {
+new___MODULE_NAME__Track <- function(trackId) {
     list(
         click = FALSE, # whether the track type has `click`, `hover`, and/or `items` methods
         hover = FALSE,
@@ -15,14 +15,14 @@ new___MODULE_NAME__Track <- function() {
 }
 
 # build method for the S3 class; REQUIRED
-build.__MODULE_NAME__Track <- function(settings, input, reference, coord, layout){
+build.__MODULE_NAME__Track <- function(track, reference, coord, layout){
 
     # use `req()` to determine if track is ready for plotting
     # req(xyz)
 
     # use generic methods and any other custom code to determine the track's (dynamic) Y span
-    padding <- padding(settings, layout)
-    height <- height(settings, 0.25) + padding$total # or set a known, fixed height in inches
+    padding <- padding(track, layout)
+    height <- height(track, 0.25) + padding$total # or set a known, fixed height in inches
     ylim <- c(0, 1)
 
     # use the mdiTrackImage helper function to create the track image
@@ -59,9 +59,9 @@ brush.__MODULE_NAME__Track <- function(track, x1, y1, x2, y2){
 
 # method for the S3 class to show a relevant trackItemsDialog or trackSamplesDialog
 # used when a track can take a list of items to be plotted together and the item list icon is clicked
-items.__MODULE_NAME__Track <- function(settings, session, input, reference, track){
+items.__MODULE_NAME__Track <- function(track, session, input, reference){
     showTrackItemsDialog(
-        settings,
+        track$settings,
         session,
         title = "Select XYZ",
         itemTypePlural = "Items",

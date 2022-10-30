@@ -164,6 +164,7 @@ observeEvent(genome(), {
         if(isLoadingDefaultGenome) isLoadingDefaultGenome <- FALSE
         else annotationInput(NULL)            
         chromosomes(listCanonicalChromosomes(genome))
+        # dstr(chromosomes())
         freezeReactiveValue(input, "chromosome")
         updateSelectInput(session, "chromosome", choices = chromosomes(), selected = NULL)        
     }
@@ -413,6 +414,24 @@ createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for bot
     # adjust the label width for UCSC track behavior
     # TODO: only do this if there are UCSC tracks?
     layout <- adjustLayoutForUcsc(layout) 
+
+    # override browser coordinates and width if exactly 1 track has adjustsWidth = TRUE
+    adjustingTrackIds <- unlist(sapply(trackIds, function(trackId) {
+        x <- tracks[[trackId]]$track$adjustsWidth
+        if(is.null(x) || !x) character() else trackId
+    }))
+    req(length(adjustingTrackIds <= 1))
+    if(length(adjustingTrackIds) == 1){
+        tryCatch({
+            x <- tracks[[adjustingTrackIds]]$track$adjustWidth(reference, coord, layout)
+            coord <- x$coord
+            layout <- x$layout
+        }, error = function(e) {
+            print(e)
+            stopSpinner(session)
+            req(FALSE)
+        })
+    }
 
     # build all tracks using reactives
     builds <- lapply(trackIds, function(trackId) {

@@ -28,8 +28,14 @@ coordinates <- function(x, ...) {
 }
 
 #----------------------------------------------------------------------
-# helper methods for the trackSettings S3 class
+# helper methods for the browserTrack S3 class
 #----------------------------------------------------------------------
+delete <- function(x, ...) {
+    UseMethod("delete", x)
+} 
+adjustWidth <- function(x, ...) {
+    UseMethod("adjustWidth", x)
+}
 build <- function(x, ...) {
     UseMethod("build", x)
 }

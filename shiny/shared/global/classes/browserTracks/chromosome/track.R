@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------
 
 # constructor for the S3 class
-new_chromosomeTrack <- function() {
+new_chromosomeTrack <- function(trackId) {
     list(
         click = TRUE,
         hover = FALSE,
@@ -26,16 +26,16 @@ chromBandColors <- list(
     gpos100 = 'grey5',
     gvar    = 'grey5'
 ) 
-build.chromosomeTrack <- function(settings, input, reference, coord, layout){
+build.chromosomeTrack <- function(track, reference, coord, layout){
     req(reference$genome)
-    req(input$chromosome)
-    track <- settings$get("Plot_Options", "Feature_Track")
-    features <- if(track == "none") NULL else getChromosomeFeatures(reference$genome, track)
+    req(track$browser$chromosome)
+    featuresTrack <- track$settings$get("Plot_Options", "Feature_Track") # i.e., a UCSC track
+    features <- if(featuresTrack == "none") NULL else getChromosomeFeatures(reference$genome, featuresTrack)
     chroms <- listUcscChromosomes(reference$genome)
-    chromSize <- chroms[chromosome == input$chromosome, size]
-    padding <- padding(settings, layout)
-    height <- height(settings, 0.25) + padding$total
-    unit <- parseUnit(scaleUnit(settings), chromSize)
+    chromSize <- chroms[chromosome == track$browser$chromosome, size]
+    padding <- padding(track, layout)
+    height <- height(track, 0.25) + padding$total
+    unit <- parseUnit(scaleUnit(track), chromSize)
     ylim <- c(0, 1)
     mai <- NULL
     image <- mdiTrackImage(layout, height, function(...){
@@ -53,13 +53,13 @@ build.chromosomeTrack <- function(settings, input, reference, coord, layout){
 
         # major features
         if(!is.null(features)){
-            features <- features[chrom == input$chromosome]
+            features <- features[chrom == track$browser$chromosome]
             if(nrow(features) > 0) rect(
                 getX(features$chromStart), 
                 y1, 
                 getX(features$chromEnd), 
                 y2, 
-                col = if(track == "gap") "black" 
+                col = if(featuresTrack == "gap") "black" 
                       else sapply(features$gieStain, function(x) chromBandColors[[x]]), 
                 border = NA
             )

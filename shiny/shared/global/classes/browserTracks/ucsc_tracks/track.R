@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------
 
 # constructor for the S3 class
-new_ucsc_tracksTrack <- function() {
+new_ucsc_tracksTrack <- function(trackId) {
     list(
         click = FALSE,
         hover = FALSE,
@@ -13,17 +13,17 @@ new_ucsc_tracksTrack <- function() {
 }
 
 # build method for the S3 class
-build.ucsc_tracksTrack <- function(settings, input, reference, coord, layout){
-    items <- settings$items()
+build.ucsc_tracksTrack <- function(track, reference, coord, layout){
+    items <- track$settings$items()
     ucscTracks <- if(!is.null(items)) lapply(items, function(x) x$display) else list()
     image <- ucscTrackImage(reference, coord, layout, ucscTracks)
     list(image = image)
 }
 
 # method for the list icon = track multi-select
-items.ucsc_tracksTrack <- function(settings, session, input, reference, track){
+items.ucsc_tracksTrack <- function(track, session, input, reference){
     showTrackItemsDialog(
-        settings,
+        track$settings,
         session,
         title = "Select UCSC Tracks",
         itemTypePlural = "Tracks",

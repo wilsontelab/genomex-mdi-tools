@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------
 
 # constructor for the S3 class
-new_plot_titleTrack <- function() {
+new_plot_titleTrack <- function(trackId) {
     list(
         click = FALSE,
         hover = FALSE,
@@ -13,8 +13,8 @@ new_plot_titleTrack <- function() {
 }
 
 # build method for the S3 class
-build.plot_titleTrack <- function(settings, input, reference, coord, layout){
-    padding <- padding(settings, layout)
+build.plot_titleTrack <- function(track, reference, coord, layout){
+    padding <- padding(track, layout)
     height <- 2.2 / layout$linesPerInch + padding$total
     ylim <- c(0, 1)
     mai <- NULL
@@ -25,7 +25,7 @@ build.plot_titleTrack <- function(settings, input, reference, coord, layout){
             ylim = ylim,  ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i") 
         mtext(
-            settings$get("Track_Options", "Plot_Title"), 
+            track$settings$get("Track_Options", "Plot_Title"), 
             side = 3, 
             line = 0.5, 
             outer = FALSE, 
@@ -34,7 +34,7 @@ build.plot_titleTrack <- function(settings, input, reference, coord, layout){
             padj = NA, 
             cex = 1.2
         )
-        if(settings$get("Track_Options", "Show_Line"))
+        if(track$settings$get("Track_Options", "Show_Line"))
             lines(c(coord$start, coord$end), c(0, 0), col = "black", lwd = 2)
     })
     list(
