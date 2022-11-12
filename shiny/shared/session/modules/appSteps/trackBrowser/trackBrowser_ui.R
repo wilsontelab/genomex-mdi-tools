@@ -38,8 +38,7 @@ trackBrowserUI <- function(id, options) {
         # top row of browser-level options and navigation
         #----------------------------------------------------------------------
         tags$div(
-
-            # TODO: could genome and annotation to settings?
+            style = "white-space: nowrap;",
             tags$div(
                 class = "trackBrowserInput ucscInput genomeInput",
                 popupInputUI(ns('genome'), "Genome")
@@ -59,6 +58,11 @@ trackBrowserUI <- function(id, options) {
             tags$div(
                 class = "trackBrowserInput",
                 textInput(ns('end'), "End", value = 10000),
+            ),
+            tags$div(
+                class = "trackBrowserInput",
+                style = "margin: 32px 5px 0px 4px",
+                actionLink(ns('all'), "all"),
             ),
             tags$div(
                 class = "trackBrowserInput",

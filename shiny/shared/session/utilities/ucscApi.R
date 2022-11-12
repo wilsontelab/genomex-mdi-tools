@@ -251,6 +251,24 @@ getChromosomeFeatures <- function(genome, track = c("cytoBand", "gap")){
         )
     }, error = function(e) NULL)
 }
+getChromosomeSizes <- function(genome){
+    chroms <- listCanonicalChromosomes(genome)
+    sizes <- listUcscChromosomes(genome)[, .(chromosome, size)]
+    sizes <- sapply(chroms, function(chrom) sizes[chromosome == chrom, size])
+    ends <- cumsum(as.numeric(sizes))
+    starts <- c(1, ends - 1)[1:length(ends)]
+    data.table(
+        chrom = "all",
+        chromStart = starts,
+        chromEnd = ends,
+        name = chroms,
+        gieStain = rep(c("odd", "even"), 50)[1:length(chroms)]
+    )   
+}
+getGenomeSize <- function(genome){
+    chroms <- listCanonicalChromosomes(genome)
+    listUcscChromosomes(genome)[chromosome %in% chroms, sum(size)]
+}
 
 # list schema from specified track in UCSC database genome -
 # api.genome.ucsc.edu/list/schema?genome=hg38;track=wgEncodeGencodeBasicV41

@@ -24,15 +24,23 @@ chromBandColors <- list(
     gpos66  = 'grey33',
     gpos75  = 'grey25',
     gpos100 = 'grey5',
-    gvar    = 'grey5'
+    gvar    = 'grey5',
+    even    = 'grey50',
+    odd     = 'grey80'
 ) 
 build.chromosomeTrack <- function(track, reference, coord, layout){
     req(reference$genome)
     req(track$browser$chromosome)
     featuresTrack <- track$settings$get("Plot_Options", "Feature_Track") # i.e., a UCSC track
-    features <- if(featuresTrack == "none") NULL else getChromosomeFeatures(reference$genome, featuresTrack)
-    chroms <- listUcscChromosomes(reference$genome)
-    chromSize <- chroms[chromosome == track$browser$chromosome, size]
+    features <- if(coord$chromosome == "all") getChromosomeSizes(reference$genome)
+                else if(featuresTrack == "none") NULL 
+                else getChromosomeFeatures(reference$genome, featuresTrack)
+    if(coord$chromosome == "all"){
+        chromSize <- features[, max(chromEnd)]
+    } else {
+        chroms <- listUcscChromosomes(reference$genome)
+        chromSize <- chroms[chromosome == track$browser$chromosome, size]        
+    }
     padding <- padding(track, layout)
     height <- height(track, 0.25) + padding$total
     unit <- parseUnit(scaleUnit(track), chromSize)
@@ -53,7 +61,7 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
 
         # major features
         if(!is.null(features)){
-            features <- features[chrom == track$browser$chromosome]
+            features <- features[chrom == coord$chromosome]
             if(nrow(features) > 0) rect(
                 getX(features$chromStart), 
                 y1, 

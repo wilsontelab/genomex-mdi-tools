@@ -5,7 +5,7 @@
 #----------------------------------------------------------------------
 # MDI (as opposed to UCSC) track image assembly
 #----------------------------------------------------------------------
-mdiTrackImage <- function(layout, height, plotFn, ...){
+mdiTrackImage <- function(layout, height, plotFn, ...){ # for track that generate plots
     # NB: do not use magick::image_graph; it is buggy, especially on Linux
     pngFile <- tempfile("trackBrowser", fileext = ".png")
     png(
@@ -37,6 +37,31 @@ setMdiTrackMai <- function(layout, padding, mai = NULL, mar = NULL){ # layout se
     )
     par(mai = mai)
     mai
+}
+pngToMdiTrackImage <- function( # for tracks that generate images, not plots
+    pngFile, 
+    layout, 
+    verticalPadding = 0L, # in pixels
+    hasLeft  = FALSE, # set to TRUE if pngFile already has a region for left or right margin labels
+    hasRight = FALSE
+){
+    image <- magick::image_read(pngFile)
+    info  <- magick::image_info(image)
+    heightOut <- info$height + 2 * verticalPadding
+    missingLeftPixels <- if(hasLeft) 0 else layout$mai$left * layout$dpi
+    image <- magick::image_extent( # add space for the right legend region and top and bottom padding
+        image, 
+        geometry = paste0(layout$width - missingLeftPixels, "x", heightOut), 
+        gravity = "West", 
+        color = "white"
+    )
+    if(!hasLeft) image <- magick::image_extent( # add space for the right legend region and top and bottom padding
+        image, 
+        geometry = paste0(layout$width, "x", heightOut), 
+        gravity = "East", 
+        color = "white"
+    )
+    image
 }
 
 #----------------------------------------------------------------------

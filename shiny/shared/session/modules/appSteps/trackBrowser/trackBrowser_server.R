@@ -163,8 +163,7 @@ observeEvent(genome(), {
     } else {
         if(isLoadingDefaultGenome) isLoadingDefaultGenome <- FALSE
         else annotationInput(NULL)            
-        chromosomes(listCanonicalChromosomes(genome))
-        # dstr(chromosomes())
+        chromosomes(c(listCanonicalChromosomes(genome), "all"))
         freezeReactiveValue(input, "chromosome")
         updateSelectInput(session, "chromosome", choices = chromosomes(), selected = NULL)        
     }
@@ -174,7 +173,8 @@ chromosomeSize <- reactive({
     req(genome)
     chrom <- input$chromosome
     req(chrom)
-    listUcscChromosomes(genome)[chromosome == chrom, size]
+    if(chrom == "all") getGenomeSize(genome)
+    else listUcscChromosomes(genome)[chromosome == chrom, size]
 })
 
 #----------------------------------------------------------------------
@@ -597,6 +597,10 @@ observeEvent(input$moveLeft,   { doMove(1,    -1) }, ignoreInit = TRUE)
 observeEvent(input$nudgeLeft,  { doMove(0.05, -1) }, ignoreInit = TRUE)
 observeEvent(input$nudgeRight, { doMove(0.05,  1) }, ignoreInit = TRUE)
 observeEvent(input$moveRight,  { doMove(1,     1) }, ignoreInit = TRUE)
+observeEvent(input$all,        { 
+    jumpToCoordinates(input$chromosome, 1, 1e9, strict = TRUE) }, 
+    ignoreInit = TRUE
+)
 center <- function(x){
     coord <- coordinates(input)
     halfWidth <- coord$width / 2
@@ -628,7 +632,7 @@ output$trackNavs <- renderUI({
         if(!hasNav) return(NULL)
         nNavs <<- nNavs + 1
         list(
-            ui = navigation(track$settings, session),
+            ui = navigation(track, session),
             name = trackNames[[trackId]]
         )
     })

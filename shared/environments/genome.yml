@@ -1,6 +1,6 @@
 ---
 # programs used to extract alignments/spans and compare them to the genome
-# versions current as of January 2022
+# versions current as of November 2022
 dependencies:
-    - samtools=1.14
+    - samtools=1.16.1 # seems to resolve the ncurses incompatibility...
     - bedtools=2.30.0
