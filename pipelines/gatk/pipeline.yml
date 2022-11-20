@@ -1,0 +1,47 @@
+---
+pipeline:
+    name: gatk
+    description: "simple wrapper around the Genome Analysis Toolkit"
+    version: v0.0.1
+actions: 
+    do:
+        order: 1
+        description: "execute a single GATK command"
+        environment: gatk4
+        condaFamilies: 
+            - base
+            - gatk  
+        optionFamilies: 
+            - gatk
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 4
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 2:00:00
+optionFamilies:
+    gatk:
+        options:
+            command: 
+                order: 1
+                short: C
+                type: string
+                required: true
+                default: null
+                description: "the GATK4 command to execute"   
+            arguments: 
+                order: 2
+                short: A
+                type: string
+                required: false
+                default: --help
+                literal: true # prevent the space-delimited list from being split into an array
+                description: "a quoted list of arguments to pass to --command"   
+# container:
+#     supported: true        # set to true if you maintain a container registry for this pipeline [false]
+#     registry:  ghcr.io     # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+#     owner:     wilsontelab # REQUIRED: the name of the owner, e.g., user or organization, at 'registry'
+#     installer: apt-get     # the installer program used by the container OS, typically apt-get or yum [apt-get]

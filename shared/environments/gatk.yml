@@ -1,0 +1,5 @@
+---
+# programs used to install the open-source Genome Analysis Toolkit (GATK)
+# versions current as of November 2022
+dependencies:
+    - gatk4=4.3.0.0
