@@ -23,6 +23,6 @@ checkPipe
 # report our results
 echo
 echo $GENOME_DIR
-tree $GENOME_DIR
+# tree $GENOME_DIR
 
 finishWorkflowStep

@@ -20,10 +20,11 @@ $INTERSECT -wao -b <(zcat ../../../metadata/$GENOME/ENCODE/$GENOME-blacklist.v2.
 $GROUP_BY -g 1,2,3,4,5,6,7,8 -c 12 -o sum |
 
 # add umap mappability score
-$INTERSECT -loj -b <(zcat $GENOME.umap.size_$BIN_SIZE.k_$KMER_LENGTH.bed.gz) |
-cut -f 1-9,14 | # no need to group, mappability and GC windows are both desired bin spans at this point
+# no longer supported; we now just add a value of 1 to every bin
+awk 'BEGIN{OFS="\t"}{print $0, 1}' |
 
 # add genmap mappability score
+# no need to group, mappability and GC windows are both desired bin spans at this point
 $INTERSECT -loj -b <(zcat $GENOME.genmap.size_$BIN_SIZE.k_$KMER_LENGTH.e_$N_ERRORS.bed.gz) |
 cut -f 1-10,15 | 
 

@@ -1,0 +1,79 @@
+---
+pipeline:
+    name: pemap
+    description: "run the pemap utility to create a genome mappability profile"
+    version: v0.0.1
+actions: 
+    _global:   
+        # environment: environmentName
+        condaFamilies: 
+            - base
+            - r-4.2             
+            - bwa
+            - genome
+        optionFamilies:
+            - genome
+            - pemap  
+    align:
+        order: 1
+        description: "create a base-level mappability profile for a combination of read length and MAPQ"      
+        resources:
+            required:
+                total-ram: 32G
+            recommended: 
+                n-cpu: 16
+                ram-per-cpu: 2G
+        job-manager:
+            recommended:
+                time-limit: 48:00:00  
+    bin:
+        order: 2
+        description: "condense a base-level mappability profile into fixed-width genome bins"
+        optionFamilies: 
+            - bin      
+        resources:
+            required:
+                total-ram: 4G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 1:00:00  
+optionFamilies:
+    output:
+        options:
+            output-dir:
+                description: "must be set as --genomes-dir/pemap" 
+            data-name:
+                description: "must be set as UCSC format genome identifier, e.g., hg38"   
+    pemap:
+        options:
+            read-length: 
+                order: 1
+                short: L
+                type: integer
+                required: false
+                default: 150
+                description: "paired-end read length used to calculate mappability"
+            min-mapq:
+                order: 2
+                short: Q
+                type: integer
+                required: false
+                default: 40
+                description: "reject read alignments with lower than this MAPQ"
+    bin:
+        options:
+            bin-size: 
+                order: 1
+                short: z
+                type: integer
+                required: false
+                default: 20000
+                description: "initial (smallest possible) bin size in bp, before any later bin merging" 
+container:
+#     supported: true        # set to true if you maintain a container registry for this pipeline [false]
+#     registry:  ghcr.io     # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+#     owner:     wilsontelab # REQUIRED: the name of the owner, e.g., user or organization, at 'registry'
+#     installer: # apt-get     # the installer program used by the container OS, typically apt-get or yum [apt-get]

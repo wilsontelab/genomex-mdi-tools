@@ -27,10 +27,6 @@ optionFamilies:
         data-name:  bosTau8
 ```
 
-UMAP files specify a k-mer length, either 24, 36, 50, or 100. This is not 
-exposed as an option and the tool will download all four files, one per k-mer
-length.
-
 ### Metadata file sources
 
 File 'gap.txt.gz' is a UCSC file that lists the known gap
@@ -51,7 +47,6 @@ masked and ignored.
 - <https://pubmed.ncbi.nlm.nih.gov/31249361/>
 - <https://github.com/Boyle-Lab/Blacklist/>
 
-File 'kKMER_LENGTH.umap.bedgraph.gz' is a Umap multi-read
-mappability file, used during normalization. 
-
-- <https://bismap.hoffmanlab.org/>
+Please note that as of this version of genomex-mdi-tools/download/metadata
+and beyond, umap mappability files are no longer supported. See further
+notes in genomex-mdi-tools/prepareBins.

@@ -30,6 +30,12 @@ sub loadFaidx {
     close $inH;
 }
 
+# get chromosome lengths
+sub getChromLength {
+    my ($chrom) = @_;
+    return $faidx{$chrom}[FAIDX_LENGTH];
+}
+
 # get a specified chunk of a single chromosome and rc if requested
 sub getRefSeq { 
     my ($chrom, $pos1, $pos2, $rc) = @_;

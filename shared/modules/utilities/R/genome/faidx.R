@@ -26,6 +26,9 @@ loadFaidx <- function(){
         chromFile       
     })
 }
+getChromLength <- function(chrom) {
+    genome_index[genome_index$chrom == chrom, , drop = FALSE]$length
+}
 #=====================================================================================
 
 #=====================================================================================

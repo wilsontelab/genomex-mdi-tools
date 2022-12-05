@@ -8,7 +8,6 @@ checkPipe
 cd $GENOME_METADATA_DIR
 mkdir -p UCSC
 mkdir -p ENCODE
-mkdir -p umap
 
 echo "attempting to download metadata files one at a time"
 
@@ -34,12 +33,6 @@ wgetFile UCSC $GENOME.gc5Base.wigVarStep.gz http://hgdownload.cse.ucsc.edu/golde
 
 # bad genome regions
 wgetFile ENCODE $GENOME-blacklist.v2.bed.gz https://github.com/Boyle-Lab/Blacklist/raw/master/lists
-
-# umap mappability
-KMER_LENGTHS="50 100" # 24 36 also available, larger files, rarely used
-for KMER_LENGTH in $KMER_LENGTHS; do
-    wgetFile umap k$KMER_LENGTH.umap.bedgraph.gz https://bismap.hoffmanlab.org/raw/$GENOME --no-check-certificate
-done
 
 echo
 echo "done"

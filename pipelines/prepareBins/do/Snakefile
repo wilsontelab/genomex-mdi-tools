@@ -49,20 +49,6 @@ rule collapse_gc5base:
     shell:
         "slurp zcat {input} | perl {params.ACTION_DIR}/parse_gc5base.pl | gzip -c > {output}"
 
-# aggregate umap mappability per $BIN_SIZE bp bins
-rule collapse_umap:
-    message: "aggregating umap mappability into genomic bins"
-    params:
-        ACTION_DIR = os.environ["ACTION_DIR"]
-    threads: 1
-    input:
-        gaps = "{genome}.gap.bed.gz",  
-        mappability = "../../../metadata/{genome}/umap/k{kmerLength}.umap.bedgraph.gz"
-    output:
-        "{genome}.umap.size_{binSize}.k_{kmerLength}.bed.gz"
-    shell:
-        "slurp zcat {input.mappability} | bash {params.ACTION_DIR}/parse_mappability.sh > {output}"
-
 # aggregate genmap mappability per $BIN_SIZE bp bins
 rule collapse_genmap:
     message: "aggregating genmap mappability into genomic bins"
@@ -87,7 +73,6 @@ rule make_bins:
         gaps = "{genome}.gap.bed.gz",
         bad_regions = "../../../metadata/{genome}/ENCODE/{genome}-blacklist.v2.bed.gz",
         exclusions = "{genome}.gap+bad_regions.bed.gz",
-        umap = "{genome}.umap.size_{binSize}.k_{kmerLength}.bed.gz",
         genmap = "{genome}.genmap.size_{binSize}.k_{kmerLength}.e_{nErrors}.bed.gz"
     output:
         "{genome}.bins.size_{binSize}.k_{kmerLength}.e_{nErrors}.bed.gz"
