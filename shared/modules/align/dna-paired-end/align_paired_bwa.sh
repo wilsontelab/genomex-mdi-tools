@@ -63,6 +63,13 @@ if [[ "$ADAPTER_SEQUENCE" != "NA" && "$ADAPTER_SEQUENCE" != "null" && "$ADAPTER_
 else
     ADAPTER_SEQUENCE=""
 fi
+
+# if requested, align paired-end reads as two single reads, i.e., without aligner pairing
+if [ "$SUPPRESS_SMART_PAIRING" = "" ]; then
+    SMART_PAIRING="-p"
+else
+    SMART_PAIRING=""
+fi
     
 #------------------------------------------------------------------
 # process reads and align to genome
@@ -86,7 +93,7 @@ fastp \
 perl $SHARED_MODULE_DIR/adjust_merge_tags.pl |
 
 # align to genome using BWA; soft-clip supplementary
-bwa mem -p -Y -t $N_CPU $BWA_GENOME_FASTA - 2>$BWA_LOG_FILE |
+bwa mem $SMART_PAIRING -Y -t $N_CPU $BWA_GENOME_FASTA - 2>$BWA_LOG_FILE |
 
 # convert to bam/cram and add mate information while still name sorted
 samtools fixmate -@ $N_CPU -m $CRAM_OUTPUT_OPTIONS - - |
