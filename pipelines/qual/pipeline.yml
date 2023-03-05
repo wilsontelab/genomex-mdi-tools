@@ -1,0 +1,55 @@
+---
+pipeline:
+    name: qual
+    description: "pre-scan FASTQ files to summarize their read QUAL distributions"
+    version: v0.0.1
+actions:  
+    _global:       
+        condaFamilies:
+            - base
+            - r-4.2                       
+    do:
+        order: 1
+        thread: do
+        optionFamilies:
+            - fastq-input
+            - quality-scanning
+        resources:
+            required:
+                total-ram: 4G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 1:00:00
+        description: "perform the FASTQ file QUAL scan"  
+optionFamilies:
+    quality-scanning:
+        options:
+            n-reads: 
+                order: 1
+                short: X
+                type: integer
+                required: false
+                default: 1000000
+                description: "number of reads to scan, distributed equally among all FASTQ files"          
+            n-terminal-bases: 
+                order: 2
+                short: B
+                type: integer
+                required: false
+                default: 30
+                description: "number of bases to assess at the starts and ends of reads"
+package:
+    do: # the pipeline action after which a data package should assembled
+        uploadType: genomex-qual # a signal to the Stage 2 framework regarding the package contents
+        files:
+            qualPlots:
+                type: png
+                file: $PLOT_PREFIX.qual-plots.png
+container:
+    supported: false       # set to true if you maintain a container registry for this pipeline [false]
+    registry:  ghcr.io     # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+    owner:     wilsontelab # REQUIRED: the name of the owner, e.g., user or organization, at 'registry'
+    installer: apt-get     # the installer program used by the container OS, typically apt-get or yum [apt-get]

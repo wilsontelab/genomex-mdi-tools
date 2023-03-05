@@ -11,8 +11,9 @@ use warnings;
 my $SUPPRESS_SMART_PAIRING = $ENV{SUPPRESS_SMART_PAIRING};
 my $prevName = "";
 
+my $lineN = 0;
 while(my $line = <STDIN>){
-    if($line =~ m/^\@/){
+    unless($lineN % 4){
         my @f = split(" ", $line);
 
         # single-read alignment, QNAME = readPairN:umi1:umi2:mergeLevel:readN
@@ -26,4 +27,5 @@ while(my $line = <STDIN>){
         }  
     }
     print $line;
+    $lineN++;
 }

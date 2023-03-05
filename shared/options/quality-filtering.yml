@@ -1,0 +1,24 @@
+---
+# options used to filter reads based on average QUAL scores
+options:
+    n-terminal-bases: 
+        order: 1
+        short: B
+        type: integer
+        required: false
+        default: 30
+        description: "number of bases to assess at the starts and ends of reads"    
+    min-qual: 
+        order: 2
+        short: Q
+        type: string
+        required: false
+        default: 0:0:0
+        description: "min allowed read QUAL as avg(QUAL):avg(substr(QUAL,0,T)):avg(substr(QUAL,-T))"   
+    max-homopolymer:
+        order: 3
+        short: H
+        type: integer
+        required: false
+        default: 0
+        description: "reject read-pairs with any homopolymer run more than -H bases (0 to disable)"  

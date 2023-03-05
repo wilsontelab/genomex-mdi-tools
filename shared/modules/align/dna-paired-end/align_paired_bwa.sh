@@ -11,6 +11,9 @@
 #     $USE_CRAM         [default: creates .bam file]
 #     $UMI_FILE         [default: no UMIs]
 #     $UMI_SKIP_BASES
+#     $MIN_QUAL         [default: no quality filtering]
+#     $N_TERMINAL_BASES 
+
 # input:
 #     if FASTQ files are found (.fastq.gz) they are used
 #     otherwise searches for SRA (.sra) files that are converted to FASTQ in a stream
@@ -70,12 +73,12 @@ if [ "$SUPPRESS_SMART_PAIRING" = "" ]; then
 else
     SMART_PAIRING=""
 fi
-    
+
 #------------------------------------------------------------------
 # process reads and align to genome
 #------------------------------------------------------------------
 
-# pull reads from various source types to a consistent interleaved format
+# pull quality reads from various source types to a consistent interleaved format
 perl $SHARED_MODULE_DIR/prepare_fastq.pl |
 
 # use fastp for one-pass adapter trimming, read merging and quality filtering
@@ -87,13 +90,13 @@ fastp \
 --length_required $MIN_INSERT_SIZE $ADAPTER_SEQUENCE \
 --merge --include_unmerged --correction \
 --html $FASTP_LOG_PREFIX.html --json $FASTP_LOG_PREFIX.json \
---report_title \"$DATA_NAME\" 2>/dev/null |
+--report_title \"$DATA_NAME\" 2>/dev/null | 
 
 # tweak the way read pair merge status is reported in QNAME line
 perl $SHARED_MODULE_DIR/adjust_merge_tags.pl |
 
 # align to genome using BWA; soft-clip supplementary
-bwa mem $SMART_PAIRING -Y -t $N_CPU $BWA_GENOME_FASTA - 2>$BWA_LOG_FILE |
+bwa mem $SMART_PAIRING -Y -t $N_CPU $BWA_GENOME_FASTA 2>$BWA_LOG_FILE - |
 
 # convert to bam/cram and add mate information while still name sorted
 samtools fixmate -@ $N_CPU -m $CRAM_OUTPUT_OPTIONS - - |

@@ -4,7 +4,8 @@ use warnings;
 # action:
 #     prepare interleaved FASTQ from different input types, including SRA files
 #     extract UMI sequences and skip base(s) in preparation for read-pair alignment to genome
-#     if UMIs not in use, append dummy UMI index of 1 for all read in all pairs
+#         if UMIs not in use, append dummy UMI index of 1 for all read in all pairs
+#     apply read quality filtering as requested (any failed read fails both reads of the pair)
 # expects:
 #     source $MODULES_DIR/source/set_read_file_vars.sh (sets FASTQ_FILE1, FASTQ_FILE2, SRA_FILES)
 #     input as either paired fastq.gz files or a set of .sra files
@@ -12,20 +13,23 @@ use warnings;
 # initialize reporting
 our $action  = "prepare_fastq";
 my ($nInputPairs, $nOutputPairs, $nInputReads,
-    $nUmisExpected, $nUmisInferred, $nUmisFailed) = (0) x 10;
+    $nUmisExpected, $nUmisInferred, $nUmisFailed, $nQualFailed) = (0) x 10;
 
 # load dependencies
 my $perlUtilDir = "$ENV{SHARED_MODULES_DIR}/utilities/perl";
 map { require "$perlUtilDir/$_.pl" } qw(workflow);
-map { require "$perlUtilDir/sequence/$_.pl" } qw(umi);
+map { require "$perlUtilDir/sequence/$_.pl" } qw(general umi);
 resetCountFile();
 
 # environment variables
-fillEnvVar(\my $FASTQ_FILE1,    'FASTQ_FILE1');
-fillEnvVar(\my $FASTQ_FILE2,    'FASTQ_FILE2');
-fillEnvVar(\my $SRA_FILES,      'SRA_FILES');
-fillEnvVar(\my $UMI_FILE,       'UMI_FILE',       1, "");
-fillEnvVar(\my $UMI_SKIP_BASES, 'UMI_SKIP_BASES', 1, 1); # the single-base A addition used in library prep/1-base primer tail
+fillEnvVar(\my $FASTQ_FILE1,        'FASTQ_FILE1');
+fillEnvVar(\my $FASTQ_FILE2,        'FASTQ_FILE2');
+fillEnvVar(\my $SRA_FILES,          'SRA_FILES');
+fillEnvVar(\my $UMI_FILE,           'UMI_FILE',       1, "");
+fillEnvVar(\my $UMI_SKIP_BASES,     'UMI_SKIP_BASES', 1, 1); # the single-base A addition used in library prep/1-base primer tail
+fillEnvVar(\my $MIN_QUAL,           'MIN_QUAL', 1, "NA");
+fillEnvVar(\my $N_TERMINAL_BASES,   'N_TERMINAL_BASES', 1, 30);
+fillEnvVar(\my $MAX_HOMOPOLYMER,    'MAX_HOMOPOLYMER', 1, 0);
 
 # constants
 use constant {
@@ -38,6 +42,15 @@ use constant {
 my $seqRegex = loadFixedUmis($UMI_FILE, $UMI_SKIP_BASES);
 my $isFixedUmi = $seqRegex ? 1 : 0;
 use vars qw(%expectedUmis %allowedUmis);
+
+# prepare for quality filtering
+my ($areQualFiltering, $MIN_QUAL_READ, $MIN_QUAL_FIRST, $MIN_QUAL_LAST) = (0, 0, 0, 0);
+if($MIN_QUAL and $MIN_QUAL ne "NA"){
+    ($MIN_QUAL_READ, $MIN_QUAL_FIRST, $MIN_QUAL_LAST) = split(":", $MIN_QUAL);
+    $areQualFiltering = ($MIN_QUAL_READ || $MIN_QUAL_FIRST || $MIN_QUAL_LAST);
+}
+my $BAD_HOMOPOLYMER = $MAX_HOMOPOLYMER + 1;
+my $homopolymer = qr/([A,N]{$BAD_HOMOPOLYMER}|[C,N]{$BAD_HOMOPOLYMER}|[G,N]{$BAD_HOMOPOLYMER}|[T,N]{$BAD_HOMOPOLYMER})/;
 
 # set the file input handles
 if($FASTQ_FILE1){
@@ -71,6 +84,10 @@ sub runReadPairs {
 }
 
 # parse a FASTQ set of 4 lines
+sub failReadQuality {
+    $nQualFailed++;
+    return [];
+}
 sub getRead {
     my ($inH) = @_;
 
@@ -106,15 +123,30 @@ sub getRead {
         chomp $qual;        
         $umi = 1; # use dummy UMI values when UMIs not present; seq and qual passed as is
     }
+
+    # apply qual filtering upstream of alignment and merging
+    # use with discretion, these are computationally more costly
+    if($areQualFiltering){
+        !$MIN_QUAL_READ  or getAvgQual($qual) >= $MIN_QUAL_READ  or return failReadQuality();
+        !$MIN_QUAL_FIRST or getAvgQual(substr($qual, 0, $N_TERMINAL_BASES)) >= $MIN_QUAL_FIRST or return failReadQuality();
+        !$MIN_QUAL_LAST  or getAvgQual(substr($qual,   -$N_TERMINAL_BASES)) >= $MIN_QUAL_LAST  or return failReadQuality(); # fast, usually sufficient
+    }
+    if($MAX_HOMOPOLYMER){
+        $seq =~ m/$homopolymer/;
+        $1 and return failReadQuality();
+    }
     return [$seq, $qual, $umi]; # $name[0]
 }
 
 # print summary information
+printCount($nInputReads,   'nInputReads',   'input reads');
 printCount($nInputPairs,   'nInputPairs',   'input read pairs');
 if($isFixedUmi){
-    printCount($nOutputPairs,  'nOutputPairs',  'output read pairs');
-    printCount($nInputReads,   'nInputReads',   'input reads');
     printCount($nUmisExpected, 'nUmisExpected', 'reads matched an expected UMI exactly');
     printCount($nUmisInferred, 'nUmisInferred', 'reads had a 1 base mismatch from an expected UMI');
-    printCount($nUmisFailed,   'nUmisFailed',   'reads failed UMI lookup');
+    printCount($nUmisFailed,   'nUmisFailed',   'reads failed UMI lookup');    
 }
+if($areQualFiltering or $MAX_HOMOPOLYMER){
+    printCount($nQualFailed,   'nQualFailed',   'reads failed one or more quality filters');
+}
+printCount($nOutputPairs,  'nOutputPairs',  'output read pairs');
