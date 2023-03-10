@@ -6,9 +6,13 @@ use warnings;
 #     extract UMI sequences and skip base(s) in preparation for read-pair alignment to genome
 #         if UMIs not in use, append dummy UMI index of 1 for all read in all pairs
 #     apply read quality filtering as requested (any failed read fails both reads of the pair)
+#     if requested, write a tabix-indexed version of all output FASTQ data for retrieval by readN
 # expects:
 #     source $MODULES_DIR/source/set_read_file_vars.sh (sets FASTQ_FILE1, FASTQ_FILE2, SRA_FILES)
 #     input as either paired fastq.gz files or a set of .sra files
+# output: 
+#     interleaved FASTQ on stdout
+#     if requested, the tabix-indexed file of the output,i.e., filtered, FASTQ data
 
 # initialize reporting
 our $action  = "prepare_fastq";
@@ -30,6 +34,8 @@ fillEnvVar(\my $UMI_SKIP_BASES,     'UMI_SKIP_BASES', 1, 1); # the single-base A
 fillEnvVar(\my $MIN_QUAL,           'MIN_QUAL', 1, "NA");
 fillEnvVar(\my $N_TERMINAL_BASES,   'N_TERMINAL_BASES', 1, 30);
 fillEnvVar(\my $MAX_HOMOPOLYMER,    'MAX_HOMOPOLYMER', 1, 0);
+fillEnvVar(\my $CREATE_FASTQ_INDEX, 'CREATE_FASTQ_INDEX', 1, 0);
+fillEnvVar(\my $DATA_FILE_PREFIX,   'DATA_FILE_PREFIX');
 
 # constants
 use constant {
@@ -51,6 +57,13 @@ if($MIN_QUAL and $MIN_QUAL ne "NA"){
 }
 my $BAD_HOMOPOLYMER = $MAX_HOMOPOLYMER + 1;
 my $homopolymer = qr/([A,N]{$BAD_HOMOPOLYMER}|[C,N]{$BAD_HOMOPOLYMER}|[G,N]{$BAD_HOMOPOLYMER}|[T,N]{$BAD_HOMOPOLYMER})/;
+
+# if requested, initialize tabix indexing of FASTQ
+my ($indexedFastqFile, $indexH);
+if($CREATE_FASTQ_INDEX){
+    $indexedFastqFile = "$DATA_FILE_PREFIX.indexed_reads.bgz";
+    open $indexH, "|-", "bgzip -c > $indexedFastqFile" or die "$action error: could not open indexing stream\n";
+}
 
 # set the file input handles
 if($FASTQ_FILE1){
@@ -78,7 +91,13 @@ sub runReadPairs {
             $nOutputPairs++;
             my $name = "@".join(":", $nOutputPairs, $$read1[UMI], $$read2[UMI]); # append paired UMIs to numeric read pair id
             print join("\n", $name, $$read1[SEQ], '+', $$read1[QUAL]), "\n"; # print interleaved read pairs
-            print join("\n", $name, $$read2[SEQ], '+', $$read2[QUAL]), "\n";        
+            print join("\n", $name, $$read2[SEQ], '+', $$read2[QUAL]), "\n";      
+            $CREATE_FASTQ_INDEX and print $indexH join("\t", 
+                "X", int($nOutputPairs / 100) + 1, $nOutputPairs, # thus, retrieval return give up to 100 read pairs
+                $$read1[SEQ], $$read1[QUAL],
+                $$read2[SEQ], $$read2[QUAL]
+            ), "\n";
+            print "$nOutputPairs\n";
         }
     }
 }

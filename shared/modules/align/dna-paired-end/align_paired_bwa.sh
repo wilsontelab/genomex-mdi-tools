@@ -117,6 +117,14 @@ if [[ "$BAM_SORT" = "coordinate" || "$BAM_SORT" = "both" ]]; then
     fi
 fi
 
+#------------------------------------------------------------------
+# index reads for fast recovery of unaltered inputs, if requested
+#------------------------------------------------------------------
+if [ "$CREATE_FASTQ_INDEX" != "" ]; then
+    echo "indexing input read pairs"
+    tabix -s 1 -b 2 -e 2 -f $DATA_FILE_PREFIX".indexed_reads.bgz"
+fi
+
 echo "done"
 
 fi
