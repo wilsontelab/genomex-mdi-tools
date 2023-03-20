@@ -1,0 +1,10 @@
+---
+# options that determine the behavior of minimap2
+options:
+    alignment-mode:
+        order: 1
+        short: A
+        type: string
+        required: false
+        default: map-ont
+        description: "alignment mode, same as minimap2 -x option"

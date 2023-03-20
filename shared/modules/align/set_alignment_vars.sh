@@ -11,6 +11,7 @@
 export FASTP_LOG_PREFIX=$LOG_FILE_PREFIX.fastp
 export BWA_LOG_FILE=$LOG_FILE_PREFIX.bwa.log
 export BWA_REALIGN_LOG_FILE=$LOG_FILE_PREFIX.bwa.realign.log
+export MINIMAP_LOG_FILE=$LOG_FILE_PREFIX.minimap.log
 
 # set the product bam/cram files
 if [[ "$USE_CRAM" = "" || "$USE_CRAM" = "0" || "$USE_CRAM" = "null" ]]; then
@@ -26,3 +27,7 @@ else
     export COORDINATE_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.realigned.cram
     export CRAM_OUTPUT_OPTIONS="--output-fmt CRAM --reference $GENOME_FASTA"
 fi
+
+# set the product PAF file, for minimap2 long reads
+export NAME_PAF_FILE=$DATA_GENOME_PREFIX.name.paf.gz
+export COORDINATE_PAF_FILE=$DATA_GENOME_PREFIX.coordinate.paf.gz
