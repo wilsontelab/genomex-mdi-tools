@@ -34,4 +34,29 @@ sub getAvgQual {
     $sum / length($_[0]) - 33;
 }
 
+# parse a CIGAR string to match a query SEQ to its reference
+sub getQryOnRef {
+    my ($qry, $cigar) = @_;
+    my @qry = split("", $qry);
+    my @qryOnRef;
+    my $index = 0;
+    my $nDeleted = 0;
+    my @insPos;
+    while ($cigar =~ (m/(\d+)(\w)/g)) { 
+        my ($size, $operation) = ($1, $2);
+        if($operation eq 'D'){
+            $nDeleted += $size;
+            push @qryOnRef, (("-") x $size);
+        } elsif($operation eq 'I'){
+            push @insPos, $index - 1 + $nDeleted;
+            $index += $size; 
+        } else {
+            push @qryOnRef, @qry[$index..($index + $size - 1)];
+            $index += $size;
+        } 
+    }
+    foreach my $i(@insPos){ $qryOnRef[$i] = "+" } # mark the position to the left of each novel insertion
+    return \@qryOnRef
+}
+
 1;

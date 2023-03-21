@@ -6,3 +6,4 @@ dependencies:
     # - fastp=0.23.2
     - minimap2=2.24
     - samtools=1.16.1
+    - porechop_abi=0.5.0

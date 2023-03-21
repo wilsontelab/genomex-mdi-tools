@@ -14,7 +14,9 @@ while (my $line = <$indexH>){
     chomp $line;
     my ($qName, $file, $offset) = split("\t", $line);
     $index{$qName} = [$file, $offset];
-    $prevQName and $index{$prevQName}[2] = $offset - $index{$prevQName}[1];
+    if($prevQName){
+        $index{$prevQName}[2] = $file eq $prevFile ? $offset - $index{$prevQName}[1] : 1e7;
+    }
     ($prevQName, $prevFile, $prevOffset) = ($qName, $file, $offset);
 }
 $index{$prevQName}[2] = 1e7;
