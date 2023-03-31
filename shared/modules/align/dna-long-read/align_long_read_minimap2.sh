@@ -44,7 +44,7 @@ fi
 # provide log feedback
 #------------------------------------------------------------------
 echo "aligning long reads to genome $GENOME, minimap2 mode '$ALIGNMENT_MODE'"
-echo "  input: $INPUT_DIR"
+echo "  input:  $INPUT_DIR"
 echo "  genome: $GENOME_FASTA" 
 echo "  output: $NAME_PAF_FILE"
 

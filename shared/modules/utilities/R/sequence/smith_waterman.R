@@ -38,10 +38,28 @@ pairedBaseScores <- initializePairScores()
 smith_waterman <- function(qry, ref, fast = TRUE, forceQryEnd = NULL){ # setting fast to TRUE enforces register shift limitations # nolint
 
     # collect sequence inputs
+    ref_ <- ref
+    isExactMatch <- qry == ref
     qry <- strsplit(qry, '')[[1]]
     ref <- strsplit(ref, '')[[1]]
     nQ <- length(qry)
     nR <- length(ref)
+
+    # shortcut the process if seqs are identical
+    if(isExactMatch){ 
+        n <- nchar(qry)
+        return(list(
+            qryOnRef = qry,
+            bestScore = matchScore * n,
+            qryStart = 1,
+            qryEnd = n,
+            refStart = 1,
+            refEnd = n,
+            qryLength = nQ,
+            refLength = nR,
+            ref = ref_
+        )) 
+    }
     isforceQryEnd <- !is.null(forceQryEnd)
     if(isforceQryEnd && forceQryEnd == QRY_START){
         qry <- rev(qry) # temporarily reverse sequence to allow same code for forceQryEnd QRY_START and QRY_END
@@ -101,10 +119,10 @@ smith_waterman <- function(qry, ref, fast = TRUE, forceQryEnd = NULL){ # setting
 
     # trace backwards to deconvolute best matching path(s) and alignment map(s)
     if(isforceQryEnd){ # demand just one best hit in forceQryEnd mode
-        if(length(paths) > 1) return(list(score = 0))
+        if(length(paths) > 1) return(list(bestScore = 0))
         bestPath <- paths[[1]]
     }
-    if(is.null(bestPath)) return(list(score = 0))
+    if(is.null(bestPath)) return(list(bestScore = 0))
     maxRefI <- bestPath[1]
     maxQryI <- bestPath[2]
     qryOnRef <- c()
@@ -142,6 +160,39 @@ smith_waterman <- function(qry, ref, fast = TRUE, forceQryEnd = NULL){ # setting
         qryStart = qryI,
         qryEnd = maxQryI,
         refStart = refI,
-        refEnd = maxRefI       
+        refEnd = maxRefI,
+        qryLength = nQ,
+        refLength = nR,
+        ref = ref_
     ))      
+}
+
+# create the x-y elements of a dot plot representing a smith_waterman object
+parseSWDots <- function(sw){
+    if(sw$bestScore == 0) return(NA)
+    qryPos <- sw$qryStart  
+    refPos <- sw$refStart  
+    do.call(rbind, lapply(sw$qryOnRef, function(q){
+        nq <- nchar(q)
+        r <- substr(sw$ref, refPos, refPos)
+        isD <- q == "-"
+        x <- if(nq == 1) data.table(
+            refPos = refPos,
+            qryPos = qryPos,
+            operation = if(isD) "D" else if(q == r) "M" else "m"
+        ) else {
+            if(substr(q, nq, nq) == r) data.table(
+                refPos = refPos,
+                qryPos = qryPos:(qryPos + nq - 1),
+                operation = c(rep("I", nq - 1), "M")
+            ) else data.table(
+                refPos = refPos,
+                qryPos = qryPos:(qryPos + nq - 1),
+                operation = "I"
+            )
+        }
+        qryPos <<- qryPos + if(isD) 0 else nq
+        refPos <<- refPos + 1
+        x  
+    }))
 }

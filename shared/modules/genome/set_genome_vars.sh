@@ -13,6 +13,9 @@ export PLOT_GENOME_PREFIX=$PLOT_PREFIX.$GENOME
 
 # fasta files and aligner indices
 export IGENOME_DIR=`echo $GENOMES_DIR/iGenomes/*/UCSC/$GENOME`
+if [ "$ALIGNMENT_MODE" = "NA" ]; then
+    export ALIGNMENT_MODE=$DEFAULT_ALIGNMENT_MODE
+fi
 if [ -e $IGENOME_DIR ]; then # use iGenomes download, if available
     export SPECIES=`echo $IGENOME_DIR | awk 'BEGIN{FS="/"}{print $(NF-2)}'`
     export GENOME_FASTA=$IGENOME_DIR/Sequence/WholeGenomeFasta/genome.fa

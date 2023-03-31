@@ -8,7 +8,7 @@ options:
         required: true
         default: null
         directory:
-            must-exist: true
+            must-exist: false # since might still need to be created by a basecaller
         description: "expects input-dir/input-name/*.fastq.gz, input-dir/input-name_*.fastq.gz, or .sra"
     input-name:
         order: 2

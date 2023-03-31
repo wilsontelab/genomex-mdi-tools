@@ -6,5 +6,5 @@ options:
         short: A
         type: string
         required: false
-        default: map-ont
-        description: "alignment mode, same as minimap2 -x option"
+        default: NA
+        description: "alignment mode, same as minimap2 -x option (NA uses pipeline default)"
