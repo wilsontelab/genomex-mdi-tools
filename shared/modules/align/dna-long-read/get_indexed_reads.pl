@@ -27,13 +27,20 @@ my ($openFile, $readH) = ("");
 sub getIndexedRead {
     my ($qName) = @_; 
     my $fileName = "$index{$qName}[0].fastq.gz";
-    my $tmpFile = "$ENV{TMP_DIR_WRK}/$fileName";
+
+    # my $tmpFile = "$ENV{TMP_DIR_WRK}/$fileName";
+    my $tmpFile = "/scratch/wilsonte_root/wilsonte0/wilsonte/7754-SA_P2_SOLO/pilot/HCT_untargeted/DEBUG.fastq";
+
+    # print "$ENV{INPUT_DIR}/$fileName\n";
+    # print "$tmpFile\n";
+
     unless($openFile eq $tmpFile){ # can generally expect callers to process reads in order, so keep handles open
         $readH and close $readH;
-        -e $tmpFile or system("zcat $ENV{INPUT_DIR}/$fileName > $tmpFile");
+        # -e $tmpFile or system("zcat $ENV{INPUT_DIR}/$fileName > $tmpFile");
         open $readH, "<", $tmpFile or die "could not open: $tmpFile\n";
         $openFile = $tmpFile;
     }
+
     my $buffer = "";
     seek $readH, $index{$qName}[1], 0;
     read $readH, $buffer, $index{$qName}[2];

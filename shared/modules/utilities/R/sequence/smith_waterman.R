@@ -35,7 +35,7 @@ initializePairScores <- function() {
 pairedBaseScores <- initializePairScores()
 
 # the Smith-Waterman algorithm itself
-smith_waterman <- function(qry, ref, fast = TRUE, forceQryEnd = NULL){ # setting fast to TRUE enforces register shift limitations # nolint
+smith_waterman <- function(qry, ref, fast = TRUE, forceQryEnd = NULL, local = FALSE){ # setting fast to TRUE enforces register shift limitations # nolint
 
     # collect sequence inputs
     ref_ <- ref
@@ -93,12 +93,12 @@ smith_waterman <- function(qry, ref, fast = TRUE, forceQryEnd = NULL){ # setting
                 score   <- left_score
                 pointer <- LEFT_  
             }       
-            if(isforceQryEnd){
+            if(local || isforceQryEnd){
                 if(score > 0){
                     x[refI + 1, qryI + 1, 1] <- score
                     x[refI + 1, qryI + 1, 2] <- pointer
                 }
-                if(qryI == nQ){ # ensure that all reported alignments go to end of query
+                if(local || qryI == nQ){ # ensure that all reported alignments go to end of query, unless local
                     if(score > bestScore){
                         bestScore <- score
                         paths <- list(c(refI, qryI))
@@ -118,8 +118,8 @@ smith_waterman <- function(qry, ref, fast = TRUE, forceQryEnd = NULL){ # setting
     }            
 
     # trace backwards to deconvolute best matching path(s) and alignment map(s)
-    if(isforceQryEnd){ # demand just one best hit in forceQryEnd mode
-        if(length(paths) > 1) return(list(bestScore = 0))
+    if(local || isforceQryEnd){ # demand just one best hit in forceQryEnd mode
+        if(!local && length(paths) > 1) return(list(bestScore = 0))
         bestPath <- paths[[1]]
     }
     if(is.null(bestPath)) return(list(bestScore = 0))

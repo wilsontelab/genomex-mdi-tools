@@ -2,7 +2,8 @@
 use strict;
 use warnings;
 
-# smith_waterman performs Smith-Waterman alignment of a query to a reference sequence
+# smith_waterman() performs either Needleman-Wunsch or Smith-Waterman 
+# alignment of a query to a reference sequence, depending on the arguments
 # expects all upper case IUPAC codes
 # returns just one best alignment as an array of query values
 #   M operations carry the qry base in the array slot (could be a base mismatch)
@@ -15,7 +16,8 @@ use warnings;
 #   such as when placing a clip terminus into a candidate region on the other side of an SV junction
 #   the end of query to use is set by value of $forceQryEnd, either QRY_START or QRY_END
 #   this mode (and only this mode) will fail if there are multiple equally good alignments
-# when not forceQryEnd, alignments are inclusive to the end of at least one input sequence on each side (i.e. not local)
+# in local mode, best alignments can be local/partial, i.e., they do not need to go to the end of either molecule
+# when not forceQryEnd or local, alignments are inclusive to the end of at least one input sequence on each side
 # usage: 
 #    our ($matchScore, $mismatchPenalty, $gapOpenPenalty, $gapExtensionPenalty, $maxShift) = 
 #        (1,           -1.5,             -2.5,            -1,                   3);
@@ -77,7 +79,7 @@ our %pairedBaseScores = initializePairScores();
 sub smith_waterman {
 
     # collect sequence inputs
-    my ($qry, $ref, $fast, $forceQryEnd) = @_; # setting $fast to truthy enforces register shift limitations
+    my ($qry, $ref, $fast, $forceQryEnd, $local) = @_; # setting $fast to truthy enforces register shift limitations
     $qry or die "smith_waterman error: missing qry sequence\n";
     $ref or die "smith_waterman error: missing ref sequence\n";
     if($qry eq $ref){ # shortcut the process if seqs are identical
@@ -111,9 +113,9 @@ sub smith_waterman {
             my ($score, $pointer) = ($diag_score >= $up_score and $diag_score >= $left_score) ? ($diag_score, _DIAG) :
                                     ($up_score >= $diag_score and $up_score >= $left_score)   ? ($up_score,   _UP) :
                                                                                                 ($left_score, _LEFT);
-            if($forceQryEnd){ 
+            if($local or $forceQryEnd){ 
                 $matrix[$refI][$qryI] = $score > 0 ? [$score, $pointer] : []; # allow trimming of non forced query end
-                if($qryI == $nQ){ # ensure that all reported alignments go to end of query
+                if($local or $qryI == $nQ){ # ensure that all reported alignments go to end of query, unless local
                     if($score > $bestScore){
                         $bestScore = $score; 
                         @paths = ([$refI, $qryI]);   
@@ -132,8 +134,8 @@ sub smith_waterman {
     }
     
     # trace backwards to deconvolute best matching path(s) and alignment map(s)
-    if($forceQryEnd){ # demand just one best hit in forceQryEnd mode
-        @paths > 1 and return ([('!') x $nQ], 0);
+    if($local or $forceQryEnd){ # demand just one best hit in forceQryEnd mode
+        !$local and @paths > 1 and return ([('!') x $nQ], 0);
         $bestPath = $paths[0];
     }
     !$bestPath and return ([('!') x $nQ], 0);    
