@@ -24,3 +24,47 @@ setCanonicalChroms <- function(){
     chromIndex[['*']] <<- 99 # special handling of unmapped reads
     revChromIndex[[99]] <<- '*'
 }
+
+# construct a map of all concatenated chromosomes from a genome fai file
+# must be called after setCanonicalChroms
+# requires library(bit64)
+loadChromSizes <- function(windowSize = 1000){ 
+    message("loading chrom sizes")
+    index_file <- paste(env$GENOME_FASTA, 'fai', sep = ".")
+    x <- fread(
+        index_file, 
+        header = FALSE, 
+        sep = "\t", 
+        stringsAsFactors = FALSE,
+        col.names  = c('chrom',     'nChromBases', 'offset',  'lineSeqLen', 'lineLen'), 
+        colClasses = c('character', 'integer64',   'numeric', 'integer',    'integer')
+    ) 
+    x[, nChromWindows := as.integer64(floor((nChromBases - 1) / windowSize) + 1)]
+    getRunningCum <- function(n){
+        x <- cumsum(n)
+        c(as.integer64(0), x[1:(length(x) - 1)])        
+    }
+    x[, ":="(
+        chromIndex = unlist(chromIndex[chrom]),
+        nBasesBefore   = getRunningCum(nChromBases),
+        nWindowsBefore = getRunningCum(nChromWindows)
+    )]
+    x[, ":="(
+        nBasesThrough   = nBasesBefore   + nChromBases,
+        nWindowsThrough = nWindowsBefore + nChromWindows
+    )]
+    x <- x[, .SD, .SDcols = c(
+        "chromIndex","chrom",
+        "nChromBases",  "nBasesBefore",  "nBasesThrough",
+        "nChromWindows","nWindowsBefore","nWindowsThrough"
+    )]
+    setkey(x, chromIndex)
+    x
+}
+expandChromWindows <- function(chromSizes){
+    message("expanding chrom windows for faster lookup")
+    chromSizes[, .(
+        chrom = chrom,
+        windowIndex = 1:as.integer(nChromWindows) - 1
+    ), keyby = .(chromIndex)]
+}

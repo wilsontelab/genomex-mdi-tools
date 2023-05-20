@@ -7,5 +7,5 @@ dependencies:
     - minimap2=2.24
     - samtools=1.16.1
     - pip:
-        - pod5
-        - duplex_tools
+        - pod5==0.1.16
+        # - duplex_tools

@@ -8,3 +8,10 @@ options:
         required: false
         default: NA
         description: "alignment mode, same as minimap2 -x option (NA uses pipeline default)"
+    bandwidth:
+        order: 2
+        short: b
+        type: string
+        required: false
+        default: 500,3300
+        description: "bandwidth for chaining and base alignment, same as minimap2 -r option"

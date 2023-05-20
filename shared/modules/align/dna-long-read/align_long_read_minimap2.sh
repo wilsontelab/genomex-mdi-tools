@@ -12,10 +12,10 @@
 #     $NAME_PAF_FILE = PAF format, with CIGAR strings
 
 #------------------------------------------------------------------
-# set the product bam/cram file; abort silently if exists and not forced
+# set the product PAF file; abort silently if exists and not forced
 #------------------------------------------------------------------
 if [[ "$FORCE_ALIGNMENT" != "" && "$FORCE_ALIGNMENT" != "0" && "$FORCE_ALIGNMENT" != "false" && -e $NAME_PAF_FILE ]]; then
-    echo "forcing overwrite of cram file: $NAME_PAF_FILE"
+    echo "forcing overwrite of PAF file: $NAME_PAF_FILE"
     rm -f $NAME_PAF_FILE
 fi
 if [ -e $NAME_PAF_FILE ]; then
@@ -40,31 +40,36 @@ if [ ! -f "$MINIMAP2_INDEX" ]; then
     checkPipe
 fi
 
+# ------------------------------------------------------------------
+# set the bandwidth
+# ------------------------------------------------------------------
+if [ "$BANDWIDTH" == "" ]; then
+    BANDWIDTH_LOG="minimap2 default"
+else
+    BANDWIDTH_LOG="$BANDWIDTH"
+    BANDWIDTH="-r $BANDWIDTH"
+fi
+
 #------------------------------------------------------------------
 # provide log feedback
 #------------------------------------------------------------------
-echo "aligning long reads to genome $GENOME, minimap2 mode '$ALIGNMENT_MODE'"
-echo "  input:  $INPUT_DIR"
-echo "  genome: $GENOME_FASTA" 
-echo "  output: $NAME_PAF_FILE"
+echo "aligning long reads to genome $GENOME with minimap2"
+echo "  input:    $INPUT_DIR"
+echo "  genome:   $GENOME_FASTA" 
+echo "  output:   $NAME_PAF_FILE"
+echo "  mode:     $ALIGNMENT_MODE"
+echo "  bandwith: $BANDWIDTH_LOG"
 
 #------------------------------------------------------------------
 # process reads and align to genome; soft clip supplemental
-# output routinely includes both supplemental and secondary, and many unmapped
-#   N     FLAG
-#   31003 0    # aligned, top and bottom strands
-#   30824 16
-#   18990 4    # unaligned
-#    7802 256  # secondary, top and bottom strands
-#    7596 272
-#    1915 2048 # supplemental, top and bottom strands
-#    1870 2064
-# --cs=short if it becomes necessary to get base-level information (but it is of dubious utility)
+# --cs=short if it becomes necessary to get base-level information
+# --no-long-join Disable the long gap patching heuristic. (which one?)
+# --rmq=no|yes Use the minigraph chaining algorithm [no]
 #------------------------------------------------------------------
 ALN_CPU=$(( N_CPU - 1 )) # minimap2 uses 1 additional core for IO
 
 perl $SHARED_MODULE_DIR/index_fastq.pl | # for sequence retrieval during SV extraction, to avoid carrying all big sequences in PAF
-minimap2 -x $ALIGNMENT_MODE -t $ALN_CPU --secondary=no -c $MINIMAP2_INDEX - 2>$MINIMAP_LOG_FILE |
+minimap2 -x $ALIGNMENT_MODE -t $ALN_CPU --secondary=no $BANDWIDTH -c $MINIMAP2_INDEX - 2>$MINIMAP_LOG_FILE |
 pigz -p $N_CPU -c | 
 slurp -s 100M -o $NAME_PAF_FILE
 checkPipe
