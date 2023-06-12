@@ -2,21 +2,84 @@
 
 # process and set working paths
 EXPANDED_INPUT_DIR=`echo ${INPUT_DIR}`
-FASTQ_FILE=${DATA_FILE_PREFIX}.fastq.gz
+if [ "$DORADO_OUTPUT_TYPE" == "" ]; then
+    FASTQ_FILE=${DATA_FILE_PREFIX}.fastq.gz
+    UBAM_FILE=${DATA_FILE_PREFIX}.unaligned.bam
+else 
+    FASTQ_FILE=${DATA_FILE_PREFIX}.$DORADO_OUTPUT_TYPE.fastq.gz
+    UBAM_FILE=${DATA_FILE_PREFIX}.$DORADO_OUTPUT_TYPE.unaligned.bam
+fi
 
-# log report
+# begin log report
 echo "calling bases"
 echo "  Dorado version: "${DORADO_VERSION}
-echo "  model: "${ONT_MODEL}
-echo "  input: "${EXPANDED_INPUT_DIR}
-echo "  output: "${FASTQ_FILE}
+echo "  model:          "${ONT_MODEL}
+echo "  input:          "${EXPANDED_INPUT_DIR}
+echo "  pod5 buffer:    "${POD5_BUFFER_DIR}
+if [ $DORADO_OUTPUT_FORMAT == "ubam" ]; then
+    echo "  output: "${UBAM_FILE}
+    rm -f $TMP_DIR_WRK/*.unaligned.bam
+else 
+    echo "  output: "${FASTQ_FILE}
+    rm -f $TMP_DIR_WRK/*.fastq.gz
+fi
 
-# call bases from pod5 to fastq.gz
-${DORADO_EXECUTABLE} basecaller ${ONT_MODEL_DIR} ${EXPANDED_INPUT_DIR} | # outputs unaligned SAM
-samtools fastq - |
-pigz -p $N_CPU -c | 
-slurp -s 10M -o ${FASTQ_FILE}
-checkPipe
+# set basecalling options
+READ_IDS_FILE=""
+if [ "$DORADO_READ_IDS" != "" ]; then # read ids file cannot be gzipped 
+    if [ -f $DORADO_READ_IDS ]; then
+        READ_IDS_FILE=`echo $DORADO_READ_IDS`
+    else 
+        READ_IDS_FILE=`echo ${DATA_FILE_PREFIX}.${GENOME}.*.qNames.txt`
+    fi
+    if [[ "$READ_IDS_FILE" == "" || ! -e $READ_IDS_FILE ]]; then
+        echo "requested read ids file not found: $DORADO_READ_IDS"
+        exit 1
+    fi
+    echo "  reads file: "${READ_IDS_FILE}   
+    READ_IDS_FILE="--read-ids $READ_IDS_FILE"
+fi
+EMIT_MOVES=""
+if [[ "$DORADO_EMIT_MOVES" == "true" ||  "$DORADO_EMIT_MOVES" == "TRUE" || "$DORADO_EMIT_MOVES" == "1" ]]; then
+    EMIT_MOVES="--emit-moves"
+fi
+
+# run basecaller one pod5 file chunk at a time, working from /dev/shm to a local write buffer
+# see: https://github.com/nanoporetech/dorado/issues/223
+cd ${EXPANDED_INPUT_DIR}
+POD5_FILES=(*.pod5)
+rm -f $POD5_BUFFER_DIR/*.pod5
+for ((i=0; i < ${#POD5_FILES[@]}; i+=POD5_BATCH_SIZE)); do 
+    echo "pod5 chunk i = $i"
+    POD5_CHUNK=${POD5_FILES[@]:i:POD5_BATCH_SIZE}
+    cp $POD5_CHUNK $POD5_BUFFER_DIR
+    if [ $DORADO_OUTPUT_FORMAT == "ubam" ]; then  
+        ${DORADO_EXECUTABLE} basecaller $EMIT_MOVES $READ_IDS_FILE $ONT_MODEL_DIR $POD5_BUFFER_DIR | 
+        samtools view -b - > $TMP_DIR_WRK/$i.unaligned.bam
+        checkPipe
+    else 
+        ${DORADO_EXECUTABLE} basecaller --emit-fastq $READ_IDS_FILE $ONT_MODEL_DIR $POD5_BUFFER_DIR |
+        pigz -p $N_CPU -c > $TMP_DIR_WRK/$i.fastq.gz
+        checkPipe
+    fi
+    rm $POD5_BUFFER_DIR/*.pod5
+done
+
+# merge the output files from local disk to shared data drive
+cd $TMP_DIR_WRK
+echo "merging output"
+if [ $DORADO_OUTPUT_FORMAT == "ubam" ]; then
+    samtools cat *.unaligned.bam |
+    slurp -s 100M -o ${UBAM_FILE}
+    checkPipe
+    rm *.unaligned.bam
+else 
+    zcat *.fastq.gz |
+    pigz -p $N_CPU -c | 
+    slurp -s 100M -o ${FASTQ_FILE}
+    checkPipe
+    rm *.fastq.gz
+fi
 
 
 # $ dorado --help

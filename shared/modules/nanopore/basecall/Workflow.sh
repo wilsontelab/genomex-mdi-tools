@@ -5,6 +5,12 @@ export SHARED_SUITE=genomex-mdi-tools
 export SHARED_MODULES_DIR=$SUITES_DIR/$SHARED_SUITE/shared/modules
 export SHARED_MODULE_DIR=$SHARED_MODULES_DIR/nanopore/basecall
 
+# create temp directories
+source $SHARED_MODULES_DIR/utilities/shell/create_shm_dir.sh
+source $SHARED_MODULES_DIR/utilities/shell/create_temp_dir.sh
+POD5_BUFFER_DIR=$SHM_DIR_WRK
+if [ "$POD5_BUFFER" = "tmp" ]; then POD5_BUFFER_DIR=$TMP_DIR_WRK; fi
+
 # set the dorado directories
 echo "check nanopore directories"
 DORADO_DIR=${NANOPORE_DIR}/dorado

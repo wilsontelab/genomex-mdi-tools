@@ -5,11 +5,13 @@
 #     source $MODULES_DIR/source/set_read_file_vars.sh
 #     source $MODULES_DIR/align/set_alignment_vars.sh
 # optional:
-#     $FORCE_ALIGNMENT  [default: don't overwrite output file]
+#     $FORCE_ALIGNMENT   [default: don't overwrite output file]
+#     $MINIMAP2_ACCURACY ["high", "low"; default if missing: high, which places cigar/cg tag in PAF]
 # input:
-#     a set of FASTQ files
+#     a set of FASTQ files, or
+#     a single unaligned bam file (takes precedence)
 # output:
-#     $NAME_PAF_FILE = PAF format, with CIGAR strings
+#     $NAME_PAF_FILE = PAF format, +/- CIGAR strings depending on $MINIMAP2_ACCURACY
 
 #------------------------------------------------------------------
 # set the product PAF file; abort silently if exists and not forced
@@ -24,8 +26,8 @@ if [ -e $NAME_PAF_FILE ]; then
 #------------------------------------------------------------------
 # check for input sequence read files
 #------------------------------------------------------------------
-elif [ "$FASTQ_FILES" = "" ]; then
-    echo "missing sequence read file(s); expected INPUT_DIR/*.fastq.gz"
+elif [[ "$UBAM_FILES" == "" && "$FASTQ_FILES" == "" ]]; then
+    echo "missing sequence read file(s); expected INPUT_DIR/*.unaligned.bam or INPUT_DIR/*.fastq.gz"
     exit 1  
 else
 
@@ -41,6 +43,17 @@ if [ ! -f "$MINIMAP2_INDEX" ]; then
 fi
 
 # ------------------------------------------------------------------
+# set the input files and parser
+# ------------------------------------------------------------------
+if [ "$UBAM_FILES" != "" ]; then
+    INPUT_TYPE="ubam" # convert to fastq as required by minimap2 
+    PARSE_READS="samtools fastq $UBAM_FILES"
+else 
+    INPUT_TYPE="fastq"
+    PARSE_READS="perl $SHARED_MODULE_DIR/index_fastq.pl" # for sequence retrieval during SV extraction, to avoid carrying all big sequences in PAF
+fi
+
+# ------------------------------------------------------------------
 # set the bandwidth
 # ------------------------------------------------------------------
 if [ "$BANDWIDTH" == "" ]; then
@@ -50,15 +63,28 @@ else
     BANDWIDTH="-r $BANDWIDTH"
 fi
 
+# ------------------------------------------------------------------
+# set the accuracy
+# ------------------------------------------------------------------
+if [ "$MINIMAP2_ACCURACY" == "low" ]; then
+    CIGAR_FLAG=""
+    MINIMAP2_ACCURACY="low (cigar not present in output PAF)"
+else
+    CIGAR_FLAG="-c"
+    MINIMAP2_ACCURACY="high (cigar present in output PAF)"
+fi
+
 #------------------------------------------------------------------
 # provide log feedback
 #------------------------------------------------------------------
 echo "aligning long reads to genome $GENOME with minimap2"
-echo "  input:    $INPUT_DIR"
-echo "  genome:   $GENOME_FASTA" 
-echo "  output:   $NAME_PAF_FILE"
-echo "  mode:     $ALIGNMENT_MODE"
-echo "  bandwith: $BANDWIDTH_LOG"
+echo "  input type: $INPUT_TYPE"
+echo "  input dir:  $INPUT_DIR"
+echo "  genome:     $GENOME_FASTA" 
+echo "  output:     $NAME_PAF_FILE"
+echo "  mode:       $ALIGNMENT_MODE"
+echo "  bandwith:   $BANDWIDTH_LOG"
+echo "  accuracy:   $MINIMAP2_ACCURACY"
 
 #------------------------------------------------------------------
 # process reads and align to genome; soft clip supplemental
@@ -68,8 +94,8 @@ echo "  bandwith: $BANDWIDTH_LOG"
 #------------------------------------------------------------------
 ALN_CPU=$(( N_CPU - 1 )) # minimap2 uses 1 additional core for IO
 
-perl $SHARED_MODULE_DIR/index_fastq.pl | # for sequence retrieval during SV extraction, to avoid carrying all big sequences in PAF
-minimap2 -x $ALIGNMENT_MODE -t $ALN_CPU --secondary=no $BANDWIDTH -c $MINIMAP2_INDEX - 2>$MINIMAP_LOG_FILE |
+$PARSE_READS |
+minimap2 -x $ALIGNMENT_MODE -t $ALN_CPU --secondary=no $BANDWIDTH $CIGAR_FLAG $MINIMAP2_INDEX - 2>$MINIMAP_LOG_FILE |
 pigz -p $N_CPU -c | 
 slurp -s 100M -o $NAME_PAF_FILE
 checkPipe

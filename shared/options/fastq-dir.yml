@@ -5,8 +5,8 @@ options:
         order: 1
         short: i
         type: string
-        required: true
-        default: null
+        required: false
+        default: NA
         directory:
             must-exist: false # since might still need to be created by a basecaller
-        description: "directory with one or more *.fastq.gz files from a single long-read run"
+        description: "directory with one or more *.unaligned.bam or *.fastq.gz files from a single long-read run [NA==TASK_DIR]"

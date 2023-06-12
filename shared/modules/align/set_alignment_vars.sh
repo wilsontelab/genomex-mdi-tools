@@ -29,5 +29,10 @@ else
 fi
 
 # set the product PAF file, for minimap2 long reads
-export NAME_PAF_FILE=$DATA_GENOME_PREFIX.name.paf.gz
-export COORDINATE_PAF_FILE=$DATA_GENOME_PREFIX.coordinate.paf.gz
+if [ "$PAF_FILE_TYPE" == "" ]; then
+    export NAME_PAF_FILE=$DATA_GENOME_PREFIX.name.paf.gz
+    export COORDINATE_PAF_FILE=$DATA_GENOME_PREFIX.coordinate.paf.gz
+else 
+    export NAME_PAF_FILE=$DATA_GENOME_PREFIX.$PAF_FILE_TYPE.name.paf.gz
+    export COORDINATE_PAF_FILE=$DATA_GENOME_PREFIX.$PAF_FILE_TYPE.coordinate.paf.gz
+fi
