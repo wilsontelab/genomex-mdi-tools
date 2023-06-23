@@ -5,8 +5,9 @@
 #----------------------------------------------------------------------
 # MDI (as opposed to UCSC) track image assembly
 #----------------------------------------------------------------------
-mdiTrackImage <- function(layout, height, plotFn, ...){ # for track that generate plots
+mdiTrackImage <- function(layout, height, plotFn, message = NULL, ...){ # for track that generate plots
     # NB: do not use magick::image_graph; it is buggy, especially on Linux
+    startSpinner(session, message = message)
     pngFile <- tempfile("trackBrowser", fileext = ".png")
     png(
         filename = pngFile,
@@ -22,6 +23,7 @@ mdiTrackImage <- function(layout, height, plotFn, ...){ # for track that generat
     dev.off()
     image <- magick::image_read(pngFile)
     unlink(pngFile)
+    stopSpinner(session)
     image
 }
 setMdiTrackMai <- function(layout, padding, mai = NULL, mar = NULL){ # layout set by browser, mai or mar set by track
@@ -73,9 +75,9 @@ coordinates.browserInput <- function(input){
     start <- trimws(input$start)
     end   <- trimws(input$end)
     if(length(start) == 0 || start == "") start <- 1
-    if(length(end)   == 0 || end   == "") end   <- as.integer(start) + 10000 
-    start <- as.integer(start)
-    end   <- as.integer(end)
+    if(length(end)   == 0 || end   == "") end   <- as.integer64(start) + 10000 
+    start <- as.integer64(start)
+    end   <- as.integer64(end)
     getBrowserCoord(input$chromosome, start, end)
 }
 
@@ -88,7 +90,7 @@ getBrowserCoord <- function(chrom, start, end){
         start  = start, 
         end    = end,
         width  = end - start + 1,
-        range  = c(start, end),
+        range  = as.numeric(c(start, end)), # using as numeric allows the range to be used in plot(xlim)
         region = paste0(chrom, ":", start, "-", end)
     )
 }

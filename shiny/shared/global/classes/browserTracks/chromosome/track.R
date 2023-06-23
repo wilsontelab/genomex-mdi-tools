@@ -52,7 +52,7 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
             xlim = coord$range, xlab = "", xaxt = "n",
             ylim = ylim,  ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i") 
-        getX <- function(pos){ pos / chromSize * coord$width + coord$start }
+        getX <- function(pos){ pos / chromSize * as.numeric(coord$width) + as.numeric(coord$start) }
 
         # whole chromosome
         y1 <- 0.25

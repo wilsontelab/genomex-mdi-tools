@@ -52,11 +52,11 @@ trackBrowserUI <- function(id, options) {
                 selectInput(ns('chromosome'), "Chromosome", choices = c()),
             ),
             tags$div(
-                class = "trackBrowserInput",
+                class = "trackBrowserInput coordinateInput",
                 textInput(ns('start'), "Start", value = 1),
             ),
             tags$div(
-                class = "trackBrowserInput",
+                class = "trackBrowserInput coordinateInput",
                 textInput(ns('end'), "End", value = 10000),
             ),
             tags$div(

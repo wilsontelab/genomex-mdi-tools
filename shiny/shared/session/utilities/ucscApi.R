@@ -267,7 +267,7 @@ getChromosomeSizes <- function(genome){
 }
 getGenomeSize <- function(genome){
     chroms <- listCanonicalChromosomes(genome)
-    listUcscChromosomes(genome)[chromosome %in% chroms, sum(size)]
+    listUcscChromosomes(genome)[chromosome %in% chroms, sum(as.integer64(size))]
 }
 
 # list schema from specified track in UCSC database genome -

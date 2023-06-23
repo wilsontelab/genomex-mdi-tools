@@ -1,6 +1,7 @@
 #----------------------------------------------------------------------
 # server components for the trackBrowser appStep module
 #----------------------------------------------------------------------
+library(bit64)
 
 #----------------------------------------------------------------------
 # BEGIN MODULE SERVER
@@ -338,7 +339,7 @@ plotTrackIds <- reactive({ # the current track ids, in plotting order
     if(nrow(trackOrder) > 0) trackOrder[order(order), trackId] else character()
 })
 coordinateWidth <- reactive({
-    as.integer(input$end) - as.integer(input$start) + 1
+    as.integer64(input$end) - as.integer64(input$start) + 1
 })
 
 #----------------------------------------------------------------------
@@ -504,7 +505,7 @@ yPixelToTrack <- function(x, y){
             width  = browserLayout$width,
             height = browserLayout$heights[i],
             dpi    = browserLayout$dpi,
-            xlim   = as.integer(c(input$start, input$end)),
+            xlim   = as.integer64(c(input$start, input$end)),
             ylim   = browserLayout$ylim[[i]],            
             mai    = browserLayout$mai[[i]]
         )        
@@ -545,8 +546,8 @@ observeEvent(browser$brush(), {
 # browser navigation support functions
 #----------------------------------------------------------------------
 jumpToCoordinates <- function(chromosome, start, end, strict = FALSE){ # arguments are strict coordinates
-    start <- as.integer(start)
-    end   <- as.integer(end)
+    start <- as.integer64(start)
+    end   <- as.integer64(end)
     if(start > end){
         tmp <- start
         start <- end
@@ -554,8 +555,8 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE){ # argumen
     }
     if(!input$strict && !strict){
         padding <- (end - start + 1) * 0.05
-        start <- as.integer(start - padding)
-        end   <- as.integer(end   + padding)
+        start <- as.integer64(start - padding)
+        end   <- as.integer64(end   + padding)
     }
     chromosomeSize <- chromosomeSize()
     req(chromosomeSize)
@@ -566,8 +567,8 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE){ # argumen
     updateTextInput(session, "end",   value = as.character(end))
 }
 doZoom <- function(exp){
-    start  <- as.integer(input$start)
-    end    <- as.integer(input$end)
+    start  <- as.integer64(input$start)
+    end    <- as.integer64(input$end)
     factor <- as.integer(input$zoomFactor)
     width  <- (end - start + 1)
     center <- start + width / 2
@@ -582,8 +583,8 @@ doZoom <- function(exp){
 observeEvent(input$zoomOut, { doZoom( 1) }, ignoreInit = TRUE)
 observeEvent(input$zoomIn,  { doZoom(-1) }, ignoreInit = TRUE)
 doMove <- function(factor, direction){
-    start  <- as.integer(input$start)
-    end    <- as.integer(input$end)
+    start  <- as.integer64(input$start)
+    end    <- as.integer64(input$end)
     width  <- (end - start + 1)
     increment <- width * factor * direction
     jumpToCoordinates(
@@ -597,10 +598,10 @@ observeEvent(input$moveLeft,   { doMove(1,    -1) }, ignoreInit = TRUE)
 observeEvent(input$nudgeLeft,  { doMove(0.05, -1) }, ignoreInit = TRUE)
 observeEvent(input$nudgeRight, { doMove(0.05,  1) }, ignoreInit = TRUE)
 observeEvent(input$moveRight,  { doMove(1,     1) }, ignoreInit = TRUE)
-observeEvent(input$all,        { 
-    jumpToCoordinates(input$chromosome, 1, 1e9, strict = TRUE) }, 
-    ignoreInit = TRUE
-)
+observeEvent(input$all, { 
+    chromSize <- if(input$chromosome == "all") chromosomeSize() else 1e9
+    jumpToCoordinates(input$chromosome, 1, chromSize, strict = TRUE) 
+}, ignoreInit = TRUE)
 center <- function(x){
     coord <- coordinates(input)
     halfWidth <- coord$width / 2

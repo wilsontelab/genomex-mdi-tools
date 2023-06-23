@@ -15,6 +15,9 @@
 .annotationInput .shiny-input-container {
     width: 150px;
 }
+.coordinateInput .shiny-input-container {
+    width: 95px;
+}
 .genomeInput .selectize-input div {
     max-width: 80px;
     overflow: hidden;
