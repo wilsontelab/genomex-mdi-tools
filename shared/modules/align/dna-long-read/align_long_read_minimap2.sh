@@ -7,9 +7,10 @@
 # optional:
 #     $FORCE_ALIGNMENT   [default: don't overwrite output file]
 #     $MINIMAP2_ACCURACY ["high", "low"; default if missing: high, which places cigar/cg tag in PAF]
-# input:
+# input (in precedence order):
+#     a single unaligned sam.gz file
+#     a single unaligned bam file
 #     a set of FASTQ files, or
-#     a single unaligned bam file (takes precedence)
 # output:
 #     $NAME_PAF_FILE = PAF format, +/- CIGAR strings depending on $MINIMAP2_ACCURACY
 
@@ -26,8 +27,8 @@ if [ -e $NAME_PAF_FILE ]; then
 #------------------------------------------------------------------
 # check for input sequence read files
 #------------------------------------------------------------------
-elif [[ "$UBAM_FILES" == "" && "$FASTQ_FILES" == "" ]]; then
-    echo "missing sequence read file(s); expected INPUT_DIR/*.unaligned.bam or INPUT_DIR/*.fastq.gz"
+elif [[ "$USAM_FILES" == "" && "$UBAM_FILES" == "" && "$FASTQ_FILES" == "" ]]; then
+    echo "missing sequence read file(s); expected INPUT_DIR/*.unaligned.sam.gz, INPUT_DIR/*.unaligned.bam or INPUT_DIR/*.fastq.gz"
     exit 1  
 else
 
@@ -45,12 +46,18 @@ fi
 # ------------------------------------------------------------------
 # set the input files and parser
 # ------------------------------------------------------------------
-if [ "$UBAM_FILES" != "" ]; then
+if [ "$USAM_FILES" != "" ]; then
+    INPUT_TYPE="usam" # convert to fastq as required by minimap2 
+    PARSE_READS1="zcat $USAM_FILES"
+    PARSE_READS2="samtools fastq -"
+elif [ "$UBAM_FILES" != "" ]; then
     INPUT_TYPE="ubam" # convert to fastq as required by minimap2 
-    PARSE_READS="samtools fastq $UBAM_FILES"
+    PARSE_READS1="samtools fastq $UBAM_FILES"
+    PARSE_READS2="cat"
 else 
     INPUT_TYPE="fastq"
-    PARSE_READS="perl $SHARED_MODULE_DIR/index_fastq.pl" # for sequence retrieval during SV extraction, to avoid carrying all big sequences in PAF
+    PARSE_READS1="perl $SHARED_MODULE_DIR/index_fastq.pl" # for sequence retrieval during SV extraction, to avoid carrying all big sequences in PAF
+    PARSE_READS2="cat"
 fi
 
 # ------------------------------------------------------------------
@@ -94,7 +101,8 @@ echo "  accuracy:   $MINIMAP2_ACCURACY"
 #------------------------------------------------------------------
 ALN_CPU=$(( N_CPU - 1 )) # minimap2 uses 1 additional core for IO
 
-$PARSE_READS |
+$PARSE_READS1 |
+$PARSE_READS2 |
 minimap2 -x $ALIGNMENT_MODE -t $ALN_CPU --secondary=no $BANDWIDTH $CIGAR_FLAG $MINIMAP2_INDEX - 2>$MINIMAP_LOG_FILE |
 pigz -p $N_CPU -c | 
 slurp -s 100M -o $NAME_PAF_FILE

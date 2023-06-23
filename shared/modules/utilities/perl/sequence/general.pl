@@ -29,6 +29,7 @@ sub getEnd {
 
 # get the average per-base Phred QUAL for a single read or segment of a read
 sub getAvgQual {
+    ($_[0] and length($_[0])) or return 0;
     my $sum = 0;
     map{ $sum += ord($_) } split("", $_[0]);
     $sum / length($_[0]) - 33;

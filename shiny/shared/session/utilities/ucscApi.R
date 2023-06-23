@@ -141,7 +141,7 @@ listUcscTracks <- function(genome, force = FALSE){
     persistentCache[[file]]$data
 }
 listUcscAnnotations <- function(genome, force = FALSE){
-    listUcscTracks(genome, force)[type == "genePred"]
+    listUcscTracks(genome, force)[type == "genePred" | type == "bigGenePred"] # bigGenePred added to support T2T hs1 genome
 }
 listUcscChromosomes <- function(genome, force = FALSE){
     file <- getUcscRdsFile(file.path("genomes", genome), "chromosomes")

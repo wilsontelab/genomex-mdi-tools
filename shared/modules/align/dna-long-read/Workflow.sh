@@ -12,11 +12,13 @@ if [ "$INPUT_DIR" == "NA" ]; then
 fi
 cd $INPUT_DIR
 
-# discover the input read files in INPUT_DIR; unaligned bam takes precedence
+# discover the input read files in INPUT_DIR; precedence = usam > ubam > fastq
 if [ "$INPUT_FILE_TYPE" == "" ]; then
+    export USAM_FILES=`ls *.unaligned.sam.gz 2>/dev/null`
     export UBAM_FILES=`ls *.unaligned.bam 2>/dev/null`
     export FASTQ_FILES=`ls *.fastq.gz 2>/dev/null`
 else 
+    export USAM_FILES=`ls *.$INPUT_FILE_TYPE.unaligned.sam.gz 2>/dev/null`
     export UBAM_FILES=`ls *.$INPUT_FILE_TYPE.unaligned.bam 2>/dev/null`
     export FASTQ_FILES=`ls *.$INPUT_FILE_TYPE.fastq.gz 2>/dev/null`
 fi

@@ -46,7 +46,8 @@ defaultTrackTypes: null
 # dependencies
 #----------------------------------------------------------------------
 packages: # required R packages
-    R: null
+    R: 
+        - bit64
     Bioconductor:
         - Rsamtools
         - magick
