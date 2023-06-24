@@ -653,6 +653,79 @@ output$trackNavs <- renderUI({
 })
 
 #----------------------------------------------------------------------
+# jumpTo coordinates and annotation feature-based navigation
+#----------------------------------------------------------------------
+checkJumpChrom <- function(chrom_){
+    genome <- genome()
+    req(genome)    
+    chroms <- getChromosomeSizes(genome)
+    chrom <- chroms[name == chrom_, .(name = name, size = chromEnd - chromStart + 1)]
+    req(nrow(chrom) == 1)
+    chrom
+}
+checkJumpCenter <- function(chrom, center_){
+    req(!grepl('\\D', center_))
+    center <- as.integer64(center_)
+    req(center >= 1, center <= chrom$size)
+    center
+}
+checkJumpStart <- function(start_){
+    req(!grepl('\\D', start_))
+    start <- as.integer64(start_)
+    req(start >= 1)
+    start
+}
+checkJumpEnd <- function(chrom, start, end_){
+    req(!grepl('\\D', end_))
+    end <- as.integer64(end_)
+    req(end > start, end <= chrom$size)
+    end
+}
+observeEvent(input$jumpTo,  { 
+    req(input$jumpTo)    
+    jumpTo <- trimws(input$jumpTo)
+    req(jumpTo)
+    dmsg("input$jumpTo")
+    dmsg(jumpTo)
+
+    parts <- strsplit(jumpTo, '(:|,|-|\\s+)')[[1]]
+    action <- tryCatch({
+        switch(
+            length(parts),
+            { # a single word, assumed to be an annotation feature name
+                annotation <- annotation()
+                req(annotation)
+                dprint(annotation)
+                NULL
+            }, { # two parts, assumed to be chrom + center, at current width
+                chrom <- checkJumpChrom(parts[1])
+                center <- checkJumpCenter(chrom, parts[2])
+                coord <- coordinates(input)
+                halfWidth <- coord$width / 2
+                list(
+                    chromosome = chrom, 
+                    start = center - halfWidth, 
+                    end   = center + halfWidth, 
+                    strict = TRUE
+                )
+            }, { # three parts, assumbed to be a region, i.e., chrom + start + end
+                chrom <- checkJumpChrom(parts[1])
+                dprint(chrom)
+                NULL
+            } 
+        )
+    }, error = function(e) NULL)
+    req(action)
+    dmsg("DOING IT")
+    updateTextInput(session, "jumpTo", value = "")
+    updateTextInput(session, "end", value = "")
+    do.call(jumpToCoordinates, action)
+}, ignoreInit = TRUE)
+
+# chr1 123456789
+# chr2 50000
+
+#----------------------------------------------------------------------
 # define bookmarking actions
 #----------------------------------------------------------------------
 loadingBookmark <- FALSE

@@ -98,6 +98,11 @@ trackBrowserUI <- function(id, options) {
             ),
             tags$div(
                 class = "trackBrowserInput",
+                style = "margin: 32px 5px 0px 4px",
+                actionLink(ns('annotationSearch'), NULL, icon("search")),
+            ),
+            tags$div(
+                class = "trackBrowserInput",
                 checkboxInput(ns('strict'), "Strict", value = FALSE),
             ),
         ),

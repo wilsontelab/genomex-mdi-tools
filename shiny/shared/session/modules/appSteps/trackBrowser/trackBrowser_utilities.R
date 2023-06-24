@@ -71,13 +71,14 @@ pngToMdiTrackImage <- function( # for tracks that generate images, not plots
 # helper methods for the browserInput S3 class
 #----------------------------------------------------------------------
 coordinates.browserInput <- function(input){
-    # TODO: implement conversion of jumpTo region or gene to coordinates
     start <- trimws(input$start)
     end   <- trimws(input$end)
-    if(length(start) == 0 || start == "") start <- 1
-    if(length(end)   == 0 || end   == "") end   <- as.integer64(start) + 10000 
+    req(start, end)
+    # if(length(start) == 0 || start == "") start <- 1
+    # if(length(end)   == 0 || end   == "") end   <- as.integer64(start) + 10000 
     start <- as.integer64(start)
     end   <- as.integer64(end)
+    req(start < end, end > 1)
     getBrowserCoord(input$chromosome, start, end)
 }
 
