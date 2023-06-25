@@ -11,7 +11,7 @@ browserTrackServer <- function(
     trackType, # track class appends "Track" to trackType
     settingsFile,
     browserInput,
-    genome,
+    genome, # genome and annotation are zero or single-row data.tables
     annotation,
     size = "m",
     ... # additional arguments passed to settingsServer
@@ -34,11 +34,19 @@ if(!is.null(request$include)) for(include in request$include){
         for(option in names(include[[family]])) template[[family]][[option]] <- include[[family]][[option]]
     }
 }
-if(!is.null(request$settings)) for(family in names(request$settings)){
-    if(is.null(template[[family]])) template[[family]] <- list()
-    for(option in names(request$settings[[family]])) 
-        template[[family]][[option]] <- request$settings[[family]][[option]]
+loadTrackSettings <- function(settings){
+    for(family in names(settings)){
+        if(is.null(template[[family]])) template[[family]] <<- list()
+        for(option in names(settings[[family]])) 
+            template[[family]][[option]] <<- settings[[family]][[option]]
+    } 
 }
+if(!is.null(request$shared)) for(sharedFile in request$shared){
+    dir <- dirname(settingsFile)
+    file <- file.path(dir, sharedFile)
+    loadTrackSettings(read_yaml(file))
+}
+if(!is.null(request$settings)) loadTrackSettings(request$settings)
 template$Track_Options$Track_Name <- list( # override and prepend universal Track_Name option
     type = "textInput",
     value = trackType

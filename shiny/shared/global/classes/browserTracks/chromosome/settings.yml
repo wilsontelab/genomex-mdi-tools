@@ -13,6 +13,7 @@ settings:
             type:   selectInput
             choices:
                 - cytoBand
+                - cytoBandIdeo
                 - gap
                 - none
             value: cytoBand

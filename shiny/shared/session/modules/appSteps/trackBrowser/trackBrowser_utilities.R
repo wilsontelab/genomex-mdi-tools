@@ -131,7 +131,8 @@ height.browserTrack <- function(track, default){
     getBrowserTrackSetting(track, "Track_Options", "Height", default)
 }
 ylab.browserTrack <- function(track, default = ""){
-    getBrowserTrackSetting(track, "Track_Options", "Y_Axis_Label", default)
+    ylab <- getBrowserTrackSetting(track, "Track_Options", "Y_Axis_Label", default)
+    if(ylab == "auto") default else if(ylab == "none") "" else ylab
 }
 ylim.browserTrack <- function(track, y){
     user <- getBrowserTrackSetting(track, "Track_Options", "Y_Limits")

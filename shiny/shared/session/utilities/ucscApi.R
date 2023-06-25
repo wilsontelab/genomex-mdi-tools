@@ -2,6 +2,11 @@
 # support functions for incorporating UCSC browser tracks into MDI trackBrowsers
 # or otherwise retrieving genomic data from UCSC resources
 #----------------------------------------------------------------------
+
+#----------------------------------------------------------------------
+# rendering UCSC track images
+# 'genome' arguments take a single character genome name
+#----------------------------------------------------------------------
 ucscRenderTracksUrl <- "http://genome.ucsc.edu/cgi-bin/hgRenderTracks"
 ucscPixelsPerChar <- list(
     "8"   = 6,  # determined empirically
@@ -33,22 +38,37 @@ adjustLayoutForUcsc <- function(layout){
     layout$plotWidth <- layout$browserWidth - layout$mai$left - layout$mai$right
     layout
 }
-ucscTrackImage <- function(genome, coord, layout, tracks = list()){
-    ucsc <- httr::GET(ucscRenderTracksUrl, query = c( # one MDI track might stack multiple UCSC tracks
-        list(
-            db = genome$genome,
-            position = coord$region,
-            guidelines = "off",
-            hgt.labelWidth = layout$uscsLabelWidthChars,
-            pix = (layout$mai$left + layout$plotWidth) * layout$dpi + 1,
-            textSize = layout$uscsPointsize,
-            hideTracks = 1
-        ), 
-        tracks # name = track, value = full|dense|pack|hide     
+ucscTrackImage <- function(genome, coord, layout, tracks = list(), ruler = FALSE){
+    req(tracks)    
+    startSpinner(session, message = "getting UCSC tracks")
+
+    # assemble the get url query
+    query <- list(
+        db = genome,
+        position = coord$region,
+        guidelines = "off",
+        hgt.labelWidth = layout$uscsLabelWidthChars,
+        pix = (layout$mai$left + layout$plotWidth) * layout$dpi + 1,
+        textSize = layout$uscsPointsize,
+        hideTracks = 1
+    )
+
+    # allow user to determine whether to use MDI or UCSC coordinate rulers
+    if(!isTruthy(ruler)) query$ruler = "hide" 
+
+    # enforce vertical track ordering (does this always work? might be buggy on UCSC end)
+    trackOrder <- as.list(as.character(1:length(tracks)))
+    names(trackOrder) <- paste0(names(tracks), "_imgOrd")
+
+    # one MDI track might stack multiple UCSC tracks
+    ucsc <- httr::GET(ucscRenderTracksUrl, query = c( 
+        query, 
+        tracks, # name = track, value = full|dense|pack|hide 
+        trackOrder   
     ))
 
     # TODO: use a better null error image if UCSC fails
-    if(ucsc$status_code != 200) {
+    if(is.null(ucsc) || !isTruthy(ucsc$status_code) || ucsc$status_code != 200) {
         print(ucsc$url)
         ucsc <- httr::GET(ucscRenderTracksUrl)
     }
@@ -60,20 +80,19 @@ ucscTrackImage <- function(genome, coord, layout, tracks = list()){
         gravity = "West", 
         color = "white"
     )
+    stopSpinner(session)
     image
 }
 # hubUrl=<url>
 # <trackName>.heightPer=<number> - sets the height of the a bigWig track in pixels
 
 #----------------------------------------------------------------------
-# support functions for reading genome data from the UCSC API
+# URLs and support functions for reading genome data from the UCSC API
 #----------------------------------------------------------------------
 ucscResourceDir <- file.path(serverEnv$RESOURCES_DIR, "UCSC")
 ucscApiPrefix  <- "https://api.genome.ucsc.edu/"
 ucscListPrefix <- paste0(ucscApiPrefix, "list/")
 ucscGetPrefix  <- paste0(ucscApiPrefix, "getData/")
-
-# directory functions
 createUcscDirectory <- function(relPath){
     dir <- if(is.null(relPath)) ucscResourceDir 
            else file.path(ucscResourceDir, relPath)
@@ -85,7 +104,10 @@ getUcscRdsFile <- function(relPath, fileName){
     file.path(dir, paste(fileName, "rds", sep = "."))    
 }
 
-# listing functions
+#----------------------------------------------------------------------
+# retrieve genome-level metadata
+# 'genome' arguments take a single character genome name
+#----------------------------------------------------------------------
 listUcscGenomes <- function(force = FALSE){
     file <- getUcscRdsFile("genomes", "genomes")
     file <- loadPersistentFile(
@@ -141,7 +163,7 @@ listUcscTracks <- function(genome, force = FALSE){
     persistentCache[[file]]$data
 }
 listUcscAnnotations <- function(genome, force = FALSE){
-    listUcscTracks(genome, force)[type == "genePred" | type == "bigGenePred"] # bigGenePred added to support T2T hs1 genome
+    listUcscTracks(genome, force)[type == "genePred" | type == "bigGenePred"]
 }
 listUcscChromosomes <- function(genome, force = FALSE){
     file <- getUcscRdsFile(file.path("genomes", genome), "chromosomes")
@@ -182,75 +204,6 @@ listCanonicalChromosomes <- function(genome, force = FALSE){
     required <- sort(chroms[!grepl('_', chroms)])
     unique(c(required[!(required %in% standardized)], standardized))
 }
-
-# get functions; caller decides whether to work by chromosome or whole genome
-getUcscTrackTable <- function(genome, track, chromosome = NULL,
-                              col.names = NULL, colClasses = NULL,   
-                              force = FALSE, ttl = "year"){
-    fileName <- if(is.null(chromosome)) track else paste(track, chromosome, sep = ".")
-    file <- getUcscRdsFile(file.path("genomes", genome, "tracks", track), fileName)
-    file <- loadPersistentFile(
-        file = file,
-        force = force,
-        unlink = force,
-        ttl = CONSTANTS$ttl[[ttl]],
-        create = function(file){
-            startSpinner(session, message = paste("getting", genome, "track", track))
-            url <- paste0(ucscGetPrefix, "track")
-            ucsc <- httr::GET(url, httr::accept_json(), query = list(
-                genome = genome, 
-                track  = track,
-                chrom  = chromosome,
-                maxItemsOutput = -1 # always get (hopefully) all data
-            ))
-            if(ucsc$status_code != 200) return(NULL) # TODO: improved error handling
-            ucsc <- httr::content(ucsc, type = "application/json")[[track]]
-            dt <- fread(
-                text = paste(
-                    sapply(names(ucsc), function(chrom){
-                        if(length(ucsc[[chrom]]) == 0) return(NULL)
-                        paste0(
-                            paste(
-                                sapply(ucsc[[chrom]], function(row){
-                                    paste(
-                                        sapply(col.names, function(col) if(is.null(row[[col]])) "NA" else row[[col]]),
-                                        collapse = "\t"
-                                    )
-                                }),
-                                collapse = "\n"             
-                            ), 
-                            "\n"
-                        )
-                    }),
-                    collapse = ""
-                ), 
-                colClasses = colClasses,
-                col.names = col.names
-            )
-            saveRDS(dt, file = file)   
-            stopSpinner(session)           
-        }
-    )
-    persistentCache[[file]]$data 
-}
-getChromosomeFeatures <- function(genome, track = c("cytoBand", "gap")){
-    tryCatch({
-        getUcscTrackTable(
-            genome, 
-            track,
-            col.names = switch(
-                track,
-                cytoBand = c("chrom", "chromStart", "chromEnd", "name", "gieStain"),
-                gap =      c("chrom", "chromStart", "chromEnd", "type", "size")
-            ),
-            colClasses = switch(
-                track,
-                cytoBand = c("character", "integer", "integer", "character", "character"),
-                gap =      c("character", "integer", "integer", "character", "integer")
-            )
-        )
-    }, error = function(e) NULL)
-}
 getChromosomeSizes <- function(genome){
     chroms <- listCanonicalChromosomes(genome)
     sizes <- listUcscChromosomes(genome)[, .(chromosome, size)]
@@ -261,13 +214,297 @@ getChromosomeSizes <- function(genome){
         chrom = "all",
         chromStart = starts,
         chromEnd = ends,
+        size = sizes,
         name = chroms,
         gieStain = rep(c("odd", "even"), 50)[1:length(chroms)]
     )   
 }
+getChromosomeSize <- function(genome, chrom_){
+    req(genome, chrom_)
+    if(chrom_ == "all") return(getGenomeSize(genome))
+    chroms <- getChromosomeSizes(genome)
+    chrom <- chroms[name == chrom_]
+    req(nrow(chrom) == 1)
+    chrom[, size]
+}
 getGenomeSize <- function(genome){
     chroms <- listCanonicalChromosomes(genome)
     listUcscChromosomes(genome)[chromosome %in% chroms, sum(as.integer64(size))]
+}
+
+#----------------------------------------------------------------------
+# generic track get function; caller decides whether to work by chromosome or whole genome
+# 'genome' and 'track' arguments take a single character entity name
+#----------------------------------------------------------------------
+getUcscTrackTable <- function(genome, track, chromosome = NULL,
+                              col.names = NULL, colClasses = NULL,   
+                              force = FALSE, ttl = "year", 
+                              maxItemsOutput = -1){ # default always tries to get (hopefully) all data
+    fileName <- if(is.null(chromosome)) track else paste(track, chromosome, sep = ".")
+    file <- getUcscRdsFile(file.path("genomes", genome, "tracks", track), fileName)
+    file <- loadPersistentFile(
+        file = file,
+        force = force,
+        unlink = force,
+        ttl = CONSTANTS$ttl[[ttl]],
+        create = function(file){
+            startSpinner(session, message = paste("downloading", genome, "track", track))
+            url <- paste0(ucscGetPrefix, "track")
+            ucsc <- httr::GET(url, httr::accept_json(), query = list(
+                genome = genome, 
+                track  = track,
+                chrom  = chromosome,
+                maxItemsOutput = maxItemsOutput
+            ))
+            if(!(ucsc$status_code %in% c(200, 206))) { # code 206 mean partial content
+                if(!is.null(status)) print(paste("UCSC failed:", status, genome, track, chromosome))
+                stopSpinner(session)
+                return(data.table()) # failure returns an empty data.table, but does not save it
+            }
+
+            startSpinner(session, message = paste("parsing", genome, "track", track))
+            ucsc <- httr::content(ucsc, type = "application/json")[[track]]
+
+            startSpinner(session, message = paste("tabulating", genome, "track", track))
+            parseFeatures <- function(rows){
+                if(length(rows) == 0) return("")
+                paste0(
+                    paste(
+                        sapply(rows, function(row){
+                            paste(
+                                sapply(col.names, function(col) if(is.null(row[[col]])) "NA" else row[[col]]),
+                                collapse = "\t"
+                            )
+                        }),
+                        collapse = "\n"             
+                    ), 
+                    "\n"
+                ) 
+            }
+            dt <- fread(
+                text = paste(
+                    if(!is.null(names(ucsc))){ # handle the more typical format with features itemized by chromosome
+                        sapply(names(ucsc), function(chrom) parseFeatures(ucsc[[chrom]]) )
+                    } else { # handle the bigGenePred format, with a single list of all features
+                        parseFeatures(ucsc)
+                    },
+                    collapse = ""
+                ), 
+                colClasses = colClasses,
+                col.names = col.names
+            )
+
+            startSpinner(session, message = paste("saving", genome, "track", track))
+            saveRDS(dt, file = file)   
+            stopSpinner(session)           
+        }
+    )
+    persistentCache[[file]]$data 
+}
+
+#----------------------------------------------------------------------
+# retrieve low-resolution chromosomeone metadata, for chromosome track
+# 'genome' and 'chrom' arguments take a single character entity name
+#----------------------------------------------------------------------
+getChromosomeFeatures <- function(genome, track){
+    availableTracks <- listUcscTracks(genome)
+    req(availableTracks)
+    if(!(track %in% availableTracks$track)) return(NULL)
+    tryCatch({
+        getUcscTrackTable(
+            genome, 
+            track,
+            col.names = switch(
+                track,
+                cytoBandIdeo = c("chrom", "chromStart", "chromEnd", "name", "gieStain"),
+                cytoBand     = c("chrom", "chromStart", "chromEnd", "name", "gieStain"),
+                gap          = c("chrom", "chromStart", "chromEnd", "type", "size")
+            ),
+            colClasses = switch(
+                track,
+                cytoBandIdeo = c("character", "integer", "integer", "character", "character"),
+                cytoBand     = c("character", "integer", "integer", "character", "character"),
+                gap          = c("character", "integer", "integer", "character", "integer")
+            )
+        )
+    }, error = function(e) NULL)
+}
+
+#----------------------------------------------------------------------
+# standardized subsets of UCSC columns used by genomeBrowser
+# post-processing functions below, or the consuming code, must distinguish and handle the genePred formats
+#----------------------------------------------------------------------
+ucscGenePredTypes <- list(
+    genePred = c(
+        "name",  # unique name for the transcript isoform or other feature
+        "name2", # gene name shared across isoforms
+        "chrom",
+        "strand",
+        "txStart",
+        "txEnd",
+        "exonCount",
+        "exonStarts",
+        "exonEnds",
+        "exonFrames"           
+    ),
+    bigGenePred = c(
+        "name", 
+        "name2", 
+        "chrom",
+        "strand",
+        "chromStart", # synonym for "txStart"
+        "chromEnd",
+        "blockCount", # synonum for "exonCount"
+        "blockSizes", # alternative encoding of exon positions
+        "chromStarts",
+        "exonFrames"   
+    )
+)
+isBigGenePred <- function(annotation) annotation$type == "bigGenePred"
+
+#----------------------------------------------------------------------
+# retrieve annotation-level metadata
+# 'genome' and 'annotation' arguments take a single-row data.table describing one entity
+# 'chromosome' and 'gene' take a single character entity name
+#----------------------------------------------------------------------
+# annotation metadata for a genome, chromosome, region or gene
+getChromTranscripts <- function(genome, annotation, chromosome = "all", force = FALSE){
+    fileName <- paste("transcripts", chromosome, sep = ".")
+    file <- getUcscRdsFile(file.path("genomes", genome$genome, "annotations", annotation$track), fileName)
+    file <- loadPersistentFile(
+        file = file,
+        force = force,
+        unlink = force,
+        ttl = CONSTANTS$ttl$year,
+        create = function(file){
+            startSpinner(session, message = paste("tabulating transcripts"))
+            dt <- getUcscTrackTable(genome$genome, annotation$track, col.names = ucscGenePredTypes[[annotation$type]], force = FALSE)
+            saveRDS(if(chromosome == "all") dt else dt[chrom == chromosome], file = file)   
+            stopSpinner(session)           
+        }
+    )
+    persistentCache[[file]]$data 
+}
+getGenomeTranscripts <- function(genome, annotation, force = FALSE){
+    getChromTranscripts(genome, annotation, chromosome = "all", force = force)
+}
+getRegionTranscripts <- function(genome, annotation, coord, force = FALSE){
+    transcripts <- getChromTranscripts(genome, annotation, chromosome = coord$chromosome, force = force)
+    if(isBigGenePred(annotation)){
+        transcripts[chromStart <= coord$end & coord$start <= chromEnd]
+    } else {
+        transcripts[txStart    <= coord$end & coord$start <= txEnd]
+    }
+}
+getGeneTranscripts <- function(genome, annotation, gene, coord = NULL){
+    transcripts <- getGenomeTranscripts(genome, annotation, force = force)
+    transcripts[toupper(name2) == toupper(gene)]
+}
+aggregateTranscriptsToGenes <- function(annotation, transcripts){
+    sizeLimit <- 5e6 # size limit correct for naming problems in annotation where name2 applies to widely disparte chromosome regions
+    x <- if(isBigGenePred(annotation)) transcripts[, {
+        blocks <- unique(data.table(
+            sizes  = unlist(strsplit(blockSizes,  ",")),
+            starts = unlist(strsplit(chromStarts, ","))            
+        ))
+        .(
+            names       = paste(sort(name), collapse = ","),
+            chrom       = chrom[1],
+            strand      = strand[1],
+            chromStart  = min(chromStart), # the widest annotated span of the gene
+            chromEnd    = max(chromEnd),
+            blockCount  = max(blockCount),
+            blockSizes  = list(as.integer(blocks$sizes)),
+            chromStarts = list(as.integer(blocks$starts))
+        ) 
+    }, by = .(name2)][chromStart - chromEnd < sizeLimit] else transcripts[, {
+        exons <- unique(data.table(
+            starts = unlist(strsplit(exonStarts, ",")),
+            ends   = unlist(strsplit(exonEnds,  ","))            
+        )) 
+        .(
+            names       = paste(sort(name), collapse = ","),
+            chrom       = chrom[1],
+            strand      = strand[1],
+            txStart     = min(txStart), # the widest annotated span of the gene
+            txEnd       = max(txEnd),
+            exonCount   = max(exonCount),
+            exonStarts  = list(as.integer(exons$starts)),
+            exonEnds    = list(as.integer(exons$ends))
+        )  
+    }, by = .(name2)][txEnd - txStart < sizeLimit]
+    x[order(name2)]
+}
+getChromGenes <- function(genome, annotation, chromosome = "all", force = FALSE){
+    fileName <- paste("genes", chromosome, sep = ".")
+    file <- getUcscRdsFile(file.path("genomes", genome$genome, "annotations", annotation$track), fileName)
+    file <- loadPersistentFile(
+        file = file,
+        force = force,
+        unlink = force,
+        ttl = CONSTANTS$ttl$year,
+        create = function(file){
+            transcripts <- getChromTranscripts(genome, annotation, chromosome = chromosome, force = force)            
+            startSpinner(session, message = paste("tabulating genes"))
+            saveRDS(aggregateTranscriptsToGenes(annotation, transcripts), file = file)   
+            stopSpinner(session)           
+        }
+    )
+    persistentCache[[file]]$data 
+}
+getGenomeGenes <- function(genome, annotation, force = FALSE){
+    getChromGenes(genome, annotation, chromosome = "all", force = force)
+}
+getRegionGenes <- function(genome, annotation, coord, force = FALSE){
+    genes <- getChromGenes(genome, annotation, chromosome = coord$chromosome, force = force)
+    if(isBigGenePred(annotation)){
+        genes[chromStart <= coord$end & coord$start <= chromEnd]
+    } else {
+        genes[txStart    <= coord$end & coord$start <= txEnd]
+    }
+}
+getGene <- function(genome, annotation, gene, force = FALSE){
+    genes <- getGenomeGenes(genome, annotation, force = force)
+    genes[toupper(name2) == toupper(gene)]
+}
+
+#----------------------------------------------------------------------
+# perform post-processing on genes and transcripts
+#----------------------------------------------------------------------
+setUcscFeatureEndpoints <- function(features, annotation){ # convert endpoints to standardized names
+    if(isBigGenePred(annotation)){
+        features[, ":="(
+            start = chromStart,
+            end   = chromEnd
+        )]
+    } else {
+        features[, ":="(
+            start = txStart,
+            end   = txEnd
+        )]
+    }
+    features
+}
+expandUcscExons <- function(genes, annotation){
+    if(nrow(genes) == 0) return(data.table())
+    if(isBigGenePred(annotation)){
+        genes[, {
+            exonStarts <- chromStart + unlist(chromStarts)
+            .(
+                chrom  = chrom,
+                strand = strand, 
+                start  = exonStarts, # thus, yields one row per exon
+                end    = exonStarts + unlist(blockSizes) - 1
+            )
+        }, by = .(name2)]
+    } else {
+        genes[, .(
+            chrom  = chrom,
+            strand = strand, 
+            start  = unlist(exonStarts), # thus, yields one row per exon
+            end    = unlist(exonEnds)
+        ), by = .(name2)]
+    }
 }
 
 # list schema from specified track in UCSC database genome -

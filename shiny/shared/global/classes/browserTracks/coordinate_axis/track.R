@@ -14,10 +14,11 @@ new_coordinate_axisTrack <- function(trackId) {
 
 # build method for the S3 class
 build.coordinate_axisTrack <- function(track, reference, coord, layout){
+    req(objectHasData(reference$genome))
     padding <- padding(track, layout)
     height <- 3.3 / layout$linesPerInch + padding$total
     unit <- parseUnit(scaleUnit(track), coord$end)
-    xlab <- paste0(reference$genome, " ", coord$chromosome, " (", unit$unit, ")")   
+    xlab <- paste0(reference$genome$genome, " ", coord$chromosome, " (", unit$unit, ")")   
     axis <- getBrowserTrackSetting(track, "Plot_Options", "Axis_Orientation", default = "bottom")        
     lwd <- lwd(track)
     xlim <- coord$range / unit$multiplier

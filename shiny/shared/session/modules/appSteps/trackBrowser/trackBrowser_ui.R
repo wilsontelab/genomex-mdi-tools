@@ -97,9 +97,10 @@ trackBrowserUI <- function(id, options) {
                 textInput(ns('jumpTo'), "Jump To", value = ""),
             ),
             tags$div(
-                class = "trackBrowserInput",
-                style = "margin: 32px 5px 0px 4px",
-                actionLink(ns('annotationSearch'), NULL, icon("search")),
+                class = "trackBrowserInput annotationSearchInput",
+                # style = "margin: 32px 5px 0px 4px",
+                # actionLink(ns('annotationSearch'), NULL, icon("search")),
+                popupInputUI(ns('annotationSearch'), label = "", value = NULL, icon = icon("search"), buttonFn = actionLink)
             ),
             tags$div(
                 class = "trackBrowserInput",
@@ -169,7 +170,8 @@ trackBrowserUI <- function(id, options) {
 
                 # the browser output image
                 mdiInteractivePlotUI(id = ns("image"))              
-            )
+            ),
+            NULL
         )
     )
 }

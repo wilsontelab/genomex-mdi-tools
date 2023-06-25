@@ -1,5 +1,5 @@
-# settings:
-#     UCSC_Options:
-#         Track_Names:
-#             type: textInput
-#             value: ncbiRefSeq
+settings:
+    Track_Options:
+        Ruler:
+            type: checkboxInput
+            value: false

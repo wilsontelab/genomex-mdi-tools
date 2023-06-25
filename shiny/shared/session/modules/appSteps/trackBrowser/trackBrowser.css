@@ -18,6 +18,10 @@
 .coordinateInput .shiny-input-container {
     width: 95px;
 }
+.annotationSearchInput .shiny-input-container {
+    width: 15px;
+    margin: 12px 0px 0px 5px;
+}
 .genomeInput .selectize-input div {
     max-width: 80px;
     overflow: hidden;

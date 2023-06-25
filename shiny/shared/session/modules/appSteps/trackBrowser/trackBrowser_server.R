@@ -16,11 +16,15 @@ trackBrowserServer <- function(id, options, bookmark, locks) {
 defaultGenome <- "hg38"
 defaultAnnotation <- "wgEncodeGencodeBasicV41"
 defaultTrackTypes <- c(
-    "plot_title",
+    # "plot_title",
     "chromosome",
     "scale_bar",
-    "coordinate_axis"
+    "coordinate_axis",
+    "genes"
 )
+addTrackPrompt <- "-- add a new track --"
+duplicateTrackPrompt <- "-- duplicate a track --"
+duplicateTrackPromptId <- "0"
 
 #----------------------------------------------------------------------
 # initialize module
@@ -50,11 +54,17 @@ confirmBrowserInit <- function(...) {
     hide("initMessage")
     browserIsInitialized(TRUE) 
     genome <- genome()
-    if(is.null(genome)    || genome == "")      genomeInput(defaultGenome)
+    if(!objectHasData(genome)) {
+        genomes <- genomes()
+        req(objectHasData(genomes))
+        genomeInput(genomes[genome == defaultGenome])
+    }
     annotation <- annotation()
-    if(is.null(annotation) || annotation == "") {
+    if(!objectHasData(annotation)) {
         isLoadingDefaultGenome <<- TRUE
-        annotationInput(defaultAnnotation)
+        annotations <- annotations()
+        req(objectHasData(annotations))
+        annotationInput(annotations[track == defaultAnnotation])
     }
     if(length(names(tracks)) == 0) isolate({ # set default header tracks if not loading a bookmark
         for(i in seq_along(c(defaultTrackTypes, options$defaultTrackTypes))){
@@ -65,9 +75,6 @@ confirmBrowserInit <- function(...) {
     })
 }
 setTimeout(confirmBrowserInit, delay = 1000)
-addTrackPrompt <- "-- add a new track --"
-duplicateTrackPrompt <- "-- duplicate a track --"
-duplicateTrackPromptId <- "0"
 
 #----------------------------------------------------------------------
 # fill cascading genome > chromosomes
@@ -86,8 +93,8 @@ genomesTable <- bufferedTableServer(
     options = list( searchDelay = 0 )
 )
 genome <- reactive({
-    genomeInput <- tryCatch({ get("genomeInput") }, error = function(e) NULL)
-    if(!is.null(genomeInput)) genomeInput() else NULL
+    genomeInput <- tryCatch({ get("genomeInput") }, error = function(e) data.table())
+    if(!is.null(genomeInput)) genomeInput() else data.table()
 })
 genomeInput <- popupInputServer(
     "genome", 
@@ -96,25 +103,26 @@ genomeInput <- popupInputServer(
         rowI <- genomesTable$selectionObserver()
         if(is.na(rowI)) {
             genomeI(NULL)
-            NA
+            data.table()
         } else {
             genomeI(rowI)
-            genomes()[rowI]$genome # the popup's return value
+            genomes()[rowI] # the popup's return value, one genome row
         }
     },
+    labelCol = "genome",
     tags$p(tags$strong({
         x <- genome()
-        if(is.null(x) || is.na(x)) "" else paste("current selection = ", genome())
+        if(!objectHasData(x)) "" else paste("current selection = ", x$genome)
     })),
     bufferedTableUI(session$ns("genomes")),
     actionLink(session$ns("getUcscGenomes"), "Reload from UCSC")
 )
 #----------------------------------------------------------------------
-annotations <- reactiveVal( NULL )
+annotations <- reactiveVal( data.table() )
 observeEvent(input$getUcscAnnotations, {
     genome <- genome()
     req(genome)
-    genomes( listUcscAnnotations(genome = genome, force = TRUE) )
+    genomes( listUcscAnnotations(genome = genome$genome, force = TRUE) )
 })
 annotationI <- reactiveVal(NULL)
 annotationsTable <- bufferedTableServer(
@@ -126,8 +134,8 @@ annotationsTable <- bufferedTableServer(
     options = list( searchDelay = 0 )
 )
 annotation <- reactive({
-    annotationInput <- tryCatch({ get("annotationInput") }, error = function(e) NULL)
-    if(!is.null(annotationInput)) annotationInput() else NULL
+    annotationInput <- tryCatch({ get("annotationInput") }, error = function(e) data.table())
+    if(!is.null(annotationInput)) annotationInput() else data.table()
 })
 annotationInput <- popupInputServer(
     "annotation", 
@@ -136,46 +144,44 @@ annotationInput <- popupInputServer(
         rowI <- annotationsTable$selectionObserver()
         if(is.na(rowI)) {
             annotationI(NULL)
-            NA
+            data.table()
         } else {
             annotationI(rowI)
-            annotations()[rowI]$track # the popup's return value
+            annotations()[rowI] # the popup's return value, one annotation row
         }
     },
+    labelCol = "track",
     tags$p(tags$strong({
         x <- annotation()
-        if(is.null(x) || is.na(x)) "" else paste("current selection = ", annotation())
+        if(!objectHasData(x)) "" else paste("current selection = ", x$track)
     })),
     bufferedTableUI(session$ns("annotations")),
     actionLink(session$ns("getUcscAnnotations"), "Reload from UCSC"),
-    active = reactive({ 
-        genome <- genome()
-        !is.null(genome) && !is.na(genome)
-    })    
+    active = reactive({ nrow(genome()) > 0 })    
 )
 #----------------------------------------------------------------------
 chromosomes <- reactiveVal(NULL)
 observeEvent(genome(), {
     genome <- genome()
-    req(genome)
-    annotations(listUcscAnnotations(genome))
+    req(nrow(genome()) > 0)
+    annotations(listUcscAnnotations(genome$genome))
     if(loadingBookmark){
         loadingBookmark <<- FALSE
     } else {
         if(isLoadingDefaultGenome) isLoadingDefaultGenome <- FALSE
-        else annotationInput(NULL)            
-        chromosomes(c(listCanonicalChromosomes(genome), "all"))
+        else annotationInput(data.table())            
+        chromosomes(c(listCanonicalChromosomes(genome$genome), "all"))
         freezeReactiveValue(input, "chromosome")
         updateSelectInput(session, "chromosome", choices = chromosomes(), selected = NULL)        
     }
 })
-chromosomeSize <- reactive({
+chromosomeSize <- reactive({ # size of the currently active chromosome (not the one we may be switching to...)
     genome <- genome()
-    req(genome)
+    req(nrow(genome()) > 0)
     chrom <- input$chromosome
     req(chrom)
-    if(chrom == "all") getGenomeSize(genome)
-    else listUcscChromosomes(genome)[chromosome == chrom, size]
+    if(chrom == "all") getGenomeSize(genome$genome)
+    else listUcscChromosomes(genome$genome)[chromosome == chrom, size]
 })
 
 #----------------------------------------------------------------------
@@ -558,7 +564,9 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE){ # argumen
         start <- as.integer64(start - padding)
         end   <- as.integer64(end   + padding)
     }
-    chromosomeSize <- chromosomeSize()
+    genome <- genome()
+    req(nrow(genome) > 0)
+    chromosomeSize <- getChromosomeSize(genome$genome, chromosome)
     req(chromosomeSize)
     if(start < 1) start <- 1
     if(end > chromosomeSize) end <- chromosomeSize
@@ -653,13 +661,13 @@ output$trackNavs <- renderUI({
 })
 
 #----------------------------------------------------------------------
-# jumpTo coordinates and annotation feature-based navigation
+# jumpTo coordinates
 #----------------------------------------------------------------------
 checkJumpChrom <- function(chrom_){
     genome <- genome()
-    req(genome)    
-    chroms <- getChromosomeSizes(genome)
-    chrom <- chroms[name == chrom_, .(name = name, size = chromEnd - chromStart + 1)]
+    req(nrow(genome) > 0)    
+    chroms <- getChromosomeSizes(genome$genome)
+    chrom <- chroms[name == chrom_, .(name, size)]
     req(nrow(chrom) == 1)
     chrom
 }
@@ -681,23 +689,36 @@ checkJumpEnd <- function(chrom, start, end_){
     req(end > start, end <= chrom$size)
     end
 }
+checkJumpGene <- function(gene){
+    genome <- genome()
+    annotation <- annotation()
+    req(gene, objectHasData(genome), objectHasData(annotation))
+    gene <- getGene(genome, annotation, gene) %>% setUcscFeatureEndpoints(annotation)
+    req(nrow(gene) == 1)
+    list(
+        chromosome = gene$chrom, 
+        start      = gene$start, 
+        end        = gene$end,
+        strict = FALSE
+    )
+}
+executeJumpTo <- function(action = NULL){
+    req(action)
+    updateTextInput(session, "jumpTo", value = "")
+    updateTextInput(session, "end", value = "")
+    do.call(jumpToCoordinates, action)
+}
 observeEvent(input$jumpTo,  { 
     req(input$jumpTo)    
     jumpTo <- trimws(input$jumpTo)
     req(jumpTo)
-    dmsg("input$jumpTo")
-    dmsg(jumpTo)
-
     parts <- strsplit(jumpTo, '(:|,|-|\\s+)')[[1]]
     action <- tryCatch({
         switch(
             length(parts),
-            { # a single word, assumed to be an annotation feature name
-                annotation <- annotation()
-                req(annotation)
-                dprint(annotation)
-                NULL
-            }, { # two parts, assumed to be chrom + center, at current width
+            { # a single word, assumed to be an annotation feature name, i.e., a gene
+                checkJumpGene(parts[1])
+            }, { # two parts, assumed to be chrom + center, at strict current width
                 chrom <- checkJumpChrom(parts[1])
                 center <- checkJumpCenter(chrom, parts[2])
                 coord <- coordinates(input)
@@ -705,25 +726,65 @@ observeEvent(input$jumpTo,  {
                 list(
                     chromosome = chrom, 
                     start = center - halfWidth, 
-                    end   = center + halfWidth, 
+                    end   = center + halfWidth,
                     strict = TRUE
                 )
             }, { # three parts, assumbed to be a region, i.e., chrom + start + end
                 chrom <- checkJumpChrom(parts[1])
-                dprint(chrom)
-                NULL
+                start <- checkJumpStart(parts[2])
+                end <- checkJumpEnd(chrom, start, parts[3])
+                list(
+                    chromosome = chrom, 
+                    start = start, 
+                    end   = end # subjected to input$strict
+                )
             } 
         )
     }, error = function(e) NULL)
-    req(action)
-    dmsg("DOING IT")
-    updateTextInput(session, "jumpTo", value = "")
-    updateTextInput(session, "end", value = "")
-    do.call(jumpToCoordinates, action)
+    executeJumpTo(action)
 }, ignoreInit = TRUE)
 
-# chr1 123456789
-# chr2 50000
+#----------------------------------------------------------------------
+# gene search popup navigation
+#----------------------------------------------------------------------
+genes <- reactive({
+    genome <- genome()
+    annotation <- annotation()
+    req(nrow(genome) > 0, nrow(annotation) > 0)
+    getGenomeGenes(genome, annotation) %>% setUcscFeatureEndpoints(annotation) 
+})
+geneI <- reactiveVal(NULL)
+genesTable <- bufferedTableServer(
+    "genes",
+    id,
+    input,
+    tableData = reactive({ genes()[, .(name2, chrom, strand, start, end)] }),
+    select = geneI,
+    options = list( searchDelay = 0 )
+)
+annotationSearchInput <- popupInputServer(
+    "annotationSearch", 
+    "Navigate to a Gene", 
+    callback = function(...){
+        rowI <- genesTable$selectionObserver()
+        if(is.na(rowI)) {
+            geneI(NULL)
+            NA
+        } else {
+            geneI(rowI)
+            genes()[rowI]$name2 # the popup's return value, a character gene name
+        }
+    },
+    updateLabel = FALSE,
+    bufferedTableUI(session$ns("genes"))
+    # ,
+    # actionLink(session$ns("getUcscGenomes"), "Reload from UCSC")
+)
+observeEvent(annotationSearchInput(),  { 
+    gene <- annotationSearchInput()
+    action <- checkJumpGene(gene)
+    executeJumpTo(action)
+}, ignoreInit = TRUE)  
 
 #----------------------------------------------------------------------
 # define bookmarking actions

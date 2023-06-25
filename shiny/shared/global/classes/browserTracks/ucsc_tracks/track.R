@@ -14,20 +14,23 @@ new_ucsc_tracksTrack <- function(trackId) {
 
 # build method for the S3 class
 build.ucsc_tracksTrack <- function(track, reference, coord, layout){
+    req(objectHasData(reference$genome))
     items <- track$settings$items()
     ucscTracks <- if(!is.null(items)) lapply(items, function(x) x$display) else list()
-    image <- ucscTrackImage(reference, coord, layout, ucscTracks)
+    ruler <- getBrowserTrackSetting(track, "Track_Options", "Ruler", default = FALSE)
+    image <- ucscTrackImage(reference$genome$genome, coord, layout, ucscTracks, ruler = ruler)
     list(image = image)
 }
 
 # method for the list icon = track multi-select
 items.ucsc_tracksTrack <- function(track, session, input, reference){
+    req(objectHasData(reference$genome))
     showTrackItemsDialog(
         track$settings,
         session,
         title = "Select UCSC Tracks",
         itemTypePlural = "Tracks",
-        tableData = function() listUcscTracks(reference$genome),
+        tableData = function() listUcscTracks(reference$genome$genome),
         keyColumn = "track",
         extraColumns = c("shortLabel"),
         options = list(

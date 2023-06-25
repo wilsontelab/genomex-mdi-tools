@@ -25,7 +25,7 @@ build.plot_titleTrack <- function(track, reference, coord, layout){
             ylim = ylim,  ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i") 
         mtext(
-            track$settings$get("Track_Options", "Plot_Title"), 
+            getBrowserTrackSettings(track, "Track_Options", "Plot_Title", ""), 
             side = 3, 
             line = 0.5, 
             outer = FALSE, 
@@ -34,7 +34,7 @@ build.plot_titleTrack <- function(track, reference, coord, layout){
             padj = NA, 
             cex = 1.2
         )
-        if(track$settings$get("Track_Options", "Show_Line"))
+        if(getBrowserTrackSettings(track, "Track_Options", "Show_Line", FALSE))
             lines(c(coord$start, coord$end), c(0, 0), col = "black", lwd = 2)
     })
     list(

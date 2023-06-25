@@ -29,16 +29,17 @@ chromBandColors <- list(
     odd     = 'grey80'
 ) 
 build.chromosomeTrack <- function(track, reference, coord, layout){
-    req(reference$genome)
+    req(objectHasData(reference$genome))
+    genome <- reference$genome$genome
     req(track$browser$chromosome)
-    featuresTrack <- track$settings$get("Plot_Options", "Feature_Track") # i.e., a UCSC track
-    features <- if(coord$chromosome == "all") getChromosomeSizes(reference$genome)
+    featuresTrack <- getBrowserTrackSetting(track, "Plot_Options", "Feature_Track", "cytoBand") # i.e., a UCSC track
+    features <- if(coord$chromosome == "all") getChromosomeSizes(genome)
                 else if(featuresTrack == "none") NULL 
-                else getChromosomeFeatures(reference$genome, featuresTrack)
+                else getChromosomeFeatures(genome, featuresTrack)
     if(coord$chromosome == "all"){
         chromSize <- features[, max(chromEnd)]
     } else {
-        chroms <- listUcscChromosomes(reference$genome)
+        chroms <- listUcscChromosomes(genome)
         chromSize <- chroms[chromosome == track$browser$chromosome, size]        
     }
     padding <- padding(track, layout)
