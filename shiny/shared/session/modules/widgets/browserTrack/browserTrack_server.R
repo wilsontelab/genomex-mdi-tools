@@ -86,6 +86,7 @@ track$settings <- settings
 track$browser <- browserInput
 track$adjustWidth <- function(reference, coord, layout) adjustWidth(track, reference, coord, layout)
 track$build <- function(reference, coord, layout) build(track, reference, coord, layout)
+track$zoom <- function(reference, coord, layout) zoom(track, reference, coord, layout)
 
 # update the track display name based on settings changes
 observeEvent(settings$Track_Options(), {

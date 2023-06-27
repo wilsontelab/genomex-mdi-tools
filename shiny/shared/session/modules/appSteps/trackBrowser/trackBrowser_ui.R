@@ -169,7 +169,10 @@ trackBrowserUI <- function(id, options) {
                 ),
 
                 # the browser output image
-                mdiInteractivePlotUI(id = ns("image"))              
+                mdiInteractivePlotUI(id = ns("image")),
+
+                # a second output image for tracks to illustrate details about a clicked feature
+                mdiInteractivePlotUI(id = ns("zoomImage"))          
             ),
             NULL
         )

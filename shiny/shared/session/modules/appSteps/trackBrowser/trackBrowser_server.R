@@ -195,6 +195,7 @@ labelTrackTypes <- c(
 )
 trackTypes <- list()       # key = trackType, value = settings template file path
 tracks <- reactiveValues() # key = trackId,   value = browserTrackServer()
+zooms  <- reactiveValues() # key = trackId,   value = track zoom reactive
 nullTrackOrder <- data.table(trackId = character(), order = integer())
 trackOrder <- reactiveVal(nullTrackOrder)
 
@@ -339,7 +340,6 @@ observeEvent({
 #----------------------------------------------------------------------
 # browser-level tracks metadata
 #----------------------------------------------------------------------
-browserLayout <- list()
 plotTrackIds <- reactive({ # the current track ids, in plotting order
     trackOrder <- trackOrder()
     if(nrow(trackOrder) > 0) trackOrder[order(order), trackId] else character()
@@ -349,7 +349,7 @@ coordinateWidth <- reactive({
 })
 
 #----------------------------------------------------------------------
-# render the composite plot image using base graphics
+# image scaling support
 #----------------------------------------------------------------------
 screenDpi <- 96 # TODO: expose as settings?
 printDpi  <- 300
@@ -373,6 +373,10 @@ getLinesPerInch <- function(dpi){ # conversion between lines and inches based on
 linesPerInchScreen <- reactive( getLinesPerInch(screenDpi) )
 linesPerInchPrint  <- reactive( getLinesPerInch(printDpi) )
 
+#----------------------------------------------------------------------
+# render the composite browser plot image using base graphics
+#----------------------------------------------------------------------
+browserLayout <- list()
 createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for both screen and image file download
     isPrint <- !is.null(pngFile)
 
@@ -492,7 +496,90 @@ browser <- mdiInteractivePlotServer(
 )
 
 #----------------------------------------------------------------------
-# handle user interactions with plot
+# render the composite zoom plot image using base graphics
+#----------------------------------------------------------------------
+zoomLayout <- list()
+createZoomPlot <- function(pngFile = NULL){ # called to generate plot for both screen and image file download
+    isPrint <- !is.null(pngFile)
+
+
+    req(FALSE)
+
+
+    # collect the zoom list from tracks with zoom option set
+    trackIds <- plotTrackIds()
+
+    nZoomTracks <- length(trackIds)    
+    req(nZoomTracks > 0)
+
+    # parse the target genome region
+    reference <- list(
+        genome = genome(),
+        annotation = annotation()
+    )
+    req(reference$genome)
+    coord <- coordinates(input)
+    req(coord)
+    req(coord$width > 0)
+
+    # parse the plot layout based on plots alone
+    layout <- browserLayout
+
+
+# most of this can be shared via function with browser composite build
+    # build all zoom tracks using reactives
+    builds <- lapply(trackIds, function(trackId) {
+        tryCatch({
+            tracks[[trackId]]$track$zoom(reference, coord, layout)
+        }, error = function(e) {
+            print(e)
+            NULL
+        })
+    })
+
+    # purge null tracks that depend on information not yet available
+    builds <- builds[!sapply(builds, is.null)]
+    if(length(builds) == 0) {
+        stopSpinner(session)
+        return(NULL)
+    }
+
+    # adjust layout for mdiInteractivePlotServer
+    layout$heights <- sapply(builds, function(build) magick::image_info(build$image)$height)
+    layout$height <- sum(layout$heights)
+    layout$zoomHeight <- layout$height / dpi
+    layout$ylim <- lapply(builds, function(build) build$ylim)
+    layout$mai  <- lapply(builds, function(build) build$mai)
+
+    # assemble to composite zoom image
+    fileName <- paste0(app$NAME, "-", id, "-zoomImage.png")       
+    pngFile <- if(isPrint) pngFile else file.path(sessionDirectory, fileName) 
+    composite <- magick::image_append(
+        magick::image_join(lapply(builds, function(build) build$image)), 
+        stack = TRUE
+    )
+    magick::image_write(composite, path = pngFile, format = "png")
+
+    # finish up
+    stopSpinner(session)
+    list(
+        pngFile = pngFile,
+        layout = layout,
+        parseLayout = yPixelToTrack
+    ) 
+}
+zoom <- mdiInteractivePlotServer(
+    "zoomImage", 
+    contents = reactive({
+        req(browserIsInitialized())
+        contents <- createZoomPlot()
+        zoomLayout <<- contents$layout
+        contents
+    })
+)
+
+#----------------------------------------------------------------------
+# handle user interactions with the browser plot
 #----------------------------------------------------------------------
 
 # convert a Y pixel to the plot it landed in for use by mdiInteractivePlotServer
