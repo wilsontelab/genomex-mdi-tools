@@ -45,8 +45,8 @@ items <- function(x, ...) {
 navigation <- function(x, ...) {
     UseMethod("navigation", x)
 }
-zoom <- function(x, ...) {
-    UseMethod("zoom", x)
+expand <- function(x, ...) {
+    UseMethod("expand", x)
 }
 padding <- function(x, ...) {
     UseMethod("padding", x)

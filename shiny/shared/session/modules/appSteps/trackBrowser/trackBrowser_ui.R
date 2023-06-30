@@ -171,10 +171,24 @@ trackBrowserUI <- function(id, options) {
                 # the browser output image
                 mdiInteractivePlotUI(id = ns("image")),
 
-                # a second output image for tracks to illustrate details about a clicked feature
-                mdiInteractivePlotUI(id = ns("zoomImage"))          
+                # a second output image for a track (one at a time) to illustrate expanded details, e.g., on feature click
+                # align this with browser tracks to allow expansion to have the same X axis (or not...)
+                div( mdiInteractivePlotUI(id = ns("expansionImage")) ),
             ),
             NULL
-        )
+        ),
+
+        # add a single table for displaying expansion data
+        # put this below to provide maximum width for complex tables
+        fluidRow(
+            id = ns("expansionTableWrapper"),
+            style = "display: none;",
+            bufferedTableUI(
+                id = ns("expansionTable"), 
+                title = NULL, 
+                downloadable = TRUE, 
+                width = 12
+            )            
+        )      
     )
 }

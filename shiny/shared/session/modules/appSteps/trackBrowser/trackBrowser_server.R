@@ -195,7 +195,6 @@ labelTrackTypes <- c(
 )
 trackTypes <- list()       # key = trackType, value = settings template file path
 tracks <- reactiveValues() # key = trackId,   value = browserTrackServer()
-zooms  <- reactiveValues() # key = trackId,   value = track zoom reactive
 nullTrackOrder <- data.table(trackId = character(), order = integer())
 trackOrder <- reactiveVal(nullTrackOrder)
 
@@ -332,7 +331,9 @@ observeEvent({
 
         # delete tracks as needed
         for(trackId in currentTrackIds) 
-            if(!(trackId %in% newTrackIds)) tracks[[trackId]] <- NULL
+            if(!(trackId %in% newTrackIds)) {
+                tracks[[trackId]] <- NULL
+            }
         removeUI(".trackDeleteTarget .browserTrack")
     } else isRankListInit <<- TRUE
 })
@@ -374,6 +375,78 @@ linesPerInchScreen <- reactive( getLinesPerInch(screenDpi) )
 linesPerInchPrint  <- reactive( getLinesPerInch(printDpi) )
 
 #----------------------------------------------------------------------
+# plot methods shared between browser and expansion tracks
+#----------------------------------------------------------------------
+reference <- reactive({ # parse the target genome region
+    reference <- list(
+        genome = genome(),
+        annotation = annotation()
+    )
+    req(reference$genome)
+    reference
+})
+coord <- reactive({ # parse the plot window
+    coord <- coordinates(input)
+    req(coord)
+    req(coord$width > 0)
+    coord 
+})
+trackCache <- list( # cache for track images to prevent slow replotting of unchanged tracks
+    browser   = list(), # names = trackIds, values = list(trackHash, contents)
+    expansion = list()
+)
+buildAllTracks <- function(trackIds, fnName, type, reference, coord, layout){
+    sharedHash <- digest(list(reference, coord, layout))
+    builds <- lapply(trackIds, function(trackId) {
+        tryCatch({
+            track <- tracks[[trackId]]$track
+            trackHash <- digest(list(
+                track$settings$all_(), 
+                if(is.null(track$settings$items)) NA else track$settings$items(),
+                if(type == "expansion") track$expand() else NA,
+                sharedHash
+            ))
+            if(is.null(trackCache[[type]][[trackId]]) || 
+               trackCache[[type]][[trackId]]$trackHash != trackHash) {
+                 trackCache[[type]][[trackId]] <<- list(
+                    trackHash = trackHash,
+                    contents = track[[fnName]](reference, coord, layout)
+                 )
+            }
+            trackCache[[type]][[trackId]]$contents
+        }, error = function(e) {
+            print(e)
+            NULL
+        })
+    })
+    builds <- builds[!sapply(builds, is.null)]
+    if(length(builds) == 0) {
+        stopSpinner(session)
+        return(NULL)
+    }
+    builds
+}
+assembleCompositeImage <- function(builds, type, pngFile){
+    fileName <- paste0(app$NAME, "-", id, "-", type, "-image.png")       
+    if(is.null(pngFile)) pngFile <- file.path(sessionDirectory, fileName)
+    composite <- magick::image_append(
+        magick::image_join(lapply(builds, function(build) build$image)), 
+        stack = TRUE
+    )
+    magick::image_write(composite, path = pngFile, format = "png")
+    stopSpinner(session)
+    pngFile
+}
+adjustLayoutForIP <- function(layout, builds){ # adjust layout for mdiInteractivePlotServer
+    layout$heights <- sapply(builds, function(build) magick::image_info(build$image)$height)
+    layout$height <- sum(layout$heights)
+    layout$browserHeight <- layout$height / layout$dpi
+    layout$ylim <- lapply(builds, function(build) build$ylim)
+    layout$mai  <- lapply(builds, function(build) build$mai)  
+    layout    
+}
+
+#----------------------------------------------------------------------
 # render the composite browser plot image using base graphics
 #----------------------------------------------------------------------
 browserLayout <- list()
@@ -385,15 +458,9 @@ createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for bot
     nTracks <- length(trackIds)    
     req(nTracks > 0)
 
-    # parse the target genome region
-    reference <- list(
-        genome = genome(),
-        annotation = annotation()
-    )
-    req(reference$genome)
-    coord <- coordinates(input)
-    req(coord)
-    req(coord$width > 0)
+    # inherit plot targets from the browser inputs
+    reference <- reference()
+    coord <- coord()
 
     # parse the plot layout based on plots alone
     browserSettings <- settings$Browser_Options()
@@ -445,43 +512,14 @@ createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for bot
     }
 
     # build all tracks using reactives
-    builds <- lapply(trackIds, function(trackId) {
-        tryCatch({
-            tracks[[trackId]]$track$build(reference, coord, layout)
-        }, error = function(e) {
-            print(e)
-            NULL
-        })
-    })
+    builds <- buildAllTracks(trackIds, "buildTrack", "browser", reference, coord, layout)
+    if(is.null(builds)) return(NULL)
 
-    # purge null tracks that depend on information not yet available
-    builds <- builds[!sapply(builds, is.null)]
-    if(length(builds) == 0) {
-        stopSpinner(session)
-        return(NULL)
-    }
-
-    # adjust layout for mdiInteractivePlotServer
-    layout$heights <- sapply(builds, function(build) magick::image_info(build$image)$height)
-    layout$height <- sum(layout$heights)
-    layout$browserHeight <- layout$height / dpi
-    layout$ylim <- lapply(builds, function(build) build$ylim)
-    layout$mai  <- lapply(builds, function(build) build$mai)
-
-    # assemble to composite browser image
-    fileName <- paste0(app$NAME, "-", id, "-image.png")       
-    pngFile <- if(isPrint) pngFile else file.path(sessionDirectory, fileName) 
-    composite <- magick::image_append(
-        magick::image_join(lapply(builds, function(build) build$image)), 
-        stack = TRUE
-    )
-    magick::image_write(composite, path = pngFile, format = "png")
-
-    # finish up
-    stopSpinner(session)
+    # assemble and return the composite browser image
     list(
-        pngFile = pngFile,
-        layout = layout,
+        pngFile = assembleCompositeImage(builds, "browser", pngFile),
+        preBuildLayout = layout,  
+        layout = adjustLayoutForIP(layout, builds),      
         parseLayout = yPixelToTrack
     ) 
 }
@@ -490,93 +528,58 @@ browser <- mdiInteractivePlotServer(
     contents = reactive({
         req(browserIsInitialized())
         contents <- createBrowserPlot()
-        browserLayout <<- contents$layout
+        browserLayout <<- contents[c("preBuildLayout", "layout")]
         contents
     })
 )
 
-#----------------------------------------------------------------------
-# render the composite zoom plot image using base graphics
-#----------------------------------------------------------------------
-zoomLayout <- list()
-createZoomPlot <- function(pngFile = NULL){ # called to generate plot for both screen and image file download
-    isPrint <- !is.null(pngFile)
+# ----------------------------------------------------------------------
+# render the composite expansion plot image using base graphics
+# ----------------------------------------------------------------------
+expandingTrackId <- reactiveVal(NULL)
+createExpansionPlot <- function(pngFile = NULL){ # called to generate plot for both screen and image file download
 
+    # collect the expansion list from tracks with expand option set
+    trackId <- expandingTrackId() # <<< reverted to a single expansion track - too confusing with multiple
+    req(trackId)
 
-    req(FALSE)
+    # build all expansion track images using reactives
+    builds <- buildAllTracks(trackId, "buildExpansion", "expansion", 
+                             reference(), coord(), browserLayout$preBuildLayout)
+    if(is.null(builds)) return(NULL)
 
-
-    # collect the zoom list from tracks with zoom option set
-    trackIds <- plotTrackIds()
-
-    nZoomTracks <- length(trackIds)    
-    req(nZoomTracks > 0)
-
-    # parse the target genome region
-    reference <- list(
-        genome = genome(),
-        annotation = annotation()
-    )
-    req(reference$genome)
-    coord <- coordinates(input)
-    req(coord)
-    req(coord$width > 0)
-
-    # parse the plot layout based on plots alone
-    layout <- browserLayout
-
-
-# most of this can be shared via function with browser composite build
-    # build all zoom tracks using reactives
-    builds <- lapply(trackIds, function(trackId) {
-        tryCatch({
-            tracks[[trackId]]$track$zoom(reference, coord, layout)
-        }, error = function(e) {
-            print(e)
-            NULL
-        })
-    })
-
-    # purge null tracks that depend on information not yet available
-    builds <- builds[!sapply(builds, is.null)]
-    if(length(builds) == 0) {
-        stopSpinner(session)
-        return(NULL)
-    }
-
-    # adjust layout for mdiInteractivePlotServer
-    layout$heights <- sapply(builds, function(build) magick::image_info(build$image)$height)
-    layout$height <- sum(layout$heights)
-    layout$zoomHeight <- layout$height / dpi
-    layout$ylim <- lapply(builds, function(build) build$ylim)
-    layout$mai  <- lapply(builds, function(build) build$mai)
-
-    # assemble to composite zoom image
-    fileName <- paste0(app$NAME, "-", id, "-zoomImage.png")       
-    pngFile <- if(isPrint) pngFile else file.path(sessionDirectory, fileName) 
-    composite <- magick::image_append(
-        magick::image_join(lapply(builds, function(build) build$image)), 
-        stack = TRUE
-    )
-    magick::image_write(composite, path = pngFile, format = "png")
-
-    # finish up
-    stopSpinner(session)
+    # assemble and return the composite expansion image
     list(
-        pngFile = pngFile,
-        layout = layout,
+        pngFile = assembleCompositeImage(builds, "expansion", pngFile),       
+        layout = adjustLayoutForIP(browserLayout$layout, builds),  
         parseLayout = yPixelToTrack
-    ) 
+    )
 }
-zoom <- mdiInteractivePlotServer(
-    "zoomImage", 
+expansionImage <- mdiInteractivePlotServer(
+    "expansionImage", 
     contents = reactive({
-        req(browserIsInitialized())
-        contents <- createZoomPlot()
-        zoomLayout <<- contents$layout
+        req(browserIsInitialized(), browserLayout$preBuildLayout)
+        contents <- createExpansionPlot()
         contents
     })
 )
+
+# ----------------------------------------------------------------------
+# create a single expansion table - any click that sets expansionTableData() replaces the data
+# ----------------------------------------------------------------------
+expansionTableData <- reactiveVal(NULL)
+expansionTable <- bufferedTableServer(
+    "expansionTable",
+    id,
+    input,
+    tableData = expansionTableData,
+    selection = 'none',
+    options = list()
+)
+observeEvent(expansionTableData(), {
+    req(expansionTableData())
+    show(id = "expansionTableWrapper")
+})
 
 #----------------------------------------------------------------------
 # handle user interactions with the browser plot
@@ -587,7 +590,8 @@ interactingTrack <- NULL
 yPixelToTrack <- function(x, y){
     req(browserLayout)
     req(y)
-    cumHeights <- cumsum(browserLayout$heights)
+    layout <- browserLayout$layout
+    cumHeights <- cumsum(layout$heights)
     i <- which(cumHeights > y)[1]
     y <- if(i == 1) y else y - cumHeights[i - 1] # distance from top of track
     interactingTrack <<- tracks[[ trackOrder()[i, trackId] ]]$track
@@ -595,12 +599,12 @@ yPixelToTrack <- function(x, y){
         x = x, # no transformation required, tracks are never side by side
         y = y,
         layout = list(
-            width  = browserLayout$width,
-            height = browserLayout$heights[i],
-            dpi    = browserLayout$dpi,
+            width  = layout$width,
+            height = layout$heights[i],
+            dpi    = layout$dpi,
             xlim   = as.integer64(c(input$start, input$end)),
-            ylim   = browserLayout$ylim[[i]],            
-            mai    = browserLayout$mai[[i]]
+            ylim   = layout$ylim[[i]],            
+            mai    = layout$mai[[i]]
         )        
     )
 }
@@ -931,6 +935,8 @@ list(
     ),
     jumpToCoordinates = jumpToCoordinates,
     center = center,
+    expandingTrackId = expandingTrackId,
+    expansionTableData = expansionTableData,
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     NULL
 )
