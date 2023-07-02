@@ -397,6 +397,7 @@ trackCache <- list( # cache for track images to prevent slow replotting of uncha
 )
 buildAllTracks <- function(trackIds, fnName, type, reference, coord, layout){
     sharedHash <- digest(list(reference, coord, layout))
+    nImages <- 0 # may be less than or equal to nTracks, depending on build successes
     builds <- lapply(trackIds, function(trackId) {
         tryCatch({
             track <- tracks[[trackId]]$track
@@ -413,14 +414,14 @@ buildAllTracks <- function(trackIds, fnName, type, reference, coord, layout){
                     contents = track[[fnName]](reference, coord, layout)
                  )
             }
+            nImages <<- nImages + 1
             trackCache[[type]][[trackId]]$contents
         }, error = function(e) {
             print(e)
             NULL
         })
     })
-    builds <- builds[!sapply(builds, is.null)]
-    if(length(builds) == 0) {
+    if(nImages == 0) {
         stopSpinner(session)
         return(NULL)
     }
@@ -430,7 +431,7 @@ assembleCompositeImage <- function(builds, type, pngFile){
     fileName <- paste0(app$NAME, "-", id, "-", type, "-image.png")       
     if(is.null(pngFile)) pngFile <- file.path(sessionDirectory, fileName)
     composite <- magick::image_append(
-        magick::image_join(lapply(builds, function(build) build$image)), 
+        magick::image_join(lapply(builds[!sapply(builds, is.null)], function(build) build$image)), 
         stack = TRUE
     )
     magick::image_write(composite, path = pngFile, format = "png")
@@ -438,7 +439,7 @@ assembleCompositeImage <- function(builds, type, pngFile){
     pngFile
 }
 adjustLayoutForIP <- function(layout, builds){ # adjust layout for mdiInteractivePlotServer
-    layout$heights <- sapply(builds, function(build) magick::image_info(build$image)$height)
+    layout$heights <- sapply(builds, function(build) if(is.null(build$image)) 0 else magick::image_info(build$image)$height)
     layout$height <- sum(layout$heights)
     layout$browserHeight <- layout$height / layout$dpi
     layout$ylim <- lapply(builds, function(build) build$ylim)
@@ -534,14 +535,10 @@ browser <- mdiInteractivePlotServer(
 )
 
 # ----------------------------------------------------------------------
-# render the composite expansion plot image using base graphics
+# render the expansion plot image using base graphics
 # ----------------------------------------------------------------------
 expandingTrackId <- reactiveVal(NULL)
-createExpansionPlot <- function(pngFile = NULL){ # called to generate plot for both screen and image file download
-
-    # collect the expansion list from tracks with expand option set
-    trackId <- expandingTrackId() # <<< reverted to a single expansion track - too confusing with multiple
-    req(trackId)
+createExpansionPlot <- function(trackId, pngFile = NULL){ # called to generate plot for both screen and image file download
 
     # build all expansion track images using reactives
     builds <- buildAllTracks(trackId, "buildExpansion", "expansion", 
@@ -558,14 +555,39 @@ createExpansionPlot <- function(pngFile = NULL){ # called to generate plot for b
 expansionImage <- mdiInteractivePlotServer(
     "expansionImage", 
     contents = reactive({
-        req(browserIsInitialized(), browserLayout$preBuildLayout)
-        contents <- createExpansionPlot()
-        contents
+        trackId <- expandingTrackId()
+        if(isTruthy(trackId)) {
+            show(selector = ".expansionImageWrapper")
+            createExpansionPlot(trackId)            
+        } else {
+            hide(selector = ".expansionImageWrapper")
+            NULL 
+        }
     })
 )
 
 # ----------------------------------------------------------------------
-# create a single expansion table - any click that sets expansionTableData() replaces the data
+# create a single object description table - any click that sets objectTableData() replaces the table contents
+# ----------------------------------------------------------------------
+objectTableData <- reactiveVal(NULL)
+objectTable <- bufferedTableServer(
+    "objectTable",
+    id,
+    input,
+    tableData = objectTableData,
+    selection = 'none',
+    options = list(
+        searching = FALSE,
+        paging = FALSE,
+        info = FALSE
+    )
+)
+observeEvent(objectTableData(), {
+    toggle(selector = ".objectTableWrapper", condition = isTruthy(objectTableData()))
+}, ignoreNULL = FALSE)
+
+# ----------------------------------------------------------------------
+# create a single expansion table - any click that sets expansionTableData() replaces the table contents
 # ----------------------------------------------------------------------
 expansionTableData <- reactiveVal(NULL)
 expansionTable <- bufferedTableServer(
@@ -577,9 +599,14 @@ expansionTable <- bufferedTableServer(
     options = list()
 )
 observeEvent(expansionTableData(), {
-    req(expansionTableData())
-    show(id = "expansionTableWrapper")
-})
+    toggle(selector = ".expansionTableWrapper", condition = isTruthy(expansionTableData()))
+}, ignoreNULL = FALSE)
+clearObjectExpansions <- function(){
+    hide(selector = ".browserExpansionWrapper")
+    expandingTrackId(NULL)
+    objectTableData(NULL)
+    expansionTableData(NULL)
+}
 
 #----------------------------------------------------------------------
 # handle user interactions with the browser plot
@@ -610,39 +637,67 @@ yPixelToTrack <- function(x, y){
 }
 
 # transmit the click and hover actions to the track
+doTrackClick <- function(click){
+    req(interactingTrack$click)     
+    click(interactingTrack, click)    
+}
 observeEvent(browser$click(), {
-    req(interactingTrack$click)
-    d <- browser$click()
-    # TODO: react to ctrl click via d$keys$ctrl, open track settings
-    click(interactingTrack, d$coord$x, d$coord$y)
+    click <- browser$click()
+    if(click$keys$alt){ # on all tracks, Alt-click opens the track settings (leaves no-key, Ctrl and Shift for track use)
+        interactingTrack$settings$open()
+    } else {
+        doTrackClick(click)
+    }
 })
 observeEvent(browser$hover(), {
     req(interactingTrack$hover)
-    d <- browser$hover()
-    hover(interactingTrack, d$coord$x, d$coord$y)
+    hover(interactingTrack, browser$hover())
 })
 
 # transmit brush action to in-window zoom by default
 observeEvent(browser$brush(), {
-    d <- browser$brush()$coord   
-    brush <- interactingTrack$brush
-    if(is.null(brush) || !brush){
-        jumpToCoordinates(input$chromosome, d$x1, d$x2)
-    } else {
-        brush(
-            interactingTrack, 
-            x1 = min(d$x1, d$x2), 
-            y1 = min(d$y1, d$y2), 
-            x2 = max(d$x1, d$x2), 
-            y2 = max(d$y1, d$y2)
-        )
+    brush <- browser$brush()  
+    if(all(!as.logical(brush$keys))){ # on all tracks, a no-key brush creates a window coordinate zoom
+        x <- sort(c(brush$coord$x1, brush$coord$x2))
+        if(x[1] < x[2]){ # make sure this isn't an accidental brush that was supposed to be a click
+            jumpToCoordinates(input$chromosome, x[1], x[2])
+        } else { # handle zero-width brushes as clicks
+            brush$x <- mean(x)
+            brush$y <- mean(brush$coord$y1, brush$coord$y2)
+            doTrackClick(brush)
+        }  
+    } else if(isTruthy(interactingTrack$brush)) { # tracks optionally handles key+brush events
+        brush(interactingTrack, brush)
     }
 })
 
 #----------------------------------------------------------------------
+# browser navigation history, to support the back button
+#----------------------------------------------------------------------
+coordinateHistory <- list()
+pushCoordinateHistory <- function(coord){ # technically, these act as shift and unshift...
+    coord$strict <- TRUE # any object padding was applied when the window was loaded
+    coord$history <- FALSE # i.e., don't re-record this view
+    coordinateHistory <<- c(list(coord), coordinateHistory)
+    if(length(coordinateHistory) > 100) coordinateHistory <<- coordinateHistory[1:100]
+}
+popCoordinateHistory <- function(){
+    req(length(coordinateHistory) > 1) # current window is in slot 1
+    coordinateHistory <<- coordinateHistory[2:length(coordinateHistory)]    
+    coordinateHistory[[1]]
+}
+observeEvent(input$back,  { 
+    do.call(jumpToCoordinates, popCoordinateHistory())
+}, ignoreInit = TRUE)  
+
+#----------------------------------------------------------------------
 # browser navigation support functions
 #----------------------------------------------------------------------
-jumpToCoordinates <- function(chromosome, start, end, strict = FALSE){ # arguments are strict coordinates
+isStrict <- function(){
+    x <- settings$Browser_Options()$Strict_Coordinates$value
+    if(is.null(x)) FALSE else x
+}
+jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = TRUE){ # arguments are strict coordinates
     start <- as.integer64(start)
     end   <- as.integer64(end)
     if(start > end){
@@ -650,7 +705,7 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE){ # argumen
         start <- end
         end <- tmp
     }
-    if(!input$strict && !strict){
+    if(!isStrict() && !strict){
         padding <- (end - start + 1) * 0.05
         start <- as.integer64(start - padding)
         end   <- as.integer64(end   + padding)
@@ -661,6 +716,8 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE){ # argumen
     req(chromosomeSize)
     if(start < 1) start <- 1
     if(end > chromosomeSize) end <- chromosomeSize
+    clearObjectExpansions()
+    if(history) pushCoordinateHistory(list(chromosome = chromosome, start = start, end = end))
     updateSelectInput(session, "chromosome", selected = chromosome)
     updateTextInput(session, "start", value = as.character(start))
     updateTextInput(session, "end",   value = as.character(end))
@@ -827,7 +884,7 @@ observeEvent(input$jumpTo,  {
                 list(
                     chromosome = chrom, 
                     start = start, 
-                    end   = end # subjected to input$strict
+                    end   = end # subjected to Browser_Options$Strict_Coordinates
                 )
             } 
         )
@@ -892,7 +949,7 @@ bookmarkObserver <- observe({
     updateTextInput(session,     'start',       value    = bm$input$start)
     updateTextInput(session,     'end',         value    = bm$input$end)
     updateTextInput(session,     'zoomFactor',  value    = bm$input$zoomFactor)
-    updateCheckboxInput(session, 'strict',      value    = bm$input$strict)
+    pushCoordinateHistory(list(chromosome = bm$input$chromosome, start = bm$input$start, end = bm$input$end))
     trackIds <- bm$outcomes$trackOrder[order(order), trackId]
     isolate({
         lapply(trackIds, function(trackId){
@@ -935,8 +992,9 @@ list(
     ),
     jumpToCoordinates = jumpToCoordinates,
     center = center,
-    expandingTrackId = expandingTrackId,
-    expansionTableData = expansionTableData,
+    expandingTrackId = expandingTrackId,      # to set the track populating the object expansion image
+    objectTableData = objectTableData,        # to populate the object description table (e.g., a gene)
+    expansionTableData = expansionTableData,  # to populate the object expansion table   (e.g., a gene's transripts)
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     NULL
 )

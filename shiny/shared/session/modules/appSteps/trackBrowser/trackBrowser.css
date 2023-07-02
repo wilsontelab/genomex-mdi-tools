@@ -18,6 +18,9 @@
 .coordinateInput .shiny-input-container {
     width: 95px;
 }
+.backButton {
+    margin: 32px 5px 0px 5px;
+}
 .annotationSearchInput .shiny-input-container {
     width: 15px;
     margin: 12px 0px 0px 5px;

@@ -108,12 +108,14 @@ build.genesTrack <- function(track, reference, coord, layout){
 
 # plot interaction methods for the S3 class
 # called by trackBrowser if track$click, $hover, or $brush is TRUE, above
-click.genesTrack <- function(track, x, y){
-    strand_ <- if(y < 2) "-" else "+"
-    genes <- genesTrackBuffer[[track$id]][strand == strand_ & start <= x & end >= x]
+click.genesTrack <- function(track, click){
+    strand_ <- if(click$coord$y < 2) "-" else "+"
+    genes <- genesTrackBuffer[[track$id]][strand == strand_ & 
+                                          start <= click$coord$x & 
+                                          end >= click$coord$x]
     req(nrow(genes) > 0)
     app$browser$jumpToCoordinates(genes[1, chrom], genes[, min(start)], genes[, max(end)])
 }
-hover.genesTrack <- function(track, x, y){
+hover.genesTrack <- function(track, hover){
     # custom actions
 }

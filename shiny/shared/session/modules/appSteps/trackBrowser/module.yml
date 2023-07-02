@@ -101,4 +101,7 @@ settings:
                 - 8
                 - 10
                 - 12
-            value:  8    
+            value:  8
+        Strict_Coordinates:
+            type: checkboxInput
+            value: FALSE

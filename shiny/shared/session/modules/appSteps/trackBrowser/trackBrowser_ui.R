@@ -49,7 +49,7 @@ trackBrowserUI <- function(id, options) {
             ),
             tags$div(
                 class = "trackBrowserInput",
-                selectInput(ns('chromosome'), "Chromosome", choices = c()),
+                selectInput(ns('chromosome'), "Chromosome", choices = c(), selectize = FALSE),
             ),
             tags$div(
                 class = "trackBrowserInput coordinateInput",
@@ -93,18 +93,16 @@ trackBrowserUI <- function(id, options) {
                 actionButton(ns('moveRight'), ">>"),
             ),
             tags$div(
+                class = "trackBrowserInput backButton",
+                actionLink(ns('back'), label = "", icon = icon("arrow-left"))
+            ),
+            tags$div(
                 class = "trackBrowserInput",
                 textInput(ns('jumpTo'), "Jump To", value = ""),
             ),
             tags$div(
                 class = "trackBrowserInput annotationSearchInput",
-                # style = "margin: 32px 5px 0px 4px",
-                # actionLink(ns('annotationSearch'), NULL, icon("search")),
                 popupInputUI(ns('annotationSearch'), label = "", value = NULL, icon = icon("search"), buttonFn = actionLink)
-            ),
-            tags$div(
-                class = "trackBrowserInput",
-                checkboxInput(ns('strict'), "Strict", value = FALSE),
             ),
         ),
         tags$div(
@@ -171,24 +169,38 @@ trackBrowserUI <- function(id, options) {
                 # the browser output image
                 mdiInteractivePlotUI(id = ns("image")),
 
-                # a second output image for a track (one at a time) to illustrate expanded details, e.g., on feature click
-                # align this with browser tracks to allow expansion to have the same X axis (or not...)
-                div( mdiInteractivePlotUI(id = ns("expansionImage")) ),
+                # image for a track (one at a time) to illustrate expanded details, e.g., on a feature  object click
+                # aligned with browser tracks to allow expansion to have the same X axis (or not...)
+                div( 
+                    class = "expansionImageWrapper browserExpansionWrapper",
+                    style = "display: none;",
+                    mdiInteractivePlotUI(id = ns("expansionImage")) 
+                ),
             ),
             NULL
         ),
 
-        # add a single table for displaying expansion data
-        # put this below to provide maximum width for complex tables
+        # tables for display data describing either an object itself and/or its expansion details
+        # put these below to provide maximum width for complex tables
         fluidRow(
-            id = ns("expansionTableWrapper"),
+            class = "objectTableWrapper browserExpansionWrapper",
+            style = "display: none;",
+            bufferedTableUI(
+                id = ns("objectTable"), 
+                title = NULL, 
+                downloadable = TRUE, 
+                width = 12
+            )
+        ),
+        fluidRow(
+            class = "expansionTableWrapper browserExpansionWrapper",
             style = "display: none;",
             bufferedTableUI(
                 id = ns("expansionTable"), 
                 title = NULL, 
                 downloadable = TRUE, 
                 width = 12
-            )            
+            )  
         )      
     )
 }

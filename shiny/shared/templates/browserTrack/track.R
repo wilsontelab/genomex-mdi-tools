@@ -47,14 +47,14 @@ build.__MODULE_NAME__Track <- function(track, reference, coord, layout){
 
 # plot interaction methods for the S3 class
 # called by trackBrowser if track$click, $hover, or $brush is TRUE, above
-click.__MODULE_NAME__Track <- function(track, x, y){
-    # custom actions
+click.__MODULE_NAME__Track <- function(track, click){
+    # custom actions, use str(click) to explore
 }
-hover.__MODULE_NAME__Track <- function(track, x, y){
-    # custom actions
+hover.__MODULE_NAME__Track <- function(track, hover){
+    # custom actions, use str(hover) to explore
 }
-brush.__MODULE_NAME__Track <- function(track, x1, y1, x2, y2){
-    # custom actions
+brush.__MODULE_NAME__Track <- function(track, brush){
+    # custom actions, use str(brush) to explore
 }
 
 # method for the S3 class to show a relevant trackItemsDialog or trackSamplesDialog
