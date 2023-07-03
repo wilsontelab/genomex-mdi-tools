@@ -68,7 +68,8 @@ track <- get(constructor)(trackId)
 class(track) <- unique(append(c("browserTrack", trackClass), class(track)))
 
 # initialize the track list items, e.g., samples or UCSC tracks
-if(!is.null(track$items) && track$items) {
+trackHasItems <- !is.null(track$items) && track$items
+if(trackHasItems) {
     settings$items <- reactiveVal(NULL) # to be filled by items(settings) method
     observeEvent(input$items, {
         reference <- list(
@@ -88,9 +89,24 @@ track$adjustWidth <- function(reference, coord, layout) adjustWidth(track, refer
 track$buildTrack <- function(reference, coord, layout) build(track, reference, coord, layout)
 track$buildExpansion <- function(reference, coord, layout) expand(track, reference, coord, layout)
 
-# update the track display name based on settings changes
-observeEvent(settings$Track_Options(), {
-    html("name", settings$Track_Options()$Track_Name$value)
+# update the track display name based on settings and items changes
+observeEvent({
+    settings$Track_Options()
+    if(trackHasItems && !is.null(settings$items)) settings$items()
+}, {
+    name <- settings$Track_Options()$Track_Name$value
+    if(trackHasItems && !is.null(settings$items) && (name == "" || name == trackType)) {
+         items <- settings$items() # list of lists
+         if(length(items) == 1) {
+            item <- items[[1]]
+            itemFields <- names(item)
+            allowedFields <- itemFields %in% c("name","Sample_ID","sample") # could add more recognized name defaults here
+            if(any(allowedFields)) name <- item[[itemFields[which(allowedFields)[1]]]]
+         } else {
+            name <- "multi-sample"
+         }
+    }
+    html("name", name)
 })
 
 # activate the track level list (e.g., samples) and settings wrappers for click events

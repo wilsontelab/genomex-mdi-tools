@@ -71,6 +71,7 @@ confirmBrowserInit <- function(...) {
             trackId <- as.character(i)
             cssId <- paste("track", trackId, sep = "_")
             tracks[[trackId]] <- initTrack(cssId, trackId, defaultTrackTypes[i])
+            createTrackSettingsObserver(trackId)
         }
     })
 }
@@ -276,6 +277,7 @@ observeEvent(input$addTrack, {
     trackId <- as.character(max(0, as.integer(names(tracks))) + 1)
     cssId <- paste("track", trackId, sep = "_")
     tracks[[trackId]] <- initTrack(cssId, trackId, trackType)
+    createTrackSettingsObserver(trackId)
 }, ignoreInit = TRUE)
 
 # handle track addition from duplication of an existing track
@@ -308,7 +310,8 @@ observeEvent(input$duplicateTrackSelect, {
     trackId <- as.character(max(0, as.integer(names(tracks))) + 1)
     cssId <- paste("track", trackId, sep = "_")
     tracks[[trackId]] <- initTrack(cssId, trackId, dupTrack$type)
-    tracks[[trackId]]$track$settings$replace(dupTrack$track$settings$all_())
+    tracks[[trackId]]$track$settings$replace(dupTrack$track$settings$all_())    
+    createTrackSettingsObserver(trackId)
 }, ignoreInit = TRUE)
 
 # handle track reordering and deletion
@@ -333,9 +336,25 @@ observeEvent({
         for(trackId in currentTrackIds) 
             if(!(trackId %in% newTrackIds)) {
                 tracks[[trackId]] <- NULL
+                trackSettingsObservers[[trackId]] <<- NULL
+                if(trackSettingsUndoId == trackId) rackSettingsUndoId <<- NULL
             }
         removeUI(".trackDeleteTarget .browserTrack")
     } else isRankListInit <<- TRUE
+})
+
+# undo the last track settings change, intended for disaster recover, not a complete history tracking
+trackSettingsObservers <- list()
+trackSettingsUndoId <- NULL
+createTrackSettingsObserver <- function(trackId){
+    trackSettingsObservers[[trackId]] <<- observeEvent(tracks[[trackId]]$track$settings$all_(), {
+        trackSettingsUndoId <<- trackId
+        clearObjectExpansions()
+    })
+}
+observeEvent(input$undoTrackSettings, {
+    req(trackSettingsUndoId, tracks[[trackSettingsUndoId]])
+    tracks[[trackSettingsUndoId]]$track$settings$undo()
 })
 
 #----------------------------------------------------------------------
@@ -956,6 +975,7 @@ bookmarkObserver <- observe({
             track <- bm$outcomes$tracks[[trackId]]        
             tracks[[trackId]] <- initTrack(track$cssId, trackId, track$type)
             tracks[[trackId]]$track$settings$replace(track$settings)
+            createTrackSettingsObserver(trackId)
             if(!is.null(track$items)) tracks[[trackId]]$track$settings$items(track$items)
         })
     })

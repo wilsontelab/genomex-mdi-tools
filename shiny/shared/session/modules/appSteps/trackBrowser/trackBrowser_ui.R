@@ -144,7 +144,8 @@ trackBrowserUI <- function(id, options) {
                     )                    
                 ),
                 uiOutput(ns("duplicateTrack")),
-                selectInput(ns("addTrack"), NULL, choices = c())              
+                selectInput(ns("addTrack"), NULL, choices = c()),
+                actionLink(ns("undoTrackSettings"), "undo track settings")            
             ),
 
             #----------------------------------------------------------------------

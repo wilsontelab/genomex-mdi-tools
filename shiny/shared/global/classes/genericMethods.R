@@ -81,3 +81,6 @@ cex <- function(x, ...) {
 col <- function(x, ...) {
     UseMethod("col", x)
 }
+trackLegend <- function(x, ...) {
+    UseMethod("trackLegend", x)
+}

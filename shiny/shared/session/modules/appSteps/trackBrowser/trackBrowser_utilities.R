@@ -197,6 +197,16 @@ col.browserTrack <- function(track, default){
 # generic track plotting functions
 # these are not S3 methods but are named similarly for clarity
 #----------------------------------------------------------------------
+trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
+    par(xpd = TRUE)
+    legend(coord$end + coord$width * 0.01, ylim[2], bty = bty, ...)
+    par(xpd = FALSE)
+}
+
+#----------------------------------------------------------------------
+# generic track plotting functions
+# these are not S3 methods but are named similarly for clarity
+#----------------------------------------------------------------------
 
 # plot XY data tracks
 plotXY.browserTrack <- function(
