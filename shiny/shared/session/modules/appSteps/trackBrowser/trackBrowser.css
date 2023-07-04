@@ -137,3 +137,13 @@
     height: 33px;
     margin: 1px 0;
 }
+
+/* the table of selected items in a trackItemsDialog */
+.trackNavWrapper .box {
+    margin-bottom: 5px;
+    border: 1px solid #ccc; 
+    border-radius: 4px;
+}
+.trackNavWrapper .col-sm-12 {
+    padding: 0;
+}

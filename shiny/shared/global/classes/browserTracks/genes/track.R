@@ -9,8 +9,7 @@ new_genesTrack <- function(trackId) {
         hover = FALSE,
         brush = FALSE,
         items = FALSE,
-        navigation = FALSE, # whether the track offers a custom, additional row of within-track navigation inputs
-        genome = FALSE # whether the track supports a whole genome view
+        navigation = FALSE # whether the track offers a custom, additional row of within-track navigation inputs
     )
 }
 

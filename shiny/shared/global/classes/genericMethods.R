@@ -84,3 +84,12 @@ col <- function(x, ...) {
 trackLegend <- function(x, ...) {
     UseMethod("trackLegend", x)
 }
+initTrackNav <- function(x, ...) {
+    UseMethod("initTrackNav", x)
+}
+trackNavInput <- function(x, ...) {
+    UseMethod("trackNavInput", x)
+}
+trackNavTable <- function(x, ...) {
+    UseMethod("trackNavTable", x)
+}

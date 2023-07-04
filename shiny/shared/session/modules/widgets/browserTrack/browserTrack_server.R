@@ -49,7 +49,7 @@ if(!is.null(request$shared)) for(sharedFile in request$shared){
 if(!is.null(request$settings)) loadTrackSettings(request$settings)
 template$Track_Options$Track_Name <- list( # override and prepend universal Track_Name option
     type = "textInput",
-    value = trackType
+    value = "auto"
 )
 
 # initialize the track settings
@@ -94,19 +94,7 @@ observeEvent({
     settings$Track_Options()
     if(trackHasItems && !is.null(settings$items)) settings$items()
 }, {
-    name <- settings$Track_Options()$Track_Name$value
-    if(trackHasItems && !is.null(settings$items) && (name == "" || name == trackType)) {
-         items <- settings$items() # list of lists
-         if(length(items) == 1) {
-            item <- items[[1]]
-            itemFields <- names(item)
-            allowedFields <- itemFields %in% c("name","Sample_ID","sample") # could add more recognized name defaults here
-            if(any(allowedFields)) name <- item[[itemFields[which(allowedFields)[1]]]]
-         } else {
-            name <- "multi-sample"
-         }
-    }
-    html("name", name)
+    html("name", getTrackDisplayName(track))
 })
 
 # activate the track level list (e.g., samples) and settings wrappers for click events

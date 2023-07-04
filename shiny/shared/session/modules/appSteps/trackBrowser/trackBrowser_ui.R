@@ -106,7 +106,7 @@ trackBrowserUI <- function(id, options) {
             ),
         ),
         tags$div(
-            style = "white-space: nowrap;",
+            style = "white-space: nowrap; margin-top: 4px;",
 
             #----------------------------------------------------------------------
             # the vertical, sortable list of tracks
@@ -152,11 +152,12 @@ trackBrowserUI <- function(id, options) {
             # the browser output area, with additional track nav options
             #----------------------------------------------------------------------
             tags$div(
-                style = "display: inline-block;",
+                style = "display: inline-block; white-space: normal;",
 
                 # additional within-track navigation options, e.g., scrolling through a stack
                 tags$div(
                     id = ns("trackNavWrapper"),
+                    class = "trackNavWrapper",
                     uiOutput(ns("trackNavs"))
                 ),
 

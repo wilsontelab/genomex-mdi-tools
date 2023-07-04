@@ -16,7 +16,7 @@ trackBrowserServer <- function(id, options, bookmark, locks) {
 defaultGenome <- "hg38"
 defaultAnnotation <- "wgEncodeGencodeBasicV41"
 defaultTrackTypes <- c(
-    # "plot_title",
+    "plot_title",
     "chromosome",
     "scale_bar",
     "coordinate_axis",
@@ -70,7 +70,7 @@ confirmBrowserInit <- function(...) {
         for(i in seq_along(c(defaultTrackTypes, options$defaultTrackTypes))){
             trackId <- as.character(i)
             cssId <- paste("track", trackId, sep = "_")
-            tracks[[trackId]] <- initTrack(cssId, trackId, defaultTrackTypes[i])
+            tracks[[trackId]] <<- initTrack(cssId, trackId, defaultTrackTypes[i])
             createTrackSettingsObserver(trackId)
         }
     })
@@ -195,7 +195,7 @@ labelTrackTypes <- c(
     "coordinate_axis"
 )
 trackTypes <- list()       # key = trackType, value = settings template file path
-tracks <- reactiveValues() # key = trackId,   value = browserTrackServer()
+tracks <- list() # key = trackId,   value = browserTrackServer()
 nullTrackOrder <- data.table(trackId = character(), order = integer())
 trackOrder <- reactiveVal(nullTrackOrder)
 
@@ -266,7 +266,6 @@ initTrack <- function(cssId, trackId, trackType){
     track
 }
 observeEvent(input$addTrack, {
-
     # parse the track request
     trackType <- input$addTrack
     req(trackType)
@@ -276,19 +275,13 @@ observeEvent(input$addTrack, {
     # create the new track
     trackId <- as.character(max(0, as.integer(names(tracks))) + 1)
     cssId <- paste("track", trackId, sep = "_")
-    tracks[[trackId]] <- initTrack(cssId, trackId, trackType)
+    tracks[[trackId]] <<- initTrack(cssId, trackId, trackType)
     createTrackSettingsObserver(trackId)
 }, ignoreInit = TRUE)
 
 # handle track addition from duplication of an existing track
 getTrackNames <- function(trackIds){
-    sapply(trackIds, function(trackId){
-        track <- tracks[[trackId]]
-        trackType <- track$type
-        trackName <- track$track$settings$get("Track_Options", "Track_Name")
-        if(!is.null(trackName) && trackName != "auto" && trackName != "") trackName
-        else trackType
-    })
+    sapply(trackIds, function(trackId) getTrackDisplayName(tracks[[trackId]]$track))
 }
 output$duplicateTrack <- renderUI({
     trackIds <- plotTrackIds()
@@ -299,7 +292,6 @@ output$duplicateTrack <- renderUI({
     selectInput(session$ns("duplicateTrackSelect"), NULL, choices = c(promptId, trackIds))
 })
 observeEvent(input$duplicateTrackSelect, {
-
     # parse the track request
     dupTrackId <- input$duplicateTrackSelect
     req(dupTrackId != duplicateTrackPromptId)
@@ -309,7 +301,7 @@ observeEvent(input$duplicateTrackSelect, {
     dupTrack <- tracks[[dupTrackId]]
     trackId <- as.character(max(0, as.integer(names(tracks))) + 1)
     cssId <- paste("track", trackId, sep = "_")
-    tracks[[trackId]] <- initTrack(cssId, trackId, dupTrack$type)
+    tracks[[trackId]] <<- initTrack(cssId, trackId, dupTrack$type)
     tracks[[trackId]]$track$settings$replace(dupTrack$track$settings$all_())    
     createTrackSettingsObserver(trackId)
 }, ignoreInit = TRUE)
@@ -335,9 +327,9 @@ observeEvent({
         # delete tracks as needed
         for(trackId in currentTrackIds) 
             if(!(trackId %in% newTrackIds)) {
-                tracks[[trackId]] <- NULL
+                tracks[[trackId]] <<- NULL
                 trackSettingsObservers[[trackId]] <<- NULL
-                if(trackSettingsUndoId == trackId) rackSettingsUndoId <<- NULL
+                if(trackSettingsUndoId == trackId) trackSettingsUndoId <<- NULL
             }
         removeUI(".trackDeleteTarget .browserTrack")
     } else isRankListInit <<- TRUE
@@ -549,9 +541,11 @@ browser <- mdiInteractivePlotServer(
         req(browserIsInitialized())
         contents <- createBrowserPlot()
         browserLayout <<- contents[c("preBuildLayout", "layout")]
+        isolate({ browserIsDone( browserIsDone() + 1 ) })
         contents
     })
 )
+browserIsDone <- reactiveVal(0)
 
 # ----------------------------------------------------------------------
 # render the expansion plot image using base graphics
@@ -675,14 +669,16 @@ observeEvent(browser$hover(), {
 
 # transmit brush action to in-window zoom by default
 observeEvent(browser$brush(), {
-    brush <- browser$brush()  
-    if(all(!as.logical(brush$keys))){ # on all tracks, a no-key brush creates a window coordinate zoom
+    brush <- browser$brush() 
+    if(isTruthy(interactingTrack$forceBrush)) {
+        brush(interactingTrack, brush)
+    } else if(all(!as.logical(brush$keys))){ # on all tracks, a no-key brush creates a window coordinate zoom
         x <- sort(c(brush$coord$x1, brush$coord$x2))
         if(x[1] < x[2]){ # make sure this isn't an accidental brush that was supposed to be a click
             jumpToCoordinates(input$chromosome, x[1], x[2])
         } else { # handle zero-width brushes as clicks
-            brush$x <- mean(x)
-            brush$y <- mean(brush$coord$y1, brush$coord$y2)
+            brush$coord$x <- mean(x)
+            brush$coord$y <- mean(brush$coord$y1, brush$coord$y2)
             doTrackClick(brush)
         }  
     } else if(isTruthy(interactingTrack$brush)) { # tracks optionally handles key+brush events
@@ -716,7 +712,7 @@ isStrict <- function(){
     x <- settings$Browser_Options()$Strict_Coordinates$value
     if(is.null(x)) FALSE else x
 }
-jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = TRUE){ # arguments are strict coordinates
+jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = TRUE, then = NULL){ # arguments are strict coordinates
     start <- as.integer64(start)
     end   <- as.integer64(end)
     if(start > end){
@@ -740,6 +736,10 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
     updateSelectInput(session, "chromosome", selected = chromosome)
     updateTextInput(session, "start", value = as.character(start))
     updateTextInput(session, "end",   value = as.character(end))
+    if(!is.null(then)) thenObserver <- observeEvent(browserIsDone(), {
+        setTimeout(then, delay = 100)
+        thenObserver$destroy()
+    }, ignoreInit = TRUE)
 }
 doZoom <- function(exp){
     start  <- as.integer64(input$start)
@@ -789,7 +789,7 @@ center <- function(x){
 }
 
 #----------------------------------------------------------------------
-# additional within-track navigation actions, e.g., scrolling through a stack
+# additional within-track navigation actions, e.g., scrolling through/tabulating a feature list
 #----------------------------------------------------------------------
 output$trackNavs <- renderUI({
 
@@ -804,11 +804,13 @@ output$trackNavs <- renderUI({
     nNavs <- 0
     navs <- lapply(trackIds, function(trackId) {
         track <- tracks[[trackId]]$track
-        hasNav <- !is.null(track$navigation) && track$navigation
+        hasNav <- isTruthy(track$navigation)
         if(!hasNav) return(NULL)
+        ui <- tryCatch({ navigation(track, session, id, reference, coord) }, error = function(e) NULL)
+        if(is.null(ui)) return(NULL)
         nNavs <<- nNavs + 1
         list(
-            ui = navigation(track, session),
+            ui = ui,
             name = trackNames[[trackId]]
         )
     })
@@ -816,14 +818,15 @@ output$trackNavs <- renderUI({
     # if needed, populate the trackNav rows
     if(nNavs == 0) NULL else lapply(navs, function(nav){
         if(is.null(nav)) return(NULL)
-        tags$div(
+        class <- nav$ui[[1]]$attribs$class
+        if(!is.null(class) && class == "trackBrowserInput") tags$div(
             style = "margin-bottom: 8px;",
             tags$p(
-                style = "display: inline-block; margin: 30px 10px 0px 10px",
+                style = "display: inline-block; margin: 30px 10px 5px 10px",
                 tags$strong(nav$name)
             ),
             nav$ui
-        )
+        ) else  nav$ui
     })
 })
 
@@ -973,7 +976,7 @@ bookmarkObserver <- observe({
     isolate({
         lapply(trackIds, function(trackId){
             track <- bm$outcomes$tracks[[trackId]]        
-            tracks[[trackId]] <- initTrack(track$cssId, trackId, track$type)
+            tracks[[trackId]] <<- initTrack(track$cssId, trackId, track$type)
             tracks[[trackId]]$track$settings$replace(track$settings)
             createTrackSettingsObserver(trackId)
             if(!is.null(track$items)) tracks[[trackId]]$track$settings$items(track$items)

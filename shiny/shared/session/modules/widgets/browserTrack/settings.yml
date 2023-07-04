@@ -13,7 +13,7 @@ allTracks:
     Track_Options:
         Track_Name: 
             type:   textInput
-            value:  null # populated by browserTrackServer
+            value:  auto # populated by browserTrackServer
         Top_Padding:
             type:   numericInput
             value:  0.02

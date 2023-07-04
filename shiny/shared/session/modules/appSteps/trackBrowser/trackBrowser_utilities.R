@@ -67,6 +67,41 @@ pngToMdiTrackImage <- function( # for tracks that generate images, not plots
 }
 
 #----------------------------------------------------------------------
+# automated track naming
+#----------------------------------------------------------------------
+getTrackDisplayName <- function(track){
+    trackName <- track$settings$get("Track_Options", "Track_Name")
+    if(
+        is.null(trackName) || 
+        trackName == "" || 
+        trackName == "auto" || 
+        trackName == track$type
+    ){
+        if(
+            isTruthy(track$items) && 
+            !is.null(track$settings$items)
+        ){
+            items <- track$settings$items() # list of lists
+            if(length(items) == 1) {
+                item <- items[[1]]
+                itemFields <- names(item)
+                allowedFields <- itemFields %in% c("name","Name","Sample_ID","sample","Sample","track","Track") # could add more recognized name defaults here
+                if(any(allowedFields)) {
+                    trackName <- item[[itemFields[which(allowedFields)[1]]]]
+                } else {
+                    trackName <- track$type 
+                }
+            } else {
+                trackName <- "multi-sample"
+            }
+        } else {
+            trackName <- track$type 
+        }
+    }
+    trackName  
+}
+
+#----------------------------------------------------------------------
 # convert browser inputs to graphic options
 # helper methods for the browserInput S3 class
 #----------------------------------------------------------------------
@@ -194,13 +229,65 @@ col.browserTrack <- function(track, default){
 }
 
 #----------------------------------------------------------------------
-# generic track plotting functions
-# these are not S3 methods but are named similarly for clarity
+# other track plotting functions
 #----------------------------------------------------------------------
 trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
     par(xpd = TRUE)
     legend(coord$end + coord$width * 0.01, ylim[2], bty = bty, ...)
     par(xpd = FALSE)
+}
+
+#----------------------------------------------------------------------
+# trackNav builder support functions
+#----------------------------------------------------------------------
+trackNavObservers__ <- list()
+initTrackNav.browserTrack <- function(track, session, inputName, actionFn = NULL) { # set actionFn for input, but not a table
+    req(getBrowserTrackSetting(track, "Track_Options", "Show_Navigation", true))
+    navName <- paste(track$type, track$id, inputName, sep = "_")
+    if(!is.null(trackNavObservers__[[navName]])) trackNavObservers__[[navName]]$destroy()
+    if(!is.null(actionFn)) trackNavObservers__[[navName]] <<- observeEvent(session$input[[navName]], { 
+        actionFn(session$input[[navName]]) 
+    })
+    navName
+}
+trackNavInput.browserTrack <- function(track, session, navName, shinyInputFn, 
+                          value = NULL, selected = NULL, ...){
+    default <- if(is.null(value)) selected else value
+    x <- isolate( session$input[[navName]] )
+    if(is.null(x)) x <- default
+    tags$div(
+        class = "trackBrowserInput",
+        if(is.null(value)) shinyInputFn(
+            session$ns(navName), 
+            selected = x,
+            ...
+        ) else shinyInputFn(
+            session$ns(navName), 
+            value = x,
+            ...
+        )
+    )
+}
+trackNavTable.browserTrack <- function(track, session, browserId, navName, 
+                                       actionFn, ...){
+    # x <- isolate( session$input[[navName]] ) # get rows already selected?
+    bufferedTableServer(
+        navName,
+        browserId,
+        session$input,
+        selectionFn = actionFn,
+        filterable = TRUE,
+        ...
+    )
+    bufferedTableUI(
+        session$ns(navName),
+        title = getTrackDisplayName(track), 
+        downloadable = TRUE,
+        width = 12,
+        selection = "single",
+        style = "display: block;",
+        collapsible = TRUE
+    )      
 }
 
 #----------------------------------------------------------------------

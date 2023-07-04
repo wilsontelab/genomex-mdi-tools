@@ -2,15 +2,14 @@
 # __MODULE_NAME__ trackBrowser track (i.e., a browserTrack)
 #----------------------------------------------------------------------
 
-# constructor for the S3 class
+# constructor for the S3 class; REQUIRED
 new___MODULE_NAME__Track <- function(trackId) {
     list(
         click = FALSE, # whether the track type has `click`, `hover`, and/or `items` methods
         hover = FALSE,
         brush = FALSE,
         items = FALSE,
-        navigation = FALSE, # whether the track offers a custom, additional row of within-track navigation inputs
-        genome = FALSE # whether the track supports a whole genome view
+        navigation = FALSE # whether the track offers a custom, additional row of within-track navigation inputs
     )
 }
 
@@ -79,5 +78,64 @@ items.__MODULE_NAME__Track <- function(track, session, input, reference){
             )
         ),
         size = "l"
+    )
+}
+
+# expand method for the S3 class
+expand.__MODULE_NAME__Track <- function(track, reference, coord, layout){
+    # build a track image the same way as for the main track build
+    # typically, need to pass data from "build" to "expand" via a variable scoped to the app
+    # expansion tracks may follow the browser genome coordinate, or have an entirely different layout
+}
+
+# method for the S3 class to populate one or more trackNav inputs above the browser output
+navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference, coord){
+
+    # initialize the trackNavs, including input observers to handle user actions
+    # initTrackNav will fail silenty if setting Track_Options/Show_Navigation is set and FALSE
+    navName1 <- initTrackNav(track, session, "inputName1", function(inputValue1){
+        # do work as needed based on the input value, e.g., make a call to app$browser$jumpToCoordinates()
+    })
+    navName2 <- initTrackNav(track, session, "tableName2") # table reactive functions are provided below
+    # etc.
+
+    # as needed, create a reactive with the data to enumerate in the trackNavs
+    trackNavData <- reactive({
+        data.table( # use track settings or other information to populate dynamically
+            chrom = c("chr1","chr2","chr3"),
+            start = 1e8,
+            end = 2e8
+        )
+    })
+
+    # return the associated navigation UI elements
+    tagList(
+        trackNavInput(
+            track, 
+            session, 
+            navName1, # the name as provided by initTrackNav
+            radioButtons, # any valid Shiny UI input function
+            label = "Input Name 1", # all further arguments must be named and are passed to the UI function
+            choices = c("foo", "bar"),            
+            selected = "bar", # the default value
+            inline = TRUE,
+            width = "150px"
+            # add other argument to pass to the Shiny UI input function
+        ),
+        trackNavTable(
+            track, 
+            session, 
+            browserId,
+            navName2, # the name as provided by initTrackNav
+            tableData = trackNavData, # populate a table based on track settings, etc.
+            actionFn = function(selectedRow){
+                req(selectedRow)
+                d <- trackNavData()[selectedRow]
+                app$browser$jumpToCoordinates(d$chrom, d$start, d$end)
+                # and/or do other work as needed based on the input value
+            }
+            # add other argument to pass to bufferedTableServer, but omit "selection" and "width"
+        )
+        # etc.
     )
 }

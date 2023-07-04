@@ -31,8 +31,13 @@ build.scale_barTrack <- function(track, reference, coord, layout){
         unit <- parseUnit(scaleUnit(track), barWidth)
         lab <- paste(" ", barWidth / unit$multiplier, " ", unit$unit, "  ", sep = "")
         strw <- strwidth(lab) * 1.1
-        text(coord$start + strw / 2, 0.5, lab)
-        rect(coord$start + strw, 0.6, coord$start + strw + barWidth, 0.4, col = "black")
+        rect(coord$start, 0.6, coord$start + barWidth, 0.4, col = "black")
+
+        # margin text label
+        tmp <- par('xpd')
+        par(xpd = TRUE, cex = 1.15)
+        text(coord$start - strw / 2, 0.5, lab)
+        par(xpd = tmp, cex = 1)
     })
     list(
         ylim  = ylim,

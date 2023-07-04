@@ -18,6 +18,8 @@ build.plot_titleTrack <- function(track, reference, coord, layout){
     height <- 2.2 / layout$linesPerInch + padding$total
     ylim <- c(0, 1)
     mai <- NULL
+    title <- getBrowserTrackSetting(track, "Track_Options", "Plot_Title", "auto")
+    if(title == "auto") title <- paste(reference$genome$description, coord$region)
     image <- mdiTrackImage(layout, height, function(...){
         mai <<- setMdiTrackMai(layout, padding, mar = list(top = 2.1, bottom = 0))
         plot(0, 0, type = "n", bty = "n",
@@ -25,7 +27,7 @@ build.plot_titleTrack <- function(track, reference, coord, layout){
             ylim = ylim,  ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i") 
         mtext(
-            getBrowserTrackSettings(track, "Track_Options", "Plot_Title", ""), 
+            title, 
             side = 3, 
             line = 0.5, 
             outer = FALSE, 
@@ -34,7 +36,7 @@ build.plot_titleTrack <- function(track, reference, coord, layout){
             padj = NA, 
             cex = 1.2
         )
-        if(getBrowserTrackSettings(track, "Track_Options", "Show_Line", FALSE))
+        if(getBrowserTrackSetting(track, "Track_Options", "Show_Line", FALSE))
             lines(c(coord$start, coord$end), c(0, 0), col = "black", lwd = 2)
     })
     list(

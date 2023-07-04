@@ -8,6 +8,7 @@ new_chromosomeTrack <- function(trackId) {
         click = TRUE,
         hover = FALSE,
         brush = TRUE,
+        forceBrush = TRUE, # special setting for genome-scale tracks to override standard no-key brush
         items = FALSE
     )
 }

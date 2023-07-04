@@ -16,7 +16,7 @@ new_coordinate_axisTrack <- function(trackId) {
 build.coordinate_axisTrack <- function(track, reference, coord, layout){
     req(objectHasData(reference$genome))
     padding <- padding(track, layout)
-    height <- 3.3 / layout$linesPerInch + padding$total
+    height <- 2.8 / layout$linesPerInch + padding$total
     unit <- parseUnit(scaleUnit(track), coord$end)
     xlab <- paste0(reference$genome$genome, " ", coord$chromosome, " (", unit$unit, ")")   
     axis <- getBrowserTrackSetting(track, "Plot_Options", "Axis_Orientation", default = "bottom")        
@@ -26,8 +26,8 @@ build.coordinate_axisTrack <- function(track, reference, coord, layout){
     bty <- switch(axis, top = "7", bottom = "l", "n")
     mai <- NULL
     image <- mdiTrackImage(layout, height, function(...){
-        mar <- if(axis == "top") list(top = 3.1, bottom = 0.1)
-               else if(axis == "bottom") list(top = 0.1, bottom = 3.1)
+        mar <- if(axis == "top") list(top = 2.6, bottom = 0.1)
+               else if(axis == "bottom") list(top = 0.1, bottom = 2.6)
                else list(top = 1.25, bottom = 1.25)
         mai <<- setMdiTrackMai(layout, padding, mar = mar)
         plot(0, 0, type = "n", bty = bty,
@@ -36,16 +36,19 @@ build.coordinate_axisTrack <- function(track, reference, coord, layout){
             xaxs = "i", yaxs = "i") 
         if(axis == "top"){
             axis(3, lwd = lwd)
-            mtext(xlab, side = 3, line = 2, cex = 1.1)
+            # mtext(xlab, side = 3, line = 2, cex = 1.1)
+            mtext(unit$unit, side = 2, las = 1, at = 1, line = 0.5)
             box(typ = "o", col = "red")
         } else if(axis == "bottom") {
             axis(1, lwd = lwd)
-            mtext(xlab, side = 1, line = 2, cex = 1.1)
+            # mtext(xlab, side = 1, line = 2, cex = 1.1)
+            mtext(unit$unit, side = 2, las = 1, at = 1, line = 0.5)
         } else {
             at <- axis(3, labels = FALSE, tick = FALSE)
             lines(xlim, rep(0.5, 2), lwd = lwd)        
             segments(at, 0, at, 1, lwd = lwd)
         }
+        
     })
     list(
         ylim  = ylim,

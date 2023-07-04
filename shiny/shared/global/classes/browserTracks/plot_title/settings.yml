@@ -2,7 +2,7 @@ settings:
     Track_Options:
         Plot_Title: 
             type:   textInput
-            value:  MIBrowser Plot
+            value:  auto
         Show_Line: 
             type:   checkboxInput
-            value:  true
+            value:  false

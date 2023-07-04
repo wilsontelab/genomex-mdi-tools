@@ -64,18 +64,20 @@ packages: # required R packages
 #----------------------------------------------------------------------
 settings:
     Browser_Options:
-        Browser_Width:
-            type:   numericInput
-            value:  7
-            min:    1.5
-            max:    10
-            step:   0.5 
-        Driver_Width:
-            type:   numericInput
-            value:  6.5
-            min:    1.5
-            max:    10
-            step:   0.5 
+        Font_Size:
+            type:   selectInput
+            choices: # chosen to work will with UCSC browser matching
+                - 6 
+                - 8
+                - 10
+                - 12
+            value:  8
+        Length_Unit:
+            type:   selectInput
+            choices:
+                - inches 
+                - cm
+            value:  inches 
         Label_Width:
             type:   numericInput
             value:  1
@@ -87,21 +89,13 @@ settings:
             value:  0
             min:    0
             max:    5
-            step:   0.1
-        Length_Unit:
-            type:   selectInput
-            choices:
-                - inches 
-                - cm
-            value:  inches            
-        Font_Size:
-            type:   selectInput
-            choices: # chosen to work will with UCSC browser matching
-                - 6 
-                - 8
-                - 10
-                - 12
-            value:  8
+            step:   0.1            
+        Browser_Width:
+            type:   numericInput
+            value:  7
+            min:    1.5
+            max:    10
+            step:   0.5 
         Strict_Coordinates:
             type: checkboxInput
             value: FALSE
