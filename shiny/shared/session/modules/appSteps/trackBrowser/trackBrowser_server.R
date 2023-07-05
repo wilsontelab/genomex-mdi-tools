@@ -286,7 +286,12 @@ getTrackNames <- function(trackIds){
 output$duplicateTrack <- renderUI({
     trackIds <- plotTrackIds()
     req(trackIds)
-    names(trackIds) <- getTrackNames(trackIds)
+    names(trackIds) <- paste0(
+        getTrackNames(trackIds), 
+        " (",
+        sapply(trackIds, function(x) tracks[[x]]$type),
+        ")"
+    )
     promptId <- duplicateTrackPromptId
     names(promptId) <- duplicateTrackPrompt
     selectInput(session$ns("duplicateTrackSelect"), NULL, choices = c(promptId, trackIds))
@@ -608,7 +613,14 @@ expansionTable <- bufferedTableServer(
     id,
     input,
     tableData = expansionTableData,
-    selection = 'none',
+    selection = 'single',
+    selectionFn = function(selectedRow){
+        trackId <- expandingTrackId()     
+        req(selectedRow, trackId)
+        track <- tracks[[trackId]]
+        req(track, track$track$expand2)
+        expand2(track$track, reference(), coord(), expansionTableData()[selectedRow])
+    },
     options = list()
 )
 observeEvent(expansionTableData(), {
@@ -620,6 +632,16 @@ clearObjectExpansions <- function(){
     objectTableData(NULL)
     expansionTableData(NULL)
 }
+
+# ----------------------------------------------------------------------
+# futher enable tracks to add add arbitrary bottom content in response to expand[2] actions
+# ----------------------------------------------------------------------
+expansionUI <- reactiveVal(NULL)
+output$expansionUI <- renderUI({
+    ui <- expansionUI()
+    req(ui)
+    ui
+})
 
 #----------------------------------------------------------------------
 # handle user interactions with the browser plot
@@ -1018,6 +1040,7 @@ list(
     expandingTrackId = expandingTrackId,      # to set the track populating the object expansion image
     objectTableData = objectTableData,        # to populate the object description table (e.g., a gene)
     expansionTableData = expansionTableData,  # to populate the object expansion table   (e.g., a gene's transripts)
+    expansionUI = expansionUI,
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     NULL
 )

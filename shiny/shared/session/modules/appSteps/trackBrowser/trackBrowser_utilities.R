@@ -242,7 +242,7 @@ trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
 #----------------------------------------------------------------------
 trackNavObservers__ <- list()
 initTrackNav.browserTrack <- function(track, session, inputName, actionFn = NULL) { # set actionFn for input, but not a table
-    req(getBrowserTrackSetting(track, "Track_Options", "Show_Navigation", true))
+    req(getBrowserTrackSetting(track, "Track_Options", "Show_Navigation", "hide") != "hide")
     navName <- paste(track$type, track$id, inputName, sep = "_")
     if(!is.null(trackNavObservers__[[navName]])) trackNavObservers__[[navName]]$destroy()
     if(!is.null(actionFn)) trackNavObservers__[[navName]] <<- observeEvent(session$input[[navName]], { 
@@ -269,25 +269,47 @@ trackNavInput.browserTrack <- function(track, session, navName, shinyInputFn,
     )
 }
 trackNavTable.browserTrack <- function(track, session, browserId, navName, 
-                                       actionFn, ...){
+                                       actionFn, options = list(), ...){
     # x <- isolate( session$input[[navName]] ) # get rows already selected?
+    if(is.null(options$lengthMenu)) options$lengthMenu <- c(5,10,15,20,50,100)
+    if(is.null(options$pageLength)) options$pageLength <- options$lengthMenu[1]
     bufferedTableServer(
         navName,
         browserId,
         session$input,
         selectionFn = actionFn,
         filterable = TRUE,
+        settings = track$settings,
+        options = options,
         ...
     )
     bufferedTableUI(
         session$ns(navName),
         title = getTrackDisplayName(track), 
         downloadable = TRUE,
+        settings = TRUE,
         width = 12,
         selection = "single",
         style = "display: block;",
         collapsible = TRUE
     )      
+}
+trackNavCanNavigate.browserTrack <- function(track){
+    getBrowserTrackSetting(track, "Track_Options", "Show_Navigation", "hide") %in% c("navigate", "navigate_and_expand")
+}
+trackNavCanExpand.browserTrack <- function(track){
+    getBrowserTrackSetting(track, "Track_Options", "Show_Navigation", "hide") %in% c("expand", "navigate_and_expand")
+}
+handleTrackNavTableClick <- function(track, chrom, start, end, expandFn = NULL){
+    navigate <- trackNavCanNavigate(track)
+    expand   <- trackNavCanExpand(track)
+    if(navigate && expand){
+        app$browser$jumpToCoordinates(chrom, start, end, then = expandFn)
+    } else if(navigate){
+        app$browser$jumpToCoordinates(chrom, start, end)
+    } else if(expand){
+        expandFn()
+    }
 }
 
 #----------------------------------------------------------------------

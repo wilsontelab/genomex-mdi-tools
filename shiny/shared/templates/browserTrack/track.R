@@ -9,7 +9,9 @@ new___MODULE_NAME__Track <- function(trackId) {
         hover = FALSE,
         brush = FALSE,
         items = FALSE,
-        navigation = FALSE # whether the track offers a custom, additional row of within-track navigation inputs
+        navigation = FALSE, # whether the track offers a custom, additional row of within-track navigation inputs
+        expand = FALSE,
+        expand2 = FALSE
     )
 }
 
@@ -88,11 +90,16 @@ expand.__MODULE_NAME__Track <- function(track, reference, coord, layout){
     # expansion tracks may follow the browser genome coordinate, or have an entirely different layout
 }
 
+# expand2 method for the S3 class
+expand2.__MODULE_NAME__Track <- function(track, reference, coord, selectedRowData){
+    # return a tagList of arbitrary UI content in response to an expansion table click
+}
+
 # method for the S3 class to populate one or more trackNav inputs above the browser output
 navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference, coord){
 
     # initialize the trackNavs, including input observers to handle user actions
-    # initTrackNav will fail silenty if setting Track_Options/Show_Navigation is set and FALSE
+    # initTrackNav will fail silenty if setting Track_Options/Show_Navigation is not set or =="hide"
     navName1 <- initTrackNav(track, session, "inputName1", function(inputValue1){
         # do work as needed based on the input value, e.g., make a call to app$browser$jumpToCoordinates()
     })
@@ -131,8 +138,9 @@ navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference
             actionFn = function(selectedRow){
                 req(selectedRow)
                 d <- trackNavData()[selectedRow]
-                app$browser$jumpToCoordinates(d$chrom, d$start, d$end)
-                # and/or do other work as needed based on the input value
+                # do other work as needed based on the input value (e.g., open a modal, navigate)
+                # you should honor the value of trackNavCanNavigate(track) and trackNavCanExpand(track)
+                # the easiest way is to use handleTrackNavTableClick(track, chrom, start, end, expandFn)
             }
             # add other argument to pass to bufferedTableServer, but omit "selection" and "width"
         )

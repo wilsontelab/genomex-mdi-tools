@@ -39,6 +39,7 @@ trackBrowserUI <- function(id, options) {
         #----------------------------------------------------------------------
         tags$div(
             style = "white-space: nowrap;",
+            class = "trackBrowserSelectizeWrapper",
             tags$div(
                 class = "trackBrowserInput ucscInput genomeInput",
                 popupInputUI(ns('genome'), "Genome")
@@ -49,7 +50,7 @@ trackBrowserUI <- function(id, options) {
             ),
             tags$div(
                 class = "trackBrowserInput",
-                selectInput(ns('chromosome'), "Chromosome", choices = c(), selectize = FALSE),
+                selectInput(ns('chromosome'), "Chromosome", choices = c()),
             ),
             tags$div(
                 class = "trackBrowserInput coordinateInput",
@@ -106,7 +107,8 @@ trackBrowserUI <- function(id, options) {
             ),
         ),
         tags$div(
-            style = "white-space: nowrap; margin-top: 4px;",
+            style = "white-space: nowrap;", #; margin-top: 4px
+            class = "trackBrowserSelectizeWrapper",
 
             #----------------------------------------------------------------------
             # the vertical, sortable list of tracks
@@ -203,6 +205,11 @@ trackBrowserUI <- function(id, options) {
                 downloadable = TRUE, 
                 width = 12
             )  
-        )      
+        ),
+
+        # a further place for arbitrary, track-defined UI content based on expand[2] actions
+        fluidRow(
+            uiOutput(ns("expansionUI"))
+        )
     )
 }

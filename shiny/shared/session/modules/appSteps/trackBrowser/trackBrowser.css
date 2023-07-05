@@ -147,3 +147,8 @@
 .trackNavWrapper .col-sm-12 {
     padding: 0;
 }
+
+/* allow longer list in drop downs */
+.trackBrowserSelectizeWrapper .selectize-dropdown-content{
+    max-height: 90vh;
+}

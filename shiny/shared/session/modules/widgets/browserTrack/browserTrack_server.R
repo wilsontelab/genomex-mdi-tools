@@ -54,6 +54,23 @@ template$Track_Options$Track_Name <- list( # override and prepend universal Trac
 
 # initialize the track settings
 trackClass <- paste0(trackType, "Track")
+class(browserInput) <- append("browserInput", class(browserInput))
+constructor <- paste0("new_", trackClass)
+track <- get(constructor)(trackId)
+class(track) <- unique(append(c("browserTrack", trackClass), class(track)))
+if(isTruthy(track$navigation)){
+    template$Track_Options$Show_Navigation <- list(
+        type = "selectInput",
+        choices = c(
+            "hide",
+            "table_only",
+            "navigate",
+            if(isTruthy(track$expand)) "expand" else NULL,
+            if(isTruthy(track$expand)) "navigate_and_expand" else NULL            
+        ),
+        selected = "hide"
+    )        
+}
 settings <- settingsServer(
     "settings", 
     cssId, 
@@ -62,10 +79,6 @@ settings <- settingsServer(
     s3Class = "trackSettings",
     ...
 )
-class(browserInput) <- append("browserInput", class(browserInput))
-constructor <- paste0("new_", trackClass)
-track <- get(constructor)(trackId)
-class(track) <- unique(append(c("browserTrack", trackClass), class(track)))
 
 # initialize the track list items, e.g., samples or UCSC tracks
 trackHasItems <- !is.null(track$items) && track$items

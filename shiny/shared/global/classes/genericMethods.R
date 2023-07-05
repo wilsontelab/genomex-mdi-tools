@@ -48,6 +48,9 @@ navigation <- function(x, ...) {
 expand <- function(x, ...) {
     UseMethod("expand", x)
 }
+expand2 <- function(x, ...) { # i.e., expand from an expansion click
+    UseMethod("expand2", x)
+}
 padding <- function(x, ...) {
     UseMethod("padding", x)
 }
@@ -92,4 +95,13 @@ trackNavInput <- function(x, ...) {
 }
 trackNavTable <- function(x, ...) {
     UseMethod("trackNavTable", x)
+}
+trackNavCanNavigate <- function(x, ...) {
+    UseMethod("trackNavCanNavigate", x)
+}
+trackNavCanExpand <- function(x, ...) {
+    UseMethod("trackNavCanExpand", x)
+}
+handleTrackNavTableClick <- function(x, ...) {
+    UseMethod("handleTrackNavTableClick", x)
 }
