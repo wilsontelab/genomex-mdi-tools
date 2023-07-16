@@ -748,8 +748,8 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         end   <- as.integer64(end   + padding)
     }
     genome <- genome()
-    req(nrow(genome) > 0)
-    chromosomeSize <- getChromosomeSize(genome$genome, chromosome)
+    req(nrow(genome) > 0)  
+    chromosomeSize <- getChromosomeSize(genome$genome, chromosome)  
     req(chromosomeSize)
     if(start < 1) start <- 1
     if(end > chromosomeSize) end <- chromosomeSize
@@ -916,7 +916,7 @@ observeEvent(input$jumpTo,  {
                 coord <- coordinates(input)
                 halfWidth <- coord$width / 2
                 list(
-                    chromosome = chrom, 
+                    chromosome = chrom$name, 
                     start = center - halfWidth, 
                     end   = center + halfWidth,
                     strict = TRUE
@@ -926,7 +926,7 @@ observeEvent(input$jumpTo,  {
                 start <- checkJumpStart(parts[2])
                 end <- checkJumpEnd(chrom, start, parts[3])
                 list(
-                    chromosome = chrom, 
+                    chromosome = chrom$name, 
                     start = start, 
                     end   = end # subjected to Browser_Options$Strict_Coordinates
                 )

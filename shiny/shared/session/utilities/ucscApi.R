@@ -257,7 +257,7 @@ getUcscTrackTable <- function(genome, track, chromosome = NULL,
                 maxItemsOutput = maxItemsOutput
             ))
             if(!(ucsc$status_code %in% c(200, 206))) { # code 206 mean partial content
-                if(!is.null(status)) print(paste("UCSC failed:", status, genome, track, chromosome))
+                print(paste("UCSC failed:", ucsc$status_code, genome, track, chromosome))
                 stopSpinner(session)
                 return(data.table()) # failure returns an empty data.table, but does not save it
             }
