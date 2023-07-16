@@ -85,7 +85,12 @@ getTrackDisplayName <- function(track){
             if(length(items) == 1) {
                 item <- items[[1]]
                 itemFields <- names(item)
-                allowedFields <- itemFields %in% c("name","Name","Sample_ID","sample","Sample","track","Track") # could add more recognized name defaults here
+                allowedFields <- itemFields %in% c(
+                    "name","Name","
+                    Sample_ID","sample","Sample",
+                    "track","Track",
+                    "library","Library"
+                ) # could add more recognized name defaults here
                 if(any(allowedFields)) {
                     trackName <- item[[itemFields[which(allowedFields)[1]]]]
                 } else {
