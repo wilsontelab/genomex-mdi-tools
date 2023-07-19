@@ -27,12 +27,12 @@ fi
 export USE_CRAM=TRUE
 source $SHARED_MODULES_DIR/align/set_alignment_vars.sh
 
-# set the sort parameters
-source $SHARED_MODULES_DIR/utilities/shell/create_temp_dir.sh
-export SORT_RAM_PER_CPU_INT=$(($RAM_PER_CPU_INT - 1000000000))
+# # set the sort parameters
+# source $SHARED_MODULES_DIR/utilities/shell/create_temp_dir.sh
+# export SORT_RAM_PER_CPU_INT=$(($RAM_PER_CPU_INT - 1000000000))
 
 # align reads to genome and create temporary output files
 runWorkflowStep 1 align $SHARED_MODULE_DIR/align_long_read_minimap2.sh
 
-# clean up
-rm -r $TMP_DIR_WRK
+# # clean up
+# rm -r $TMP_DIR_WRK

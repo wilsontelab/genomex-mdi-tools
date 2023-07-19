@@ -8,7 +8,8 @@ source $SHARED_MODULES_DIR/genome/set_genome_vars.sh
 source $SHARED_MODULES_DIR/source/set_read_file_vars.sh
 source $SHARED_MODULES_DIR/align/set_alignment_vars.sh
 
-# set the sort parameters
+# set the tmp file and sort parameters
+source $SHARED_MODULES_DIR/utilities/shell/create_shm_dir.sh
 source $SHARED_MODULES_DIR/utilities/shell/create_temp_dir.sh
 export SORT_RAM_PER_CPU_INT=$(($RAM_PER_CPU_INT - 1000000000))
 
@@ -16,4 +17,5 @@ export SORT_RAM_PER_CPU_INT=$(($RAM_PER_CPU_INT - 1000000000))
 runWorkflowStep 1 align $SHARED_MODULE_DIR/align_paired_bwa.sh
 
 # clean up
+rm -r $SHM_DIR_WRK
 rm -r $TMP_DIR_WRK

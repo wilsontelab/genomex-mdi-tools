@@ -5,7 +5,11 @@
 # include:
 #     - height, etc.
 
-# uncomment this section to specify settings that are common to multiple tracks
+# uncomment this section to specify settings that are imported from a parent trackType
+# trackType:
+#     - <trackType> # must find genomex-mdi-tools//shiny/shared/session/utilities/browserTrackTypes/<trackType>/settings.yml
+
+# uncomment this section to specify settings that are common to multiple tracks in an app or suite
 # shared:
 #     - ../shared_settings.yml # interpreted relative to the track's own settings.yml file
 

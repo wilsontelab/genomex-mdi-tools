@@ -1,0 +1,17 @@
+include:
+    - yAxisLimit
+    - height
+    - hLines
+    - xyOptions
+    # - colorPlotly TODO: replace with color palette
+settings:
+    Plot_Options:
+        Max_Bins:
+            type: numericInput
+            value:  250
+            min:    50
+            max:    5000
+            step:   50      
+        Bin_Size:
+            type: textInput
+            value:  ""

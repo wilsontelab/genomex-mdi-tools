@@ -148,14 +148,17 @@ adjustLayoutWidth <- function(layout, plotWidth){
 # helper methods for the browserTrack S3 class
 #----------------------------------------------------------------------
 getBrowserTrackSetting <- function(track, optionFamily, option, default = NULL){
-    user <- track$settings[[optionFamily]]()[[option]]$value # track developer must ensure option is offered
-    if(is.null(user)) return(default)
-    if(typeof(user) == "character"){
-        user <- trimws(user)
-        if(user == "" || user == "auto") return(default)
+    family <- track$settings[[optionFamily]]
+    if(is.null(family)) return(default)
+    value <- family()[[option]]$value
+    if(is.null(value)) return(default)
+    if(typeof(value) == "character"){
+        value <- trimws(value)
+        if(value == "" || value == "auto") return(default)
     }
-    user
+    value
 }
+getTrackSetting <- getBrowserTrackSetting
 
 # Track_Options options family
 padding.browserTrack <- function(track, layout){
@@ -174,15 +177,19 @@ ylab.browserTrack <- function(track, default = ""){
     ylab <- getBrowserTrackSetting(track, "Track_Options", "Y_Axis_Label", default)
     if(ylab == "auto") default else if(ylab == "none") "" else ylab
 }
-ylim.browserTrack <- function(track, y){
-    user <- getBrowserTrackSetting(track, "Track_Options", "Y_Limits")
-    if(is.null(user)) return(paddedRange(y))
+ylim.browserTrack <- function(track, y, family = "Track_Options", setting = "Y_Limit"){
+    user <- trimws(getBrowserTrackSetting(track, family, setting, ""))
+    if(user == "") return(paddedRange(y))
     user <- gsub('\\s', '', user)
     user <- gsub('to', '-', user)
     user <- gsub('::', ':', user)
-    user <- as.numeric(strsplit(user, '[-:,]')[[1]])
-    if(is.na(user[2])) user[2] <- -user[1]
-    sort(user)
+    tryCatch({
+        user <- as.numeric(strsplit(user, '[-:,]')[[1]])
+        if(is.na(user[2])) user[2] <- -user[1]
+        sort(user)          
+    }, error = function(e){
+        paddedRange(y)
+    })
 }
 bty.browserTrack <- function(track, default){
     user <- getBrowserTrackSetting(track, "Track_Options", "Bounding_Box")
@@ -206,40 +213,143 @@ typ.browserTrack <- function(track, default){
         # TODO: implement special handling of area, histogram, 
     )
 }
-pch.browserTrack <- function(track, default){
+pch.browserTrack <- function(track, default = 19){
     user <- getBrowserTrackSetting(track, "Plot_Options", "Point_Symbol")
     if(is.null(user)) return(default)
     switch(
         user,
-        "Open Circles" = 1,
-        "Filled Circles" = 19,
-        "Open Squares" = 0,
-        "Filled Squares" = 15
+        "open_circles" = 1,
+        "filled_circles" = 19,
+        "open_squares" = 0,
+        "filled_squares" = 15
     )
 }
-lwd.browserTrack <- function(track, default){
+lwd.browserTrack <- function(track, default = 1.5){
     user <- getBrowserTrackSetting(track, "Plot_Options", "Line_Width")
     if(is.null(user)) return(default)
     user
 }
-cex.browserTrack <- function(track, default){
+lty.browserTrack <- function(track, default = 1){
+    user <- getBrowserTrackSetting(track, "Plot_Options", "Line_Type")
+    if(is.null(user)) return(default)
+    user
+}
+cex.browserTrack <- function(track, default = 1){
     user <- getBrowserTrackSetting(track, "Plot_Options", "Point_Size")
     if(is.null(user)) return(default)
     user
 }
-col.browserTrack <- function(track, default){
+col.browserTrack <- function(track, default = CONSTANTS$plotlyColors$blue){
     user <- getBrowserTrackSetting(track, "Plot_Options", "Color")
     if(is.null(user)) return(default)
     CONSTANTS$plotlyColor[[user]]
 }
 
 #----------------------------------------------------------------------
-# other track plotting functions
+# plot frame functions
 #----------------------------------------------------------------------
+zeroLine.browserTrack <- function(track, color = CONSTANTS$plotlyColors$black, lwd = 1){
+    abline(h = 0, col = color, lwd = lwd)
+}
+hLines.browserTrack <- function(track, ylim, color = CONSTANTS$plotlyColors$grey, lwd = 0.25){
+    doLines <- getTrackSetting(track, "Track_Options", "Horizontal_Lines", TRUE)
+    if(!doLines) return()
+    unit <- 10 ** floor(log10(max(abs(ylim))))
+    getY <- function(){
+        y <- seq(-unit * 10, unit * 10, unit)
+        y[y >= ylim[1] & y <= ylim[2]]        
+    }
+    y <- getY()
+    if(length(y) <= 3) {
+        unit <- unit / 10
+        y <- getY()
+    }
+    if(length(y) > 10) {
+        unit <- unit * 2
+        y <- getY()
+    }
+    abline(h = y, col = color, lwd = lwd)
+}
 trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
     par(xpd = TRUE)
     legend(coord$end + coord$width * 0.01, ylim[2], bty = bty, ...)
     par(xpd = FALSE)
+}
+
+#----------------------------------------------------------------------
+# data retrieval and plotting functions
+#----------------------------------------------------------------------
+getItemsData.browserTrack <- function(track, reference, coord, dataFn, stranded = FALSE){
+    items <- track$settings$items()
+    req(items, length(items) > 0)
+    itemNames <- names(items)
+    ymin <- 0
+    ymax <- 0
+    d <- lapply(itemNames, function(itemName){
+        dd <- dataFn(track, reference, coord, itemName, items[[itemName]])
+        y <- if("y1" %in% names(dd)) dd[, c(y1, y2)] else dd[, y]
+        if(stranded) {
+            ymax <<- max(ymax, abs(y), na.rm = TRUE)
+        } else {
+            if(allowNeg) ymin <<- min(ymin, y, na.rm = TRUE)
+            ymax <<- max(ymax, y, na.rm = TRUE)
+        }
+        dd
+    })
+    names(d) <- itemNames
+    list(
+        d = d,
+        ymin = ymin,
+        ymax = ymax
+    )
+}
+plotXY.browserTrack <- function(track, d, color = NULL, ...){
+    if(is.null(color)) color <- col(track) 
+    switch(
+        getTrackSetting(track, "Plot_Options", "Plot_As", "area"),
+        points = points(
+            d$x, 
+            d$y, 
+            pch = pch(track), 
+            cex = cex(track),
+            col = color, 
+            ...
+        ),
+        both =  points(
+            d$x, 
+            d$y, 
+            typ = "b", 
+            pch = pch(track), 
+            cex = cex(track),
+            lwd = lwd(track), 
+            lty = lty(track),
+            col = color, 
+            ...
+        ),
+        histogram = points(
+            d$x, 
+            d$y, 
+            typ = "h", 
+            cex = cex(track),
+            col = color, 
+            ...
+        ),
+        area = polygon(
+            c(d$x[1], d$x, d$x[length(d$x)]), 
+            c(0, d$y, 0), 
+            col = color, 
+            border = "grey20",
+            ...
+        ),
+        lines(
+            d$x, 
+            d$y, 
+            lwd = lwd(track), 
+            lty = lty(track),
+            col = color, 
+            ...
+        )
+    )
 }
 
 #----------------------------------------------------------------------
@@ -315,51 +425,4 @@ handleTrackNavTableClick <- function(track, chrom, start, end, expandFn = NULL){
     } else if(expand){
         expandFn()
     }
-}
-
-#----------------------------------------------------------------------
-# generic track plotting functions
-# these are not S3 methods but are named similarly for clarity
-#----------------------------------------------------------------------
-
-# plot XY data tracks
-plotXY.browserTrack <- function(
-    track,
-    input,
-    x, 
-    y, 
-    xaxt = "n",  # most tracks do not show their X axis
-    xlab = "",   # or X axis label, but track can override this behavior
-    ylab = NULL,
-    typ  = NULL,
-    bty  = NULL,
-    pch  = NULL,
-    lwd  = NULL,
-    cex  = NULL,
-    col  = NULL,
-    ... # additional arguments passed to plot()
-){
-    if(is.null(ylab)) ylab <- ylab(track, "")
-    if(is.null(typ))  typ  <-  typ(track, "p")
-    if(is.null(bty))  bty  <-  bty(track, "n")
-    if(is.null(pch))  pch  <-  pch(track, 16)
-    if(is.null(lwd))  lwd  <-  lwd(track, 1)
-    if(is.null(cex))  cex  <-  cex(track, 1)
-    if(is.null(col))  col  <-  col(track, "black")
-    plot(
-        x = x,
-        y = y,
-        xaxt = xaxt,
-        xlab = xlab,
-        ylab = ylab,
-        typ = typ,
-        bty = bty,
-        pch = pch,
-        lwd = lwd,
-        cex = cex,
-        col = col,
-        xaxs = "i",
-        yaxs = "i",
-        ...
-    )
 }

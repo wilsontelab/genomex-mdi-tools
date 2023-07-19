@@ -15,4 +15,4 @@ action: # required
     job-manager:
         recommended:                
             time-limit: 2:00:00            
-    description: "download Dorado and an ONT basecalling model"
+    description: "download Dorado and an ONT basecalling model(s)"

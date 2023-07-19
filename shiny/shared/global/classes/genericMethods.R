@@ -78,11 +78,26 @@ pch <- function(x, ...) {
 lwd <- function(x, ...) {
     UseMethod("lwd", x)
 }
+lty <- function(x, ...) {
+    UseMethod("lty", x)
+}
 cex <- function(x, ...) {
     UseMethod("cex", x)
 }
 col <- function(x, ...) {
     UseMethod("col", x)
+}
+zeroLine <- function(x, ...) {
+    UseMethod("zeroLine", x)
+}
+hLines <- function(x, ...) {
+    UseMethod("hLines", x)
+}
+getItemsData <- function(x, ...) {
+    UseMethod("getItemsData", x)
+}
+plotXY <- function(x, ...) {
+    UseMethod("plotXY", x)
 }
 trackLegend <- function(x, ...) {
     UseMethod("trackLegend", x)

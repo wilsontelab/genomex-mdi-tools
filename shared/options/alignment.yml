@@ -15,3 +15,31 @@ options:
         required: false
         default: name
         description: "sort status of the output file(s) (name, coordinate, both)"
+    parabricks-prep-command:
+        order: 3
+        short: x
+        type: string
+        required: false
+        default: "module load singularity"
+        description: "system call to prepare to run parabricks if --n-gpu > 0"        
+    parabricks-version-tag:
+        order: 4
+        short: y
+        type: string
+        required: false
+        default: 4.1.1-1
+        description: "the parabricks container image tag to use if --n-gpu > 0"
+    parabricks-image:
+        order: 5
+        short: Y
+        type: string
+        required: false
+        default: NA
+        description: "full path to a parabricks container image, as an alternative to --parabricks-version-tag" 
+    low-memory:
+        order: 6
+        short: M
+        type: boolean
+        required: false
+        default: false
+        description: "set the parabricks fq2bam --low-memory flag, e.g., for V100 GPUs"

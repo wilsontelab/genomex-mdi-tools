@@ -46,6 +46,18 @@ if(!is.null(request$shared)) for(sharedFile in request$shared){
     file <- file.path(dir, sharedFile)
     loadTrackSettings(read_yaml(file))
 }
+if(!is.null(request$trackType)) for(trackType_ in request$trackType){ 
+    trackTypeRequest <- loadExternalYml("genomex-mdi-tools", file.path("shared/session/utilities/browserTrackTypes", trackType_, "settings.yml"))
+    if(!is.null(trackTypeRequest$include)) for(include in trackTypeRequest$include){
+        include <- library[[include]]
+        if(is.null(include)) next
+        for(family in names(include)){
+            if(is.null(template[[family]])) template[[family]] <- list()
+            for(option in names(include[[family]])) template[[family]][[option]] <- include[[family]][[option]]
+        }
+    }
+    if(!is.null(trackTypeRequest$settings)) loadTrackSettings(trackTypeRequest$settings)
+}
 if(!is.null(request$settings)) loadTrackSettings(request$settings)
 template$Track_Options$Track_Name <- list( # override and prepend universal Track_Name option
     type = "textInput",

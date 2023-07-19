@@ -1,5 +1,6 @@
 # action:
 #     align paired dna-seq read files to genome with read merging using fastp and bwa
+#     if $N_GPU > 0, use Parabricks fq2bam for GPU acceleration
 # expects:
 #     source $MODULES_DIR/genome/set_genome_vars.sh
 #     source $MODULES_DIR/source/set_read_file_vars.sh
@@ -13,7 +14,7 @@
 #     $UMI_SKIP_BASES
 #     $MIN_QUAL         [default: no quality filtering]
 #     $N_TERMINAL_BASES 
-
+#     $N_GPU            for GPU acceleration
 # input:
 #     if FASTQ files are found (.fastq.gz) they are used
 #     otherwise searches for SRA (.sra) files that are converted to FASTQ in a stream
@@ -62,16 +63,38 @@ echo "  genome: $BWA_GENOME_FASTA"
 
 # if requested, perform "extra" adapter trimming (in addition to merge-inherent trimming)
 if [[ "$ADAPTER_SEQUENCE" != "NA" && "$ADAPTER_SEQUENCE" != "null" && "$ADAPTER_SEQUENCE" != "" ]]; then
-    ADAPTER_SEQUENCE="--adapter_sequence $ADAPTER_SEQUENCE"
+    export ADAPTER_SEQUENCE="--adapter_sequence $ADAPTER_SEQUENCE"
 else
-    ADAPTER_SEQUENCE=""
+    export ADAPTER_SEQUENCE=""
 fi
 
 # if requested, align paired-end reads as two single reads, i.e., without aligner pairing
 if [ "$SUPPRESS_SMART_PAIRING" = "" ]; then
-    SMART_PAIRING="-p"
+    export SMART_PAIRING="-p"
 else
-    SMART_PAIRING=""
+    export SMART_PAIRING=""
+fi
+
+#------------------------------------------------------------------
+# set branching to either standard bwa or the gpu-accelerated parabricks fq2bam
+#------------------------------------------------------------------
+if [ "$N_GPU" != "0" ]; then
+    echo "--n-gpu > 0, using Parabricks GPU acceleration"
+    ALIGN_SCRIPT1="perl $SHARED_MODULE_DIR/parabricks/split_fastq_to_file.pl"
+    ALIGN_SCRIPT2="bash $SHARED_MODULE_DIR/parabricks/run_fq2bam.sh"
+    export PB_TMP_DIR=$TMP_DIR_WRK/parabricks
+    mkdir -p $PB_TMP_DIR/input
+    mkdir -p $PB_TMP_DIR/output
+    mkdir -p $PB_TMP_DIR/tmp
+    export UNMERGED_FILE_1="$PB_TMP_DIR/input/unmerged_1.fastq.gz"
+    export UNMERGED_FILE_2="$PB_TMP_DIR/input/unmerged_2.fastq.gz"
+    export MERGED_FILE="$PB_TMP_DIR/input/merged.fastq.gz"
+    N_FASTP_THREADS=$N_CPU # although usually fastp is not the rate-limiting step
+else
+    echo "--n-gpu == 0, using CPU-based bwa mem"
+    ALIGN_SCRIPT1="bash $SHARED_MODULE_DIR/bwa/run_bwa.sh"
+    ALIGN_SCRIPT2="bash $SHARED_MODULE_DIR/bwa/sort_and_index.sh"
+    N_FASTP_THREADS=3 # the fastp default
 fi
 
 #------------------------------------------------------------------
@@ -85,6 +108,7 @@ perl $SHARED_MODULE_DIR/prepare_fastq.pl |
 # large numbers of threads do not improve the speed
 # dup evaluation is memory intensive and not needed here
 fastp \
+--thread $N_FASTP_THREADS \
 --stdin --interleaved_in --stdout \
 --dont_eval_duplication \
 --length_required $MIN_INSERT_SIZE $ADAPTER_SEQUENCE \
@@ -96,26 +120,17 @@ fastp \
 perl $SHARED_MODULE_DIR/adjust_merge_tags.pl |
 
 # align to genome using BWA; soft-clip supplementary
-bwa mem $SMART_PAIRING -Y -t $N_CPU $BWA_GENOME_FASTA 2>$BWA_LOG_FILE - |
-
-# convert to bam/cram and add mate information while still name sorted
-samtools fixmate -@ $N_CPU -m $CRAM_OUTPUT_OPTIONS - - |
-slurp -s 100M -o $NAME_BAM_FILE
+# head -n 40000000 | 
+$ALIGN_SCRIPT1
 checkPipe
 
-#------------------------------------------------------------------
-# handle bam/cram file coordinate sorting, if requested
-#------------------------------------------------------------------
-if [[ "$BAM_SORT" = "coordinate" || "$BAM_SORT" = "both" ]]; then
-    echo "sorting alignments by coordinate"
-    slurp -s 500M $NAME_BAM_FILE |
-    samtools sort $CRAM_OUTPUT_OPTIONS --threads $N_CPU -m $SORT_RAM_PER_CPU_INT -T $TMP_FILE_PREFIX.samtools.sort - |
-    slurp -s 500M -o $COORDINATE_BAM_FILE
-    checkPipe
-    if [ "$BAM_SORT" = "coordinate" ]; then
-        rm -rf $NAME_BAM_FILE
-    fi
-fi
+# # #################
+# # cp -r $PB_TMP_DIR/input $TASK_DIR
+# echo "copying previously prepared fastq files"
+# cp $TASK_DIR/input/* $PB_TMP_DIR/input
+
+export -f checkPipe
+$ALIGN_SCRIPT2
 
 #------------------------------------------------------------------
 # index reads for fast recovery of unaltered inputs, if requested

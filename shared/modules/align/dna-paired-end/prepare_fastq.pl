@@ -1,5 +1,7 @@
 use strict;
 use warnings;
+use File::Basename;
+use File::Copy;
 
 # action:
 #     prepare interleaved FASTQ from different input types, including SRA files
@@ -26,6 +28,9 @@ map { require "$perlUtilDir/sequence/$_.pl" } qw(general umi);
 resetCountFile();
 
 # environment variables
+fillEnvVar(\my $N_CPU,              'N_CPU');
+fillEnvVar(\my $TMP_DIR_WRK,        'TMP_DIR_WRK');
+fillEnvVar(\my $SHM_DIR_WRK,        'SHM_DIR_WRK');
 fillEnvVar(\my $FASTQ_FILE1,        'FASTQ_FILE1');
 fillEnvVar(\my $FASTQ_FILE2,        'FASTQ_FILE2');
 fillEnvVar(\my $SRA_FILES,          'SRA_FILES');
@@ -74,9 +79,20 @@ if($FASTQ_FILE1){
     close $inH2;    
 } else {
     foreach my $sraFile(split(" ", $SRA_FILES)){
-        open my $inH, "-|", "fastq-dump --stdout --split-files $sraFile" or throwError("could not open $sraFile: $!");
+        # when operating in a stream, fastq-dump seems at least as good as fasterq-dump
+        # fasterq-dump inexplicably processes the entire data set to uncompressed temp files before passing on to stdout
+        # open my $inH, "-|", 
+        #     "fasterq-dump --stdout --split-spot --threads $N_CPU --temp $TMP_DIR_WRK $sraFile" or 
+        #     throwError("could not open $sraFile: $!");        
+        # open my $inH, "-|", "fastq-dump --stdout --split-files $sraFile" or throwError("could not open $sraFile: $!");        
+        my $sraName = basename($sraFile); # pre-copy SRA file to /dev/shm to speed up fastq-dump
+        my $tmpFile = "$SHM_DIR_WRK/$sraName";
+        unlink $tmpFile; # in case some partial file pre-exists
+        copy($sraFile, $tmpFile) or die "copy failed: $!";
+        open my $inH, "-|", "fastq-dump --stdout --split-files $tmpFile" or throwError("could not open $tmpFile: $!");
         runReadPairs($inH, $inH);
-        close $inH;        
+        close $inH;
+        unlink $tmpFile;
     }
 }
 

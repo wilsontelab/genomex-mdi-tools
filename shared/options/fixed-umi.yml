@@ -3,7 +3,7 @@
 options:
     umi-file: 
         order: 1
-        short: u
+        short: U
         type: string
         required: false
         default: null

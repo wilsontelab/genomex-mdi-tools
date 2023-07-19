@@ -110,39 +110,6 @@ wait $COPY_PID
 COPY_OUT_I=$CALL_I
 do_batch_copy
 
-# # merge the output files from local disk to shared data drive
-# cd $TMP_DIR_WRK
-# echo "merging output"
-# if [ $DORADO_OUTPUT_FORMAT == "ubam" ]; then
-#     samtools cat *.unaligned.bam > ${UBAM_FILE}
-#     checkPipe
-#     rm *.unaligned.bam
-# else 
-#     cat *.fastq.gz > ${FASTQ_FILE}
-#     checkPipe
-#     rm *.fastq.gz
-# fi
-
-# # run basecaller one pod5 file chunk at a time, working from /dev/shm to a local write buffer
-# # see: https://github.com/nanoporetech/dorado/issues/223
-# cd ${EXPANDED_INPUT_DIR}
-# POD5_FILES=(*.pod5)
-# rm -f $POD5_BUFFER_DIR/*.pod5
-# for ((i=0; i < ${#POD5_FILES[@]}; i+=POD5_BATCH_SIZE)); do 
-#     echo "pod5 chunk i = $i"
-#     POD5_CHUNK=${POD5_FILES[@]:i:POD5_BATCH_SIZE}
-#     cp $POD5_CHUNK $POD5_BUFFER_DIR
-#     if [ $DORADO_OUTPUT_FORMAT == "ubam" ]; then  
-#         ${DORADO_EXECUTABLE} basecaller $EMIT_MOVES $READ_IDS_FILE $ONT_MODEL_DIR $POD5_BUFFER_DIR | 
-#         samtools view -b - > $TMP_DIR_WRK/$i.unaligned.bam
-#         checkPipe
-#     else 
-#         ${DORADO_EXECUTABLE} basecaller --emit-fastq $READ_IDS_FILE $ONT_MODEL_DIR $POD5_BUFFER_DIR |
-#         pigz -p $N_CPU -c > $TMP_DIR_WRK/$i.fastq.gz
-#         checkPipe
-#     fi
-#     rm $POD5_BUFFER_DIR/*.pod5
-# done
 
 # $ dorado --help
 # Usage: dorado [options] subcommand
