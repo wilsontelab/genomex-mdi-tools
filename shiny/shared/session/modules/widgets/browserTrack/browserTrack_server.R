@@ -22,6 +22,7 @@ browserTrackServer <- function(
 # parse requested track settings
 suite  <- 'genomex-mdi-tools'
 module <- "browserTrack"
+browserTrackTypesDir <- "shared/session/types/browserTrackTypes"
 widgetDir <- getWidgetDir(module, suite = suite)
 library <- read_yaml(file.path(widgetDir, "settings.yml")) 
 template <- list(Track_Options = library$allTracks$Track_Options) # so it is always first
@@ -42,12 +43,15 @@ loadTrackSettings <- function(settings){
     } 
 }
 if(!is.null(request$shared)) for(sharedFile in request$shared){
-    dir <- dirname(settingsFile)
-    file <- file.path(dir, sharedFile)
+    file <- file.path(gitStatusData$suite$dir, "shiny", browserTrackTypesDir, sharedFile)
+    if(!file.exists(file)){
+        dir <- dirname(settingsFile)
+        file <- file.path(dir, sharedFile)        
+    }
     loadTrackSettings(read_yaml(file))
 }
 if(!is.null(request$trackType)) for(trackType_ in request$trackType){ 
-    trackTypeRequest <- loadExternalYml("genomex-mdi-tools", file.path("shared/session/utilities/browserTrackTypes", trackType_, "settings.yml"))
+    trackTypeRequest <- loadExternalYml("genomex-mdi-tools", file.path(browserTrackTypesDir, trackType_, "settings.yml"))
     if(!is.null(trackTypeRequest$include)) for(include in trackTypeRequest$include){
         include <- library[[include]]
         if(is.null(include)) next

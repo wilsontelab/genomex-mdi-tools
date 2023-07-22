@@ -188,37 +188,46 @@ chromosomeSize <- reactive({ # size of the currently active chromosome (not the 
 #----------------------------------------------------------------------
 # manage browser tracks
 #----------------------------------------------------------------------
-labelTrackTypes <- c(
-    "plot_title",
-    "chromosome",
-    "scale_bar",
-    "coordinate_axis"
-)
-trackTypes <- list()       # key = trackType, value = settings template file path
-tracks <- list() # key = trackId,   value = browserTrackServer()
+trackTypes <- list() # key = trackType, value = settings template file path
+tracks <- list()     # key = trackId,   value = browserTrackServer()
 nullTrackOrder <- data.table(trackId = character(), order = integer())
 trackOrder <- reactiveVal(nullTrackOrder)
 
 # assemble the track types available to this app
+parentAppTrackTypes <- character()
 addTrackType <- function(trackType, tracksFolder){
-    trackTypes[[trackType]] <<- file.path(tracksFolder, trackType, "settings.yml")
+    path <- file.path(tracksFolder, trackType, "settings.yml")
+    if(file.exists(path)) trackTypes[[trackType]] <<- path
 }
-addTrackTypes <- function(dir, classPath){
+addTrackTypes <- function(dir, classPath, isParentApp = FALSE){
     tracksFolder <- file.path(dir, classPath)
     trackTypes <- list.dirs(tracksFolder, full.names = FALSE, recursive = FALSE)
+    if(isParentApp) parentAppTrackTypes <<- sort(trackTypes)
     sapply(trackTypes, addTrackType, tracksFolder)
 }
-classPath <- "shiny/shared/global/classes/browserTracks"
-genomexDirs <- parseExternalSuiteDirs(suite)
-addTrackTypes(genomexDirs$suiteDir, classPath)
-addTrackTypes(gitStatusData$suite$dir, classPath)
 classPath <- "classes/browserTracks"
-addTrackTypes(app$DIRECTORY, classPath)
+globalClassPath <- file.path("shiny/shared/global", classPath) 
+genomexDirs <- parseExternalSuiteDirs(suite)
+addTrackTypes(genomexDirs$suiteDir, globalClassPath) # apps always offer global tracks from genomex-mdi-tools
+addTrackTypes(app$DIRECTORY, classPath, isParentApp = TRUE) # apps always offer tracks they define themselves
+if(!is.null(options$tracks)) for(trackType in options$tracks){ # apps can additionally offer global tracks declared in the app's config.yml that are...
+    if(grepl("//", trackType)){ # ... defined in an external suite, if that suite is actually installed ...
+        x <- strsplit(trackType, "//")[[1]]
+        trackSuiteDirs <- parseExternalSuiteDirs(x[1])
+        if(
+            isTruthy(gitStatusData$dependencies[[x[1]]]$loaded) &&
+            !is.null(trackSuiteDirs)
+        )  addTrackType(x[2], file.path(trackSuiteDirs$suiteDir, globalClassPath)) 
+    } else { # ... or in the parent suite of the app
+        addTrackType(trackType, file.path(gitStatusData$suite$dir, globalClassPath))
+    }
+}
 
 # initialize available tracks
 initTrackTypes <- observe({ 
     names <- names(trackTypes)
-    sortedTrackTypes <- c(labelTrackTypes, sort(names[!(names %in% labelTrackTypes)]))
+    firstTrackTypes <- c(defaultTrackTypes, parentAppTrackTypes)
+    sortedTrackTypes <- c(firstTrackTypes, sort(names[!(names %in% firstTrackTypes)]))
     updateSelectInput(
         session, 
         "addTrack", 

@@ -39,3 +39,55 @@ showTrackItemsDialog <- function(
         callback = function(...) settings$items( dialog$selected() )
     )
 }
+
+# common form of a track items dialog that shows and returns Samples as Sample_ID and Project
+showTrackSamplesDialog <- function(track, session, ...){
+    showTrackItemsDialog(
+        track$settings,
+        session,
+        title = "Select Samples",
+        itemTypePlural = "Samples",
+        tableData = reactive({
+            uploadName <- appStepNamesByType$upload
+            x <- as.data.table(app[[uploadName]]$outcomes$samples())
+            req(x)
+            x[, .(Sample_ID, Project)]
+        }),
+        keyColumn = "Sample_ID",
+        extraColumns = c("Project"),
+        size = "l" # xl
+    )
+}
+
+# parse a track's selected samples into named list where sourceId -> data.table of samples
+getSourcesFromTrackSamples <- function(selectedSamples){ # selectedSamples is a list of sample lists, each with Sample_ID and Project
+    sources <- list()
+    uploadName <- appStepNamesByType$upload
+    uploadSamples <- as.data.table(app[[uploadName]]$outcomes$samples())
+    for(selectedSample in selectedSamples){   
+        sourceId <- uploadSamples[Sample_ID == selectedSample$Sample_ID & Project == selectedSample$Project, Source_ID]
+        sources[[sourceId]] <- rbind(sources[[sourceId]], as.data.table(selectedSample))
+    }    
+    sources
+}
+
+# assign a unique color to each unique selected sample
+getColorsBySelectedSample <- function(selectedSources){ # selected sources as returned by getSourcesFromTrackSamples
+    allSamples <- unique(unlist(lapply(selectedSources, function(x) x$Sample_ID)))
+    sampleCols <- as.list(1:length(allSamples))
+    names(sampleCols) <- paste0(",", allSamples, ",") 
+    sampleCols   
+}
+dt_colorBySelectedSample <- function(dt, selectedSources){ # dt expected to have samples columns, and usually nSamples, columns
+    sampleCols <- getColorsBySelectedSample(selectedSources)
+    if("nSamples" %in% names(dt)){
+        dt[, color := ifelse(
+            nSamples > 1,
+            "black", 
+            unlist(CONSTANTS$plotlyColors[unlist(sampleCols[samples])])
+        )]        
+    } else {
+        dt[, color := unlist(CONSTANTS$plotlyColors[unlist(sampleCols[samples])])]   
+    }
+    dt
+}

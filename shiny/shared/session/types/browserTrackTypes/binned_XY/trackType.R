@@ -2,8 +2,8 @@
 # binned_XY is a track type for reproducibly plotting XY scatter plots with regularly sequenced X-axis values
 # expects:
 #   one or more track$settings$items, yielding one (set of) overlaid traces per item
-#   dataFn(track, reference, coord, itemName, item) must return binned data in format of expandTabixBinRuns, aggregateTabixBins, etc.
-#       i.e., as data.table(strand = character(), x = seq(min, max, binSize), y = numeric())
+#   dataFn(track, reference, coord, itemName, item) must return binned data for one item in format of expandTabixBinRuns, aggregateTabixBins, etc.
+#       i.e., as a data.table(strand = character(), x = seq(min, max, binSize), y = numeric())
 # supports:
 #   stranded(+/-) or unstranded(.) data types
 #   dynamic rebinning based on user settings
