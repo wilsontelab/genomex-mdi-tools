@@ -30,7 +30,7 @@ build.genesTrack <- function(track, reference, coord, layout){
         "blue/orange" = list("+" = "blue", "-" = "orange3"),
         list("+" = "green4", "-" = "red3")
     )
-    height <- getBrowserTrackSetting(track, "Track_Options", "Height", 0.8)
+    height <- getBrowserTrackSetting(track, "Track", "Height", 0.8)
     height <- height + padding$total # or set a known, fixed height in inches
     ylim <- c(0, 4)
     genes <- getRegionGenes(reference$genome, reference$annotation, coord, force = FALSE) %>%

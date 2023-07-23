@@ -1,5 +1,5 @@
 settings:
-    Track_Options:
+    Track:
         Plot_Title: 
             type:   textInput
             value:  auto

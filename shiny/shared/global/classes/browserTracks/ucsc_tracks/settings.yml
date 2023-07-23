@@ -1,5 +1,5 @@
 settings:
-    Track_Options:
+    Track:
         Ruler:
             type: checkboxInput
             value: false

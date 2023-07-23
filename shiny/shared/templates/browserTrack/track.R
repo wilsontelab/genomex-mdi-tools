@@ -99,7 +99,7 @@ expand2.__MODULE_NAME__Track <- function(track, reference, coord, selectedRowDat
 navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference, coord){
 
     # initialize the trackNavs, including input observers to handle user actions
-    # initTrackNav will fail silenty if setting Track_Options/Show_Navigation is not set or =="hide"
+    # initTrackNav will fail silenty if setting Track/Show_Navigation is not set or =="hide"
     navName1 <- initTrackNav(track, session, "inputName1", function(inputValue1){
         # do work as needed based on the input value, e.g., make a call to app$browser$jumpToCoordinates()
     })

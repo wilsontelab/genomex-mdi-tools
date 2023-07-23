@@ -70,7 +70,7 @@ pngToMdiTrackImage <- function( # for tracks that generate images, not plots
 # automated track naming
 #----------------------------------------------------------------------
 getTrackDisplayName <- function(track){
-    trackName <- track$settings$get("Track_Options", "Track_Name")
+    trackName <- track$settings$get("Track", "Track_Name")
     if(
         is.null(trackName) || 
         trackName == "" || 
@@ -160,10 +160,10 @@ getBrowserTrackSetting <- function(track, optionFamily, option, default = NULL){
 }
 getTrackSetting <- getBrowserTrackSetting
 
-# Track_Options options family
+# Track options family
 padding.browserTrack <- function(track, layout){
-    top    <- getInches(track$settings$get("Track_Options", "Top_Padding"),    layout$lengthUnit)
-    bottom <- getInches(track$settings$get("Track_Options", "Bottom_Padding"), layout$lengthUnit)
+    top    <- getInches(track$settings$get("Track", "Top_Padding"),    layout$lengthUnit)
+    bottom <- getInches(track$settings$get("Track", "Bottom_Padding"), layout$lengthUnit)
     list(
         top = top,
         bottom = bottom,
@@ -171,13 +171,13 @@ padding.browserTrack <- function(track, layout){
     )
 }
 height.browserTrack <- function(track, default){
-    getBrowserTrackSetting(track, "Track_Options", "Height", default)
+    getBrowserTrackSetting(track, "Track", "Height", default)
 }
 ylab.browserTrack <- function(track, default = ""){
-    ylab <- getBrowserTrackSetting(track, "Track_Options", "Y_Axis_Label", default)
+    ylab <- getBrowserTrackSetting(track, "Track", "Y_Axis_Label", default)
     if(ylab == "auto") default else if(ylab == "none") "" else ylab
 }
-ylim.browserTrack <- function(track, y, family = "Track_Options", setting = "Y_Limit"){
+ylim.browserTrack <- function(track, y, family = "Track", setting = "Y_Limit"){
     user <- trimws(getBrowserTrackSetting(track, family, setting, ""))
     if(user == "") return(paddedRange(y))
     user <- gsub('\\s', '', user)
@@ -192,17 +192,17 @@ ylim.browserTrack <- function(track, y, family = "Track_Options", setting = "Y_L
     })
 }
 bty.browserTrack <- function(track, default){
-    user <- getBrowserTrackSetting(track, "Track_Options", "Bounding_Box")
+    user <- getBrowserTrackSetting(track, "Track", "Bounding_Box")
     if(is.null(user)) return(default)
     if(user) "o" else "n"
 }
 
 # Plot_Options options family
-scaleUnit.browserTrack <- function(track, default = "auto"){
-    getBrowserTrackSetting(track, "Plot_Options", "Scale_Unit", default)
+scaleUnit.browserTrack <- function(track, default = "auto", family = "Plot_Options"){
+    getBrowserTrackSetting(track, family, "Scale_Unit", default)
 }
-typ.browserTrack <- function(track, default){
-    user <- getBrowserTrackSetting(track, "Plot_Options", "Plot_Type")
+typ.browserTrack <- function(track, default, family = "Plot_Options"){
+    user <- getBrowserTrackSetting(track, family, "Plot_Type")
     if(is.null(user)) return(default)
     switch(
         user,
@@ -213,8 +213,8 @@ typ.browserTrack <- function(track, default){
         # TODO: implement special handling of area, histogram, 
     )
 }
-pch.browserTrack <- function(track, default = 19){
-    user <- getBrowserTrackSetting(track, "Plot_Options", "Point_Symbol")
+pch.browserTrack <- function(track, default = 19, family = "Plot_Options"){
+    user <- getBrowserTrackSetting(track, family, "Point_Symbol")
     if(is.null(user)) return(default)
     switch(
         user,
@@ -224,23 +224,23 @@ pch.browserTrack <- function(track, default = 19){
         "filled_squares" = 15
     )
 }
-lwd.browserTrack <- function(track, default = 1.5){
-    user <- getBrowserTrackSetting(track, "Plot_Options", "Line_Width")
+lwd.browserTrack <- function(track, default = 1.5, family = "Plot_Options"){
+    user <- getBrowserTrackSetting(track, family, "Line_Width")
     if(is.null(user)) return(default)
     user
 }
-lty.browserTrack <- function(track, default = 1){
-    user <- getBrowserTrackSetting(track, "Plot_Options", "Line_Type")
+lty.browserTrack <- function(track, default = 1, family = "Plot_Options"){
+    user <- getBrowserTrackSetting(track, family, "Line_Type")
     if(is.null(user)) return(default)
     user
 }
-cex.browserTrack <- function(track, default = 1){
-    user <- getBrowserTrackSetting(track, "Plot_Options", "Point_Size")
+cex.browserTrack <- function(track, default = 1, family = "Plot_Options"){
+    user <- getBrowserTrackSetting(track, family, "Point_Size")
     if(is.null(user)) return(default)
     user
 }
-col.browserTrack <- function(track, default = CONSTANTS$plotlyColors$blue){
-    user <- getBrowserTrackSetting(track, "Plot_Options", "Color")
+col.browserTrack <- function(track, default = CONSTANTS$plotlyColors$blue, family = "Plot_Options"){
+    user <- getBrowserTrackSetting(track, family, "Color")
     if(is.null(user)) return(default)
     CONSTANTS$plotlyColor[[user]]
 }
@@ -252,7 +252,7 @@ zeroLine.browserTrack <- function(track, color = CONSTANTS$plotlyColors$black, l
     abline(h = 0, col = color, lwd = lwd)
 }
 hLines.browserTrack <- function(track, ylim, color = CONSTANTS$plotlyColors$grey, lwd = 0.25){
-    doLines <- getTrackSetting(track, "Track_Options", "Horizontal_Lines", TRUE)
+    doLines <- getTrackSetting(track, "Track", "Horizontal_Lines", TRUE)
     if(!doLines) return()
     unit <- 10 ** floor(log10(max(abs(ylim))))
     getY <- function(){
@@ -283,17 +283,13 @@ getItemsData.browserTrack <- function(track, reference, coord, dataFn, stranded 
     items <- track$settings$items()
     req(items, length(items) > 0)
     itemNames <- names(items)
-    ymin <- 0
-    ymax <- 0
+    ymin <- NA
+    ymax <- NA
     d <- lapply(itemNames, function(itemName){
         dd <- dataFn(track, reference, coord, itemName, items[[itemName]])
         y <- if("y1" %in% names(dd)) dd[, c(y1, y2)] else dd[, y]
-        if(stranded) {
-            ymax <<- max(ymax, abs(y), na.rm = TRUE)
-        } else {
-            if(allowNeg) ymin <<- min(ymin, y, na.rm = TRUE)
-            ymax <<- max(ymax, y, na.rm = TRUE)
-        }
+        ymin <<- min(ymin, y, na.rm = TRUE)
+        ymax <<- max(ymax, y, na.rm = TRUE)
         dd
     })
     names(d) <- itemNames
@@ -303,15 +299,15 @@ getItemsData.browserTrack <- function(track, reference, coord, dataFn, stranded 
         ymax = ymax
     )
 }
-plotXY.browserTrack <- function(track, d, color = NULL, ...){
-    if(is.null(color)) color <- col(track) 
+plotXY.browserTrack <- function(track, d, color = NULL, family = "Plot_Options", ...){
+    if(is.null(color)) color <- col(track, family = family) 
     switch(
-        getTrackSetting(track, "Plot_Options", "Plot_As", "area"),
+        getTrackSetting(track, family, "Plot_As", "lines"),
         points = points(
             d$x, 
             d$y, 
-            pch = pch(track), 
-            cex = cex(track),
+            pch = pch(track, family = family), 
+            cex = cex(track, family = family),
             col = color, 
             ...
         ),
@@ -319,10 +315,10 @@ plotXY.browserTrack <- function(track, d, color = NULL, ...){
             d$x, 
             d$y, 
             typ = "b", 
-            pch = pch(track), 
-            cex = cex(track),
-            lwd = lwd(track), 
-            lty = lty(track),
+            pch = pch(track, family = family), 
+            cex = cex(track, family = family),
+            lwd = lwd(track, family = family), 
+            lty = lty(track, family = family),
             col = color, 
             ...
         ),
@@ -330,7 +326,7 @@ plotXY.browserTrack <- function(track, d, color = NULL, ...){
             d$x, 
             d$y, 
             typ = "h", 
-            cex = cex(track),
+            cex = cex(track, family = family),
             col = color, 
             ...
         ),
@@ -344,8 +340,8 @@ plotXY.browserTrack <- function(track, d, color = NULL, ...){
         lines(
             d$x, 
             d$y, 
-            lwd = lwd(track), 
-            lty = lty(track),
+            lwd = lwd(track, family = family), 
+            lty = lty(track, family = family),
             col = color, 
             ...
         )
@@ -357,7 +353,7 @@ plotXY.browserTrack <- function(track, d, color = NULL, ...){
 #----------------------------------------------------------------------
 trackNavObservers__ <- list()
 initTrackNav.browserTrack <- function(track, session, inputName, actionFn = NULL) { # set actionFn for input, but not a table
-    req(getBrowserTrackSetting(track, "Track_Options", "Show_Navigation", "hide") != "hide")
+    req(getBrowserTrackSetting(track, "Track", "Show_Navigation", "hide") != "hide")
     navName <- paste(track$type, track$id, inputName, sep = "_")
     if(!is.null(trackNavObservers__[[navName]])) trackNavObservers__[[navName]]$destroy()
     if(!is.null(actionFn)) trackNavObservers__[[navName]] <<- observeEvent(session$input[[navName]], { 
@@ -410,10 +406,10 @@ trackNavTable.browserTrack <- function(track, session, browserId, navName,
     )      
 }
 trackNavCanNavigate.browserTrack <- function(track){
-    getBrowserTrackSetting(track, "Track_Options", "Show_Navigation", "hide") %in% c("navigate", "navigate_and_expand")
+    getBrowserTrackSetting(track, "Track", "Show_Navigation", "hide") %in% c("navigate", "navigate_and_expand")
 }
 trackNavCanExpand.browserTrack <- function(track){
-    getBrowserTrackSetting(track, "Track_Options", "Show_Navigation", "hide") %in% c("expand", "navigate_and_expand")
+    getBrowserTrackSetting(track, "Track", "Show_Navigation", "hide") %in% c("expand", "navigate_and_expand")
 }
 handleTrackNavTableClick <- function(track, chrom, start, end, expandFn = NULL){
     navigate <- trackNavCanNavigate(track)

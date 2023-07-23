@@ -17,7 +17,7 @@ build.ucsc_tracksTrack <- function(track, reference, coord, layout){
     req(objectHasData(reference$genome))
     items <- track$settings$items()
     ucscTracks <- if(!is.null(items)) lapply(items, function(x) x$display) else list()
-    ruler <- getBrowserTrackSetting(track, "Track_Options", "Ruler", default = FALSE)
+    ruler <- getBrowserTrackSetting(track, "Track", "Ruler", default = FALSE)
     image <- ucscTrackImage(reference$genome$genome, coord, layout, ucscTracks, ruler = ruler)
     list(image = image)
 }

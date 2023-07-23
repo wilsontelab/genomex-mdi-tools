@@ -1,7 +1,7 @@
 include:
     - scaleUnit
 settings:
-    Track_Options:
+    Track:
         Height: 
             type:   numericInput
             value:  0.25

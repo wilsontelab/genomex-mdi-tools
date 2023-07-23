@@ -41,8 +41,7 @@ getTabixRangeData <- function(tabix, coord, col.names = NULL, colClasses = NULL)
 
 # for files compressed as runs of bins with the same score, expand the runs out to individual bins
 # pass in an object from getTabixRangeData
-expandTabixBinRuns <- function(dt, binSize, stranded = TRUE, na.value = 0, 
-                               useBinCenter = TRUE, minusStrandNeg = TRUE){
+expandTabixBinRuns <- function(dt, binSize, stranded = TRUE, na.value = 0, minusStrandNeg = TRUE){
     if(nrow(dt) == 0) return(data.table(strand = character(), x = integer(), y = double()))
     bins <- if(stranded){
         dt <- dt[, .(
@@ -67,21 +66,19 @@ expandTabixBinRuns <- function(dt, binSize, stranded = TRUE, na.value = 0,
         merge(allBins, dt, by = c("start_"), all.x = TRUE)
     }
     bins[is.na(score), score := na.value]
-    if(useBinCenter) bins[, start_ := as.integer(start_ + binSize / 2)]
     if(stranded && minusStrandNeg) bins[strand == "-", score := -score]
     bins[, .(strand = strand, x = start_, y = score)][order(x)]
 }
 
 # if too many bins, reduce the number of plotted XY points
 # pass in an object from expandTabixBinRuns, or any similar format with no missing bins
-aggregateTabixBins <- function(bins, track, coord, scalar, aggFn = mean){
-    if(nrow(bins) == 0) return(data.table(strand = character(), point = integer(), x = integer(), y = double()))
-    bins[, point := as.integer((1:.N - 1) / scalar), by = .(strand)]
+aggregateTabixBins <- function(bins, track, coord, plotBinSize, aggFn = mean){
+    if(nrow(bins) == 0) return(data.table(strand = character(), x = integer(), y = double()))
+    bins[, x := floor(x / plotBinSize) * plotBinSize]
     bins[, 
         .(
-            x = median(as.double(x)), 
             y = aggFn(as.double(y), na.rm = FALSE)
         ), 
-        by = .(strand, point)
+        by = .(strand, x)
     ]    
 }

@@ -22,10 +22,12 @@ browserTrackServer <- function(
 # parse requested track settings
 suite  <- 'genomex-mdi-tools'
 module <- "browserTrack"
-browserTrackTypesDir <- "shared/session/types/browserTrackTypes"
+browserTrackTypesDir <- "types/browserTrackTypes"
+appBrowserTrackTypesDir <- file.path("apps", app$NAME, browserTrackTypesDir)
+sharedBrowserTrackTypesDir <- file.path("shared/session", browserTrackTypesDir)
 widgetDir <- getWidgetDir(module, suite = suite)
 library <- read_yaml(file.path(widgetDir, "settings.yml")) 
-template <- list(Track_Options = library$allTracks$Track_Options) # so it is always first
+template <- list(Track = library$allTracks$Track) # so it is always first
 request <- if(is.null(settingsFile)) list() else read_yaml(settingsFile)
 if(!is.null(request$include)) for(include in request$include){
     include <- library[[include]]
@@ -43,27 +45,40 @@ loadTrackSettings <- function(settings){
     } 
 }
 if(!is.null(request$shared)) for(sharedFile in request$shared){
-    file <- file.path(gitStatusData$suite$dir, "shiny", browserTrackTypesDir, sharedFile)
+    file <- file.path(gitStatusData$suite$dir, "shiny", sharedBrowserTrackTypesDir, sharedFile) # really, should now use update trackType handling via trackType
     if(!file.exists(file)){
         dir <- dirname(settingsFile)
         file <- file.path(dir, sharedFile)        
     }
     loadTrackSettings(read_yaml(file))
 }
-if(!is.null(request$trackType)) for(trackType_ in request$trackType){ 
-    trackTypeRequest <- loadExternalYml("genomex-mdi-tools", file.path(browserTrackTypesDir, trackType_, "settings.yml"))
-    if(!is.null(trackTypeRequest$include)) for(include in trackTypeRequest$include){
-        include <- library[[include]]
-        if(is.null(include)) next
-        for(family in names(include)){
-            if(is.null(template[[family]])) template[[family]] <- list()
-            for(option in names(include[[family]])) template[[family]][[option]] <- include[[family]][[option]]
+if(!is.null(request$trackType)) for(trackType_ in request$trackType){ # allows multiple track types for a given track
+    # look for the requested trackType settings ...
+    ttFileName <- file.path(trackType_, "settings.yml")    
+    trackTypeRequest <- loadExternalYml(gitStatusData$suite$name, file.path(appBrowserTrackTypesDir, ttFileName)) # ... in app ...
+    if(is.null(trackTypeRequest)) trackTypeRequest <- loadExternalYml(gitStatusData$suite$name, file.path(sharedBrowserTrackTypesDir, ttFileName)) # ... in the parent suite ...
+    if(is.null(trackTypeRequest)) trackTypeRequest <- loadExternalYml("genomex-mdi-tools", file.path(sharedBrowserTrackTypesDir, ttFileName)) # ... in genomex-mdi-tools ...
+    if(!is.null(trackTypeRequest)) {
+        if(!is.null(trackTypeRequest$include)) for(include in trackTypeRequest$include){
+            include <- library[[include]]
+            if(is.null(include)) next
+            for(family in names(include)){
+                if(is.null(template[[family]])) template[[family]] <- list()
+                for(option in names(include[[family]])) template[[family]][[option]] <- include[[family]][[option]]
+            }
         }
+        if(!is.null(trackTypeRequest$settings)) loadTrackSettings(trackTypeRequest$settings)
     }
-    if(!is.null(trackTypeRequest$settings)) loadTrackSettings(trackTypeRequest$settings)
+}
+if(!is.null(request$override)) for(family in names(request$override)){ # allow track to override the defaults of their parent trackTypes
+    if(is.null(template[[family]])) next
+    for(option in names(request$override[[family]])) {
+        if(is.null(template[[family]][[option]])) next
+        template[[family]][[option]]$value <- request$override[[family]][[option]]
+    }
 }
 if(!is.null(request$settings)) loadTrackSettings(request$settings)
-template$Track_Options$Track_Name <- list( # override and prepend universal Track_Name option
+template$Track$Track_Name <- list( # override and prepend universal Track_Name option
     type = "textInput",
     value = "auto"
 )
@@ -75,7 +90,7 @@ constructor <- paste0("new_", trackClass)
 track <- get(constructor)(trackId)
 class(track) <- unique(append(c("browserTrack", trackClass), class(track)))
 if(isTruthy(track$navigation)){
-    template$Track_Options$Show_Navigation <- list(
+    template$Track$Show_Navigation <- list(
         type = "selectInput",
         choices = c(
             "hide",
@@ -120,7 +135,7 @@ track$buildExpansion <- function(reference, coord, layout) expand(track, referen
 
 # update the track display name based on settings and items changes
 observeEvent({
-    settings$Track_Options()
+    settings$Track()
     if(trackHasItems && !is.null(settings$items)) settings$items()
 }, {
     html("name", getTrackDisplayName(track))

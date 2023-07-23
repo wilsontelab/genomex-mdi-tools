@@ -10,7 +10,7 @@
 # options always added to all tracks (you don't need to include this option set)
 #----------------------------------------------------------------------
 allTracks: 
-    Track_Options:
+    Track:
         Track_Name: 
             type:   textInput
             value:  auto # populated by browserTrackServer
@@ -34,7 +34,7 @@ allTracks:
 # option sets you may include as needed, i.e., that only apply to certain track types
 #----------------------------------------------------------------------
 height: 
-    Track_Options:
+    Track:
         Height: 
             type:   numericInput
             value:  2
@@ -42,7 +42,7 @@ height:
             max:    5
             step:   0.5
 box: 
-    Track_Options:
+    Track:
         Bounding_Box: 
             type:   checkboxInput
             value:  false 
@@ -57,12 +57,12 @@ scaleUnit:
                 - bp
             value: auto
 yAxisLimit:
-    Track_Options:
+    Track:
         Y_Limit:
             type: textInput
             value: auto # ylim is set by track.R when Y_Limits = auto 
 hLines:
-    Track_Options:
+    Track:
         Horizontal_Lines:
             type: checkboxInput
             value: true          
