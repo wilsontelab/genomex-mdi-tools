@@ -423,13 +423,14 @@ trackCache <- list( # cache for track images to prevent slow replotting of uncha
 buildAllTracks <- function(trackIds, fnName, type, reference, coord, layout){
     sharedHash <- digest(list(reference, coord, layout))
     nImages <- 0 # may be less than or equal to nTracks, depending on build successes
+
     builds <- lapply(trackIds, function(trackId) {
         tryCatch({
             track <- tracks[[trackId]]$track
             trackHash <- digest(list(
                 track$settings$all_(), 
                 if(is.null(track$settings$items)) NA else track$settings$items(),
-                if(type == "expansion") track$expand() else NA,
+                if(type == "expansion") expandingTrack() else NA,
                 sharedHash
             ))
             if(is.null(trackCache[[type]][[trackId]]) || 
@@ -442,6 +443,7 @@ buildAllTracks <- function(trackIds, fnName, type, reference, coord, layout){
             nImages <<- nImages + 1
             trackCache[[type]][[trackId]]$contents
         }, error = function(e) {
+            message(paste("buildAllTracks: track error:", tracks[[trackId]]$track$type, trackId))
             print(e)
             NULL
         })
@@ -564,7 +566,7 @@ browserIsDone <- reactiveVal(0)
 # ----------------------------------------------------------------------
 # render the expansion plot image using base graphics
 # ----------------------------------------------------------------------
-expandingTrackId <- reactiveVal(NULL)
+expandingTrack <- reactiveVal(NULL)
 createExpansionPlot <- function(trackId, pngFile = NULL){ # called to generate plot for both screen and image file download
 
     # build all expansion track images using reactives
@@ -582,10 +584,10 @@ createExpansionPlot <- function(trackId, pngFile = NULL){ # called to generate p
 expansionImage <- mdiInteractivePlotServer(
     "expansionImage", 
     contents = reactive({
-        trackId <- expandingTrackId()
-        if(isTruthy(trackId)) {
+        expandingTrack <- expandingTrack()
+        if(is.list(expandingTrack)) {
             show(selector = ".expansionImageWrapper")
-            createExpansionPlot(trackId)            
+            createExpansionPlot(expandingTrack$trackId)            
         } else {
             hide(selector = ".expansionImageWrapper")
             NULL 
@@ -624,9 +626,9 @@ expansionTable <- bufferedTableServer(
     tableData = expansionTableData,
     selection = 'single',
     selectionFn = function(selectedRow){
-        trackId <- expandingTrackId()     
-        req(selectedRow, trackId)
-        track <- tracks[[trackId]]
+        expandingTrack <- expandingTrack()     
+        req(selectedRow, expandingTrack)
+        track <- tracks[[expandingTrack$trackId]]
         req(track, track$track$expand2)
         expand2(track$track, reference(), coord(), expansionTableData()[selectedRow])
     },
@@ -637,9 +639,10 @@ observeEvent(expansionTableData(), {
 }, ignoreNULL = FALSE)
 clearObjectExpansions <- function(){
     hide(selector = ".browserExpansionWrapper")
-    expandingTrackId(NULL)
+    expandingTrack(NULL)
     objectTableData(NULL)
     expansionTableData(NULL)
+    expansionUI(NULL)
 }
 
 # ----------------------------------------------------------------------
@@ -1046,10 +1049,10 @@ list(
     ),
     jumpToCoordinates = jumpToCoordinates,
     center = center,
-    expandingTrackId = expandingTrackId,      # to set the track populating the object expansion image
+    expandingTrack = expandingTrack,          # to describe the source of the expansion image/table as expandingTrack(trackId = trackId, object = xxx)
     objectTableData = objectTableData,        # to populate the object description table (e.g., a gene)
     expansionTableData = expansionTableData,  # to populate the object expansion table   (e.g., a gene's transripts)
-    expansionUI = expansionUI,
+    expansionUI = expansionUI,                # arbitrary expansion UI content passed to renderUI
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     NULL
 )

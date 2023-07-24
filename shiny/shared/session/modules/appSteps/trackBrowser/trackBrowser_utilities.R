@@ -19,10 +19,18 @@ mdiTrackImage <- function(layout, height, plotFn, message = NULL, ...){ # for tr
         res = layout$dpi, 
         type = "cairo"
     )
-    plotFn(...)
-    dev.off()
-    image <- magick::image_read(pngFile)
-    unlink(pngFile)
+    image <- tryCatch({
+        plotFn(...) 
+        dev.off()
+        image <- magick::image_read(pngFile)
+        unlink(pngFile)
+        image
+    }, error = function(e){
+        message(paste("mdiTrackImage: plotFn error:"))
+        print(e)
+        dev.off()
+        req(FALSE)
+    })
     stopSpinner(session)
     image
 }

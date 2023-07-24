@@ -80,22 +80,22 @@ settings:
             value:  inches 
         Label_Width:
             type:   numericInput
-            value:  1
+            value:  0.75
             min:    0
             max:    5
-            step:   0.1
+            step:   0.25
         Legend_Width:
             type:   numericInput
-            value:  0
+            value:  1.25
             min:    0
             max:    5
-            step:   0.1            
+            step:   0.25            
         Browser_Width:
             type:   numericInput
-            value:  7
+            value:  7.5
             min:    1.5
             max:    10
-            step:   0.5 
+            step:   0.25 
         Strict_Coordinates:
             type: checkboxInput
             value: FALSE

@@ -193,7 +193,9 @@ trackBrowserUI <- function(id, options) {
                 id = ns("objectTable"), 
                 title = NULL, 
                 downloadable = TRUE, 
-                width = 12
+                width = 12,
+                collapsible = TRUE,
+                collapsed = FALSE
             )
         ),
         fluidRow(
@@ -203,7 +205,9 @@ trackBrowserUI <- function(id, options) {
                 id = ns("expansionTable"), 
                 title = NULL, 
                 downloadable = TRUE, 
-                width = 12
+                width = 12,
+                collapsible = TRUE,
+                collapsed = FALSE
             )  
         ),
 
