@@ -1,6 +1,7 @@
 # action:
 #     align paired dna-seq read files to genome with read merging using fastp and bwa
 #     if $N_GPU > 0, use Parabricks fq2bam for GPU acceleration
+#     if requested in CPU mode, use minimap2 as a drop-in replacement for bwa mem
 # expects:
 #     source $MODULES_DIR/genome/set_genome_vars.sh
 #     source $MODULES_DIR/source/set_read_file_vars.sh
@@ -15,6 +16,7 @@
 #     $MIN_QUAL         [default: no quality filtering]
 #     $N_TERMINAL_BASES 
 #     $N_GPU            for GPU acceleration
+#     $USE_MINIMAP2     use minimap2 instead of bwa mem
 # input:
 #     if FASTQ files are found (.fastq.gz) they are used
 #     otherwise searches for SRA (.sra) files that are converted to FASTQ in a stream
@@ -76,8 +78,9 @@ else
 fi
 
 #------------------------------------------------------------------
-# set branching to either standard bwa or the gpu-accelerated parabricks fq2bam
+# set branching to either standard bwa, minimap2 or the gpu-accelerated parabricks fq2bam
 #------------------------------------------------------------------
+
 if [ "$N_GPU" != "0" ]; then
     echo "--n-gpu > 0, using Parabricks GPU acceleration"
     ALIGN_SCRIPT1="perl $SHARED_MODULE_DIR/parabricks/split_fastq_to_file.pl"
@@ -90,8 +93,13 @@ if [ "$N_GPU" != "0" ]; then
     export UNMERGED_FILE_2="$PB_TMP_DIR/input/unmerged_2.fastq.gz"
     export MERGED_FILE="$PB_TMP_DIR/input/merged.fastq.gz"
     N_FASTP_THREADS=$N_CPU # although usually fastp is not the rate-limiting step
+elif [[ "$USE_MINIMAP2" != "" && "$USE_MINIMAP2" != "0" ]]; then
+    echo "--n-gpu==0, --use-minimap2 set, using CPU-based minimap2"
+    ALIGN_SCRIPT1="bash $SHARED_MODULE_DIR/minimap2/run_minimap2.sh"
+    ALIGN_SCRIPT2="bash $SHARED_MODULE_DIR/bwa/sort_and_index.sh" # yes, the same for minimap2 and bwa
+    N_FASTP_THREADS=3 # the fastp default
 else
-    echo "--n-gpu == 0, using CPU-based bwa mem"
+    echo "--n-gpu==0, using CPU-based bwa mem"
     ALIGN_SCRIPT1="bash $SHARED_MODULE_DIR/bwa/run_bwa.sh"
     ALIGN_SCRIPT2="bash $SHARED_MODULE_DIR/bwa/sort_and_index.sh"
     N_FASTP_THREADS=3 # the fastp default
@@ -120,14 +128,8 @@ fastp \
 perl $SHARED_MODULE_DIR/adjust_merge_tags.pl |
 
 # align to genome using BWA; soft-clip supplementary
-# head -n 40000000 | 
 $ALIGN_SCRIPT1
 checkPipe
-
-# # #################
-# # cp -r $PB_TMP_DIR/input $TASK_DIR
-# echo "copying previously prepared fastq files"
-# cp $TASK_DIR/input/* $PB_TMP_DIR/input
 
 export -f checkPipe
 $ALIGN_SCRIPT2

@@ -14,6 +14,7 @@ browserTrackServer <- function(
     genome, # genome and annotation are zero or single-row data.tables
     annotation,
     size = "m",
+    presets = NULL, # passed from an app's config.yml to supplement the presets specified by the track itself
     ... # additional arguments passed to settingsServer
 ) { 
     moduleServer(cssId, function(input, output, session) {    
@@ -102,12 +103,16 @@ if(isTruthy(track$navigation)){
         selected = "hide"
     )        
 }
+presets <- if(is.null(request$presets)) presets       # presets were defined by app in config.yml
+           else if(is.null(presets)) request$presets  # request$presets were defined by track in settings.yml
+           else c(presets, request$presets)           # one or both could be concatenated in final track
 settings <- settingsServer(
     "settings", 
     cssId, 
     templates = list(template), 
     size = size,
     s3Class = "trackSettings",
+    presets = presets,
     ...
 )
 

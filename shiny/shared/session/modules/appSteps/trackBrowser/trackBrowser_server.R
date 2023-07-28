@@ -50,6 +50,7 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
 )
 browserIsInitialized <- reactiveVal(FALSE)
 isLoadingDefaultGenome <- FALSE
+getTrackId <- function() gsub("( |:|-)", "_", paste(as.character(Sys.time()), sample.int(1e8, 1)))
 confirmBrowserInit <- function(...) {
     hide("initMessage")
     browserIsInitialized(TRUE) 
@@ -68,7 +69,7 @@ confirmBrowserInit <- function(...) {
     }
     if(length(names(tracks)) == 0) isolate({ # set default header tracks if not loading a bookmark
         for(i in seq_along(c(defaultTrackTypes, options$defaultTrackTypes))){
-            trackId <- as.character(i)
+            trackId <- getTrackId()
             cssId <- paste("track", trackId, sep = "_")
             tracks[[trackId]] <<- initTrack(cssId, trackId, defaultTrackTypes[i])
             createTrackSettingsObserver(trackId)
@@ -246,7 +247,8 @@ initTrack <- function(cssId, trackId, trackType){
         cssId = cssId,
         trackId = trackId,
         trackType = trackType,
-        settingsFile = trackTypes[[trackType]],
+        settingsFile = trackTypes[[trackType]], # includes any presets defined by the trackType
+        presets = options$presets[[trackType]], # add any presets defined by the calling app
         browserInput = input,
         genome = genome,
         annotation = annotation,
@@ -282,7 +284,7 @@ observeEvent(input$addTrack, {
     updateSelectInput(session, "addTrack", selected = addTrackPrompt) # reset the prompt
 
     # create the new track
-    trackId <- as.character(max(0, as.integer(names(tracks))) + 1)
+    trackId <- getTrackId()
     cssId <- paste("track", trackId, sep = "_")
     tracks[[trackId]] <<- initTrack(cssId, trackId, trackType)
     createTrackSettingsObserver(trackId)
@@ -313,7 +315,7 @@ observeEvent(input$duplicateTrackSelect, {
 
     # create the new track
     dupTrack <- tracks[[dupTrackId]]
-    trackId <- as.character(max(0, as.integer(names(tracks))) + 1)
+    trackId <- getTrackId()
     cssId <- paste("track", trackId, sep = "_")
     tracks[[trackId]] <<- initTrack(cssId, trackId, dupTrack$type)
     tracks[[trackId]]$track$settings$replace(dupTrack$track$settings$all_())    
@@ -343,7 +345,7 @@ observeEvent({
             if(!(trackId %in% newTrackIds)) {
                 tracks[[trackId]] <<- NULL
                 trackSettingsObservers[[trackId]] <<- NULL
-                if(trackSettingsUndoId == trackId) trackSettingsUndoId <<- NULL
+                if(!is.null(trackSettingsUndoId) && trackSettingsUndoId == trackId) trackSettingsUndoId <<- NULL
             }
         removeUI(".trackDeleteTarget .browserTrack")
     } else isRankListInit <<- TRUE

@@ -43,3 +43,10 @@ options:
         required: false
         default: false
         description: "set the parabricks fq2bam --low-memory flag, e.g., for V100 GPUs"
+    use-minimap2:
+        order: 7
+        short: 2
+        type: boolean
+        required: false
+        default: false
+        description: "in CPU alignment mode, use minimap2 as a drop-in replacement to bwa mem"

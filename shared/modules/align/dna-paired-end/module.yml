@@ -4,6 +4,7 @@ action: # required
     condaFamilies: 
         - base
         - bwa
+        - minimap2
     optionFamilies:
         - fastq-input
         - fixed-umi

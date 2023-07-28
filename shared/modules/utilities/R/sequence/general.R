@@ -120,3 +120,10 @@ rc_cigar <- Vectorize(function(cigar){
     operations <- unlist(regmatches(cigar, gregexpr('\\d+\\D',  cigar)))
     paste(rev(operations), collapse = "")
 })
+
+# get the number of reference bases covered by a CIGAR string
+getCigarRefSpan <- Vectorize(function(cigar){
+    lengths    <- as.numeric(unlist(regmatches(cigar, gregexpr('\\d+', cigar))))
+    operations <-            unlist(regmatches(cigar, gregexpr('\\D',  cigar)))
+    sum(lengths[operations %in% c("M","D")])
+})
