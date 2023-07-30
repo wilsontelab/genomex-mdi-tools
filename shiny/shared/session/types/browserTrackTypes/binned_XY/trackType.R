@@ -23,8 +23,8 @@ build.binned_XY_track <- function(track, reference, coord, layout, dataFn,
                                   center = FALSE, binSize = NULL){
 
     # collect all individual items
-    # itemList == list(d = list(itemName = data.table(strand, x, y)), ymin, ymax)
     itemsList <- getItemsData(track, reference, coord, dataFn, stranded = stranded) 
+    req(itemsList$hasData)
     itemNames <- names(itemsList$d)
     nItems <- length(itemNames)
     originalItemNames <- itemNames

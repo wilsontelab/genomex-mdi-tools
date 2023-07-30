@@ -17,12 +17,14 @@ export MINIMAP_LOG_FILE=$LOG_FILE_PREFIX.minimap.log
 if [[ "$USE_CRAM" = "" || "$USE_CRAM" = "0" || "$USE_CRAM" = "null" ]]; then
     export NAME_BAM_FILE=$DATA_GENOME_PREFIX.name.bam
     export COORDINATE_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.bam
+    export COORDINATE_BAM_INDEX=$COORDINATE_BAM_FILE.bai
     export NAME_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.name.realigned.bam
     export COORDINATE_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.realigned.bam
     export CRAM_OUTPUT_OPTIONS=""
 else
     export NAME_BAM_FILE=$DATA_GENOME_PREFIX.name.cram
     export COORDINATE_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.cram
+    export COORDINATE_BAM_INDEX=$COORDINATE_BAM_FILE.crai
     export NAME_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.name.realigned.cram
     export COORDINATE_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.realigned.cram
     export CRAM_OUTPUT_OPTIONS="--output-fmt CRAM --reference $GENOME_FASTA"

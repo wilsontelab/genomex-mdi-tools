@@ -1,0 +1,20 @@
+---
+version: v0.0.0 # optional, for internal tracking
+action: # required
+    condaFamilies: 
+        - base
+        - genome
+    optionFamilies:
+        - genome
+        - bam-format
+        - read-filtering
+    resources:
+        required:
+            total-ram: 36G
+        recommended: 
+            n-cpu: 24 # a reasonable plan is one CPU per chromosome
+            ram-per-cpu: 2G
+    job-manager:
+        recommended:               
+            time-limit: 6:00:00            
+    description: "create an optional file readable by browser track base_pileup"

@@ -53,5 +53,9 @@ sub getRefSeq {
     $rc and rc(\$seq);
     return $seq; 
 }
+sub getChromSeq {
+    my($chrom) = @_;
+    getRefSeq($chrom, 1, getChromLength($chrom));
+}
 
 1;

@@ -37,27 +37,33 @@ sub getAvgQual {
 
 # parse a CIGAR string to match a query SEQ to its reference
 sub getQryOnRef {
-    my ($qry, $cigar) = @_;
+    my ($qry, $cigar, $noClip) = @_;
     my @qry = split("", $qry);
     my @qryOnRef;
-    my $index = 0;
+    my $qryI = 0;
     my $nDeleted = 0;
-    my @insPos;
+    my $nInserted = 0;
+    my @insI;
+    if($noClip){
+        $cigar =~ s/^(\d+)[S|H]//g and @qry = @qry[$1..$#qry];
+        $cigar =~ s/(\d+)[S|H]$//g and @qry = @qry[0..($#qry - $1)];
+    }
     while ($cigar =~ (m/(\d+)(\w)/g)) { 
         my ($size, $operation) = ($1, $2);
         if($operation eq 'D'){
+            push @qryOnRef, (("-") x $size);            
             $nDeleted += $size;
-            push @qryOnRef, (("-") x $size);
         } elsif($operation eq 'I'){
-            push @insPos, $index - 1 + $nDeleted;
-            $index += $size; 
+            push @insI, $qryI - 1 + $nDeleted - $nInserted;
+            $nInserted += $size;
+            $qryI += $size; 
         } else {
-            push @qryOnRef, @qry[$index..($index + $size - 1)];
-            $index += $size;
+            push @qryOnRef, @qry[$qryI..($qryI + $size - 1)];
+            $qryI += $size;
         } 
     }
-    foreach my $i(@insPos){ $qryOnRef[$i] = "+" } # mark the position to the left of each novel insertion
-    return \@qryOnRef
+    foreach my $i(@insI){ $qryOnRef[$i] = "+" } # mark the position to the left of each novel insertion
+    return \@qryOnRef;
 }
 
 1;

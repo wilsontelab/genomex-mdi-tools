@@ -87,11 +87,15 @@ build.genesTrack <- function(track, reference, coord, layout){
                 sizeThreshold <- rev(sort(size[I]))[5]
                 size >= sizeThreshold | name2 %in% Force_Gene_Labels
             }
-        }]            
+        }]       
+        labels <- genes[I, name2]
+        labelHalfWidths <- strwidth(labels) / 2 * 1.2
+        x <- genes[I, start + (end - start) / 2]
+        y <- genes[I, ifelse(strand == "-", 0.5, 3.5)]
         if(sum(I) > 0) text(
-            genes[I, start + (end - start) / 2], 
-            y = genes[I, ifelse(strand == "-", 0.5, 3.5)], 
-            labels = genes[I, name2], 
+            pmin(coord$end - labelHalfWidths, pmax(coord$start + labelHalfWidths, x)), 
+            y = y, 
+            labels = labels, 
             cex = 1.15, 
             col = geneCol[I]
         )

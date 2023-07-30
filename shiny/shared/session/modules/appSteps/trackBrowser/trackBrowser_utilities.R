@@ -287,6 +287,23 @@ trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
 #----------------------------------------------------------------------
 # data retrieval and plotting functions
 #----------------------------------------------------------------------
+getBgzFilesFromItems <- function(track, reference, type){ # return a set of typically large bgz files found on a server but not packaged
+    items <- track$settings$items()
+    selectedSources <- getSourcesFromTrackSamples(items)
+    c(sapply(names(selectedSources), function(sourceId){
+        genome <- getSourcePackageOption(sourceId, "genome", "genome") 
+        if(genome != reference$genome$genome) return(character())  
+        outputDir <- getSourcePackageOption(sourceId, "output", "output-dir")
+        dataName <- getSourcePackageOption(sourceId, "output", "data-name")
+        selectedSamples <- selectedSources[[sourceId]]$Sample_ID
+        bgzFiles <- paste(selectedSamples, genome, type, "bgz", sep = ".")  
+        bgzFiles <- c(
+            file.path(outputDir, selectedSamples, bgzFiles), # hits when the data package corresponds directly to the pileup file location
+            file.path(outputDir, dataName, selectedSamples, bgzFiles) # hits when the data package aggregated a set of sample found in sub-folders
+        )
+        bgzFiles[file.exists(bgzFiles)]
+    }))
+}
 getItemsData.browserTrack <- function(track, reference, coord, dataFn, stranded = FALSE){
     items <- track$settings$items()
     req(items, length(items) > 0)
@@ -304,7 +321,11 @@ getItemsData.browserTrack <- function(track, reference, coord, dataFn, stranded 
     list(
         d = d,
         ymin = ymin,
-        ymax = ymax
+        ymax = ymax,
+        hasData = any(sapply(itemNames, function(itemName) {
+            nrow(d[[itemName]] > 0) && any(!is.na(d[[itemName]]$x))
+        }))
+
     )
 }
 plotXY.browserTrack <- function(track, d, color = NULL, family = "Plot_Options", ...){

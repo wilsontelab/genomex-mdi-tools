@@ -1,0 +1,10 @@
+include:
+    - height
+settings:
+    Pileup:
+        Max_Width:
+            type:   numericInput
+            value:  1000
+            min:    100
+            max:    1000000
+            step:   100  
