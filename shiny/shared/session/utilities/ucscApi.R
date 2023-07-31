@@ -123,10 +123,10 @@ listUcscGenomes <- function(force = FALSE){
             ucsc <- httr::content(ucsc, type = "application/json")[[target]]
             dt <- data.table(do.call(rbind, ucsc))
             dt[, genome := names(ucsc)]
-            cols <- c("organism", "genome", "description", "orderKey")
+            cols <- c("organism", "genome", "scientificName", "description", "orderKey")
             dt <- dt[, .SD, .SDcols = cols][, lapply(.SD, unlist, recursive = FALSE)] 
             saveRDS(
-                dt[order(organism, orderKey), .(organism, genome, description)], 
+                dt[order(organism, orderKey), .(genome, organism, scientificName, description)], 
                 file = file
             )
             stopSpinner(session)

@@ -39,9 +39,5 @@ build.plot_titleTrack <- function(track, reference, coord, layout){
         if(getBrowserTrackSetting(track, "Track", "Show_Line", FALSE))
             lines(c(coord$start, coord$end), c(0, 0), col = "black", lwd = 2)
     })
-    list(
-        ylim  = ylim,
-        mai   = mai,
-        image = image
-    )
+    list(ylim = ylim, mai = mai, image = image)
 }

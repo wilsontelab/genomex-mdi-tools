@@ -25,12 +25,14 @@ build.XY_pileup_track <- function(track, reference, coord, layout,
 
     # check for a valid plot window
     Max_Width <- getTrackSetting(track, "Pileup", "Max_Width", 1000)
-    req(coord$width <= Max_Width) 
+    if(!isTruthy(coord$width <= Max_Width)) return(trackInfo(track, coord, layout, "window too wide to plot pileup"))
 
     # parse the input data
     pileups <- dataFn()
-    req(pileups, length(pileups) > 0)
+    if(!allAreTruthy(pileups, length(pileups) > 0)) 
+        return(trackInfo(track, coord, layout, "no usable data to plot"))
     pileups <- lapply(pileups, function(pileup){
+        if(nrow(pileup$pileup) == 0) return(pileup)
         pileup$pileup <- pileup$pileup[end >= coord$start & start <= coord$end] # flush the ends out, masking the first and last as unreliable
         pileup$pileup[1, ":="(start = coord$start)]
         pileup$pileup[nrow(pileup$pileup), ":="(end = coord$end)]
@@ -44,7 +46,7 @@ build.XY_pileup_track <- function(track, reference, coord, layout,
     # set the layout
     padding <- padding(track, layout)
     height <- height(track, 0.25) + padding$total # or set a known, fixed height in inches
-    ylim <- c(0, max(sapply(pileups, function(x) x$maxY)))
+    ylim <- NULL # set below 
 
     # use the mdiTrackImage helper function to create the track image
     mai <- NULL
@@ -53,23 +55,33 @@ build.XY_pileup_track <- function(track, reference, coord, layout,
         layout(matrix(1:length(pileups), ncol = 1, byrow = TRUE))
         par(xpd = TRUE)        
         for(pileup in pileups){
-            colors <- unlist(colorPalette[pileup$usedValues])
-            barplot(
-                height = t(as.matrix(pileup$pileup[, .SD, .SDcols = pileup$usedValues])), 
-                width = pileup$pileup[, end - start + 1],
-                col = colors,
-                space = 0, border = NA, 
-                xlab = "", xaxt = "n",
-                ylim = ylim, ylab = pileup$ylab, 
-                bty = "n",
-                xaxs = "i", yaxs = "i",
-                legend.text = TRUE, args.legend = list(
-                    bty = "n", 
-                    x = coord$width * 1.1,
-                    y = ylim[2],
-                    border = rev(colors)
-                )
-            )
+            if(nrow(pileup$pileup) == 0){
+                ylim <<- c(0, 1)
+                plot(0, 0, type = "n", bty = "n",
+                    xlim = coord$range, xlab = "", xaxt = "n", # nearly always set `xlim`` to `coord$range`
+                    ylim = ylim,  ylab = "", yaxt = "n",
+                    xaxs = "i", yaxs = "i")
+                trackNoData(coord, ylim, paste(pileup$ylab, "has no pileup data in window"))
+            } else {
+                ylim <<- c(0, max(sapply(pileups, function(x) x$maxY)))
+                colors <- unlist(colorPalette[pileup$usedValues])
+                barplot(
+                    height = t(as.matrix(pileup$pileup[, .SD, .SDcols = pileup$usedValues])), 
+                    width = pileup$pileup[, end - start + 1],
+                    col = colors,
+                    space = 0, border = NA, 
+                    xlab = "", xaxt = "n",
+                    ylim = ylim, ylab = pileup$ylab, 
+                    bty = "n",
+                    xaxs = "i", yaxs = "i",
+                    legend.text = TRUE, args.legend = list(
+                        bty = "n", 
+                        x = coord$width * 1.1,
+                        y = ylim[2],
+                        border = rev(colors)
+                    )
+                )                
+            }
         }
         par(xpd = FALSE)
     })

@@ -1028,6 +1028,7 @@ bookmarkObserver <- observe({
 list(
     input = input,
     settings = settings$all_,
+    # TODO: add trackOutcomes functionality to allow tracks to send information to downstream app steps
     outcomes = list(
         genome = genomeInput,
         annotation = annotationInput,        

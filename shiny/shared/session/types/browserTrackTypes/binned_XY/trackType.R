@@ -24,7 +24,7 @@ build.binned_XY_track <- function(track, reference, coord, layout, dataFn,
 
     # collect all individual items
     itemsList <- getItemsData(track, reference, coord, dataFn, stranded = stranded) 
-    req(itemsList$hasData)
+    if(!itemsList$hasData) return(trackInfo(track, coord, layout, "no usable data to plot"))
     itemNames <- names(itemsList$d)
     nItems <- length(itemNames)
     originalItemNames <- itemNames

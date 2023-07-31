@@ -280,7 +280,7 @@ hLines.browserTrack <- function(track, ylim, color = CONSTANTS$plotlyColors$grey
 }
 trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
     par(xpd = TRUE)
-    legend(coord$end + coord$width * 0.01, ylim[2], bty = bty, ...)
+    legend(coord$end + coord$width * 0.01, ylim[1] + diff(ylim) / 2, bty = bty, yjust = 0.5, ...)
     par(xpd = FALSE)
 }
 
