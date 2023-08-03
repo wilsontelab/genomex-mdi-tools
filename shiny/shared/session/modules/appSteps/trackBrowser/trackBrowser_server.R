@@ -177,14 +177,23 @@ observeEvent(genome(), {
         updateSelectInput(session, "chromosome", choices = chromosomes(), selected = NULL)        
     }
 })
-chromosomeSize <- reactive({ # size of the currently active chromosome (not the one we may be switching to...)
+genomeSize <- reactive({
     genome <- genome()
     req(nrow(genome()) > 0)
-    chrom <- input$chromosome
-    req(chrom)
-    if(chrom == "all") getGenomeSize(genome$genome)
-    else getChromosomeSize(genome$genome, chrom)
-    # else listUcscChromosomes(genome$genome)[chromosome == chrom, size]
+    getGenomeSize(genome$genome)  
+})
+chromosomeSizes <- reactive({ # size of the currently active chromosome (not the one we may be switching to...)
+    genome <- genome()
+    req(nrow(genome()) > 0)
+    getChromosomeSizes(genome$genome)
+})
+getTargetChromosomeSize <- function(chrom_){
+    req(chrom_)
+    if(chrom_ == "all") genomeSize()
+    else chromosomeSizes()[name == chrom_, size]    
+}
+currentChromosomeSize <- reactive({ # size of the currently active chromosome (not the one we may be switching to...)
+    getTargetChromosomeSize(input$chromosome)
 })
 
 #----------------------------------------------------------------------
@@ -764,10 +773,7 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         end   <- as.integer64(end   + padding)
     }
     genome <- genome()
-    # req(nrow(genome) > 0)  
-    chromosomeSize <- chromosomeSize()
-    # chromosomeSize <- getChromosomeSize(genome$genome, chromosome)  
-    # req(chromosomeSize)
+    chromosomeSize <- getTargetChromosomeSize(chromosome) 
     if(start < 1) start <- 1
     if(end > chromosomeSize) end <- chromosomeSize
     clearObjectExpansions()
@@ -813,8 +819,7 @@ observeEvent(input$nudgeLeft,  { doMove(0.05, -1) }, ignoreInit = TRUE)
 observeEvent(input$nudgeRight, { doMove(0.05,  1) }, ignoreInit = TRUE)
 observeEvent(input$moveRight,  { doMove(1,     1) }, ignoreInit = TRUE)
 observeEvent(input$all, { 
-    chromSize <- if(input$chromosome == "all") chromosomeSize() else 1e9
-    jumpToCoordinates(input$chromosome, 1, chromSize, strict = TRUE) 
+    jumpToCoordinates(input$chromosome, 1, currentChromosomeSize(), strict = TRUE) 
 }, ignoreInit = TRUE)
 center <- function(x){
     coord <- coordinates(input)
@@ -872,11 +877,8 @@ output$trackNavs <- renderUI({
 #----------------------------------------------------------------------
 # jumpTo coordinates
 #----------------------------------------------------------------------
-checkJumpChrom <- function(chrom_){
-    genome <- genome()
-    req(nrow(genome) > 0)    
-    chroms <- getChromosomeSizes(genome$genome)
-    chrom <- chroms[name == chrom_, .(name, size)]
+checkJumpChrom <- function(chrom_){  
+    chrom <- chromosomeSizes()[name == chrom_, .(name, size)]
     req(nrow(chrom) == 1)
     chrom
 }
@@ -932,7 +934,7 @@ observeEvent(input$jumpTo,  {
                 center <- checkJumpCenter(chrom, parts[2])
                 coord <- coordinates(input)
                 halfWidth <- coord$width / 2
-                list(
+                list( 
                     chromosome = chrom$name, 
                     start = center - halfWidth, 
                     end   = center + halfWidth,
