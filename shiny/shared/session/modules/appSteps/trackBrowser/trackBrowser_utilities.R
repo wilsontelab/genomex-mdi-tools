@@ -7,7 +7,7 @@
 #----------------------------------------------------------------------
 mdiTrackImage <- function(layout, height, plotFn, message = NULL, ...){ # for track that generate plots
     # NB: do not use magick::image_graph; it is buggy, especially on Linux
-    startSpinner(session, message = message)
+    if(!is.null(message)) startSpinner(session, message = message)
     pngFile <- tempfile("trackBrowser", fileext = ".png")
     png(
         filename = pngFile,
@@ -31,7 +31,7 @@ mdiTrackImage <- function(layout, height, plotFn, message = NULL, ...){ # for tr
         dev.off()
         req(FALSE)
     })
-    stopSpinner(session)
+    # stopSpinner(session)
     image
 }
 setMdiTrackMai <- function(layout, padding, mai = NULL, mar = NULL){ # layout set by browser, mai or mar set by track

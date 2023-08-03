@@ -183,7 +183,8 @@ chromosomeSize <- reactive({ # size of the currently active chromosome (not the 
     chrom <- input$chromosome
     req(chrom)
     if(chrom == "all") getGenomeSize(genome$genome)
-    else listUcscChromosomes(genome$genome)[chromosome == chrom, size]
+    else getChromosomeSize(genome$genome, chrom)
+    # else listUcscChromosomes(genome$genome)[chromosome == chrom, size]
 })
 
 #----------------------------------------------------------------------
@@ -749,6 +750,7 @@ isStrict <- function(){
     if(is.null(x)) FALSE else x
 }
 jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = TRUE, then = NULL){ # arguments are strict coordinates
+    req(chromosome, start, end)
     start <- as.integer64(start)
     end   <- as.integer64(end)
     if(start > end){
@@ -762,9 +764,10 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         end   <- as.integer64(end   + padding)
     }
     genome <- genome()
-    req(nrow(genome) > 0)  
-    chromosomeSize <- getChromosomeSize(genome$genome, chromosome)  
-    req(chromosomeSize)
+    # req(nrow(genome) > 0)  
+    chromosomeSize <- chromosomeSize()
+    # chromosomeSize <- getChromosomeSize(genome$genome, chromosome)  
+    # req(chromosomeSize)
     if(start < 1) start <- 1
     if(end > chromosomeSize) end <- chromosomeSize
     clearObjectExpansions()
