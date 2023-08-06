@@ -48,7 +48,12 @@ fi
 
 # initialize pod5 sources
 cd ${EXPANDED_INPUT_DIR}
-POD5_FILES=(*.pod5)
+CHECK_COUNT=`ls -1 *.pod5 2>/dev/null | wc -l`
+if [ "$CHECK_COUNT" == "0" ]; then
+    POD5_FILES=(*.fast5) # support implicit fallback to fast5 instead of the preferred pod5
+else
+    POD5_FILES=(*.pod5)
+fi
 rm -rf $POD5_BUFFER_DIR/*
 
 # functions for copy and calling a batch of pod5 files

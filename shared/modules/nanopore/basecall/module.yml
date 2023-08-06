@@ -18,4 +18,4 @@ action: # required
         recommended:       
             partition: gpu          
             time-limit: 48:00:00            
-    description: "use Dorado to perform basecalling from ONT POD5 read file(s)"
+    description: "use Dorado to perform basecalling from ONT POD5 or FAST5 read file(s)"

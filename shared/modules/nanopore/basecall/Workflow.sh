@@ -30,5 +30,5 @@ if [ ! -d ${ONT_MODEL_DIR} ]; then
     exit 1
 fi 
 
-# convert ONT read files from POD5 to FASTQ, i.e., call bases
+# convert ONT read files from POD5/FAST5 to FASTQ, i.e., call bases
 runWorkflowStep 1 basecall $SHARED_MODULE_DIR/basecall.sh

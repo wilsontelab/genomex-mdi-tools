@@ -28,11 +28,11 @@ options:
         type: string
         required: false
         default: shm # or tmp, for fewer, overly large pod5 files
-        description: "whether to use shared memory (shm) or --tmp-dir-large (tmp) for pod5 buffereing"
+        description: "whether to use shared memory (shm) or --tmp-dir-large (tmp) for pod5/fast5 buffereing"
     pod5-batch-size: 
         order: 5
         short: z
         type: integer
         required: false
         default: 20
-        description: "number of pod5 files to process in each pass (must fit in pod-buffer)"
+        description: "number of pod5/fast5 files to process in each pass (must fit in pod-buffer)"

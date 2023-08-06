@@ -39,13 +39,14 @@ loadChromSizes <- function(windowSize = 1000){
         col.names  = c('chrom',     'nChromBases', 'offset',  'lineSeqLen', 'lineLen'), 
         colClasses = c('character', 'integer64',   'numeric', 'integer',    'integer')
     )[chrom %in% names(chromIndex)] # canonical chroms only
+    x[, chromIndex := unlist(chromIndex[chrom])]
+    x <- x[order(chromIndex)]
     x[, nChromWindows := as.integer64(floor((nChromBases - 1) / windowSize) + 1)]
     getRunningCum <- function(n){
         x <- cumsum(n)
         c(as.integer64(0), x[1:(length(x) - 1)])        
     }
     x[, ":="(
-        chromIndex = unlist(chromIndex[chrom]),
         nBasesBefore   = getRunningCum(nChromBases),
         nWindowsBefore = getRunningCum(nChromWindows)
     )]
