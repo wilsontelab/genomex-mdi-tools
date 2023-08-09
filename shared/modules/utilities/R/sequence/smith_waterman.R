@@ -47,14 +47,13 @@ smith_waterman <- function(qry, ref, fast = TRUE, forceQryEnd = NULL, local = FA
 
     # shortcut the process if seqs are identical
     if(isExactMatch){ 
-        n <- nchar(qry)
         return(list(
             qryOnRef = qry,
-            bestScore = matchScore * n,
+            bestScore = matchScore * nQ,
             qryStart = 1,
-            qryEnd = n,
+            qryEnd = nQ,
             refStart = 1,
-            refEnd = n,
+            refEnd = nR,
             qryLength = nQ,
             refLength = nR,
             ref = ref_
