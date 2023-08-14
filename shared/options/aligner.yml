@@ -1,0 +1,10 @@
+---
+# options that determine the behavior of either bwa or minimap2
+options:
+    bandwidth:
+        order: 1
+        short: b
+        type: string
+        required: false
+        default: NA
+        description: "bandwidth for chaining and base alignment, same as bwa mem -w or minimap2 -r"

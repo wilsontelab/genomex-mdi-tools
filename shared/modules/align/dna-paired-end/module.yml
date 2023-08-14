@@ -11,6 +11,7 @@ action: # required
         - trim-reads
         - quality-filtering
         - alignment
+        - aligner
         - genome
         - bam-format
     resources:
