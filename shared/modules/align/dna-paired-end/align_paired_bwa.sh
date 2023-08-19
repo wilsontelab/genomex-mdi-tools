@@ -80,7 +80,6 @@ fi
 #------------------------------------------------------------------
 # set branching to either standard bwa, minimap2 or the gpu-accelerated parabricks fq2bam
 #------------------------------------------------------------------
-
 if [ "$N_GPU" != "0" ]; then
     echo "--n-gpu > 0, using Parabricks GPU acceleration"
     ALIGN_SCRIPT1="perl $SHARED_MODULE_DIR/parabricks/split_fastq_to_file.pl"
@@ -94,11 +93,27 @@ if [ "$N_GPU" != "0" ]; then
     export MERGED_FILE="$PB_TMP_DIR/input/merged.fastq.gz"
     N_FASTP_THREADS=$N_CPU # although usually fastp is not the rate-limiting step
 elif [[ "$USE_MINIMAP2" != "" && "$USE_MINIMAP2" != "0" ]]; then
+    if [[ "$BANDWIDTH" == "" || "$BANDWIDTH" == "NA" ]]; then
+        export BANDWIDTH_LOG="aligner default"
+        export BANDWIDTH=""
+    else
+        export BANDWIDTH_LOG="$BANDWIDTH"
+        export BANDWIDTH="-r $BANDWIDTH"
+    fi
+    echo "  bandwidth: $BANDWIDTH_LOG" 
     echo "--n-gpu==0, --use-minimap2 set, using CPU-based minimap2"
     ALIGN_SCRIPT1="bash $SHARED_MODULE_DIR/minimap2/run_minimap2.sh"
     ALIGN_SCRIPT2="bash $SHARED_MODULE_DIR/bwa/sort_and_index.sh" # yes, the same for minimap2 and bwa
     N_FASTP_THREADS=3 # the fastp default
 else
+    if [[ "$BANDWIDTH" == "" || "$BANDWIDTH" == "NA" ]]; then
+        export BANDWIDTH_LOG="aligner default"
+        export BANDWIDTH=""
+    else
+        export BANDWIDTH_LOG="$BANDWIDTH"
+        export BANDWIDTH="-w $BANDWIDTH"
+    fi
+    echo "  bandwidth: $BANDWIDTH_LOG" 
     echo "--n-gpu==0, using CPU-based bwa mem"
     ALIGN_SCRIPT1="bash $SHARED_MODULE_DIR/bwa/run_bwa.sh"
     ALIGN_SCRIPT2="bash $SHARED_MODULE_DIR/bwa/sort_and_index.sh"
