@@ -72,14 +72,16 @@ getSourcesFromTrackSamples <- function(selectedSamples){ # selectedSamples is a 
 }
 
 # assign a unique color to each unique selected sample
-getColorsBySelectedSample <- function(selectedSources){ # selected sources as returned by getSourcesFromTrackSamples
-    allSamples <- unique(unlist(lapply(selectedSources, function(x) x$Sample_ID)))
+getColorsBySelectedSample <- function(selectedTargets, isMultiSample = TRUE, dt = NULL){ # selected sources as returned by getSourcesFromTrackSamples
+    allSamples <- if(isMultiSample) unique(unlist(lapply(selectedSources, function(x) x$Sample_ID)))
+                  else unique(dt[, unlist(strsplit(samples, ","))])
+    allSamples <- allSamples[allSamples != ""]
     sampleCols <- as.list(1:length(allSamples))
     names(sampleCols) <- paste0(",", allSamples, ",") 
     sampleCols   
 }
-dt_colorBySelectedSample <- function(dt, selectedSources){ # dt expected to have samples columns, and usually nSamples, columns
-    sampleCols <- getColorsBySelectedSample(selectedSources)
+dt_colorBySelectedSample <- function(dt, selectedTargets, isMultiSample = TRUE){ # dt expected to have samples columns, and usually nSamples, columns
+    sampleCols <- getColorsBySelectedSample(selectedTargets, isMultiSample, dt)
     if("nSamples" %in% names(dt)){
         dt[, color := ifelse(
             nSamples > 1,
