@@ -340,8 +340,9 @@ observeEvent({
 }, {
 
     # parse the request
-    currentTrackIds <- trackOrder()[, trackId]    
-    newTrackIds <- sapply(strsplit(input$trackRankList, '\\s+'), function(x) x[length(x)])
+    currentTrackIds <- trackOrder()[, trackId] 
+    newTrackIds <- if(isTruthy(input$trackRankList)) sapply(strsplit(input$trackRankList, '\\s+'), function(x) x[length(x)])
+                   else currentTrackIds # 082623, unclear why input$trackRankList suddenly starting hitting here with NULL value
 
     # declare the new track order
     nTracks <- length(newTrackIds)
@@ -359,7 +360,7 @@ observeEvent({
             }
         removeUI(".trackDeleteTarget .browserTrack")
     } else isRankListInit <<- TRUE
-})
+}, ignoreInit = TRUE)
 
 # undo the last track settings change, intended for disaster recover, not a complete history tracking
 trackSettingsObservers <- list()

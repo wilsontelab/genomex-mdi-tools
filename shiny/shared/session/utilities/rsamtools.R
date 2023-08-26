@@ -2,25 +2,41 @@
 # support functions for reading browser track data from TABIX-indexed files
 #----------------------------------------------------------------------
 
-# read a tbi index file into an Rsamtools tabix object
+# read (and if needed, create) a tbi index file into an Rsamtools tabix object
 # cache it since the index load is relatively slow
 getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, force = FALSE, ttl = CONSTANTS$ttl$day){
     req(file.exists(bgzFile))
-    startSpinner(session, message = "loading tabix")
-    fileName <- basename(bgzFile)
-    if(is.null(cacheDir)) cacheDir <- dirname(bgzFile)
-    rdsFile <- file.path(cacheDir, paste(fileName, "rds", sep = "."))
-    if(!file.exists(rdsFile) || create){
-        startSpinner(session, message = "loading tabix...")
-        unlink(rdsFile)
-        saveRDS(Rsamtools::TabixFile(bgzFile), file = rdsFile)
-    }
-    rdsFile <- loadPersistentFile(
-        file = rdsFile,
-        force = create || force,
-        ttl = ttl
-    )
-    persistentCache[[rdsFile]]$data
+    tryCatch({
+        startSpinner(session, message = "loading tabix")
+        fileName <- basename(bgzFile)
+        if(is.null(cacheDir)) cacheDir <- dirname(bgzFile)
+        rdsFile <- file.path(cacheDir, paste(fileName, "rds", sep = "."))
+        if(!file.exists(rdsFile) || create){
+            indexFile <- paste(bgzFile, "tbi", sep = ".")
+            if(!file.exists(indexFile)) {
+                startSpinner(session, message = "indexing bgz...")
+                Rsamtools::indexTabix(
+                    bgzFile, 
+                    seq = 1,
+                    start = 2,
+                    end = 3
+                )
+            }
+            startSpinner(session, message = "loading tabix...")
+            unlink(rdsFile)
+            saveRDS(Rsamtools::TabixFile(bgzFile), file = rdsFile)
+        }
+        rdsFile <- loadPersistentFile(
+            file = rdsFile,
+            force = create || force,
+            ttl = ttl
+        )
+        persistentCache[[rdsFile]]$data
+    }, error = function(e){
+        print(e)
+        stopSpinner(session)
+        req(FALSE)
+    })
 }
 
 # query a bgz or other tabixed file by the current window coordinates
