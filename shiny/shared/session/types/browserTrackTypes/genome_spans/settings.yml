@@ -1,0 +1,71 @@
+include:
+    - height # Track options
+    - hLines
+settings:
+    Data:
+        Plot_As:
+            type: selectInput
+            choices:
+                - points
+                - lines 
+                - both 
+                - area 
+                - histogram
+            value: lines
+        Point_Symbol:
+            type: selectInput
+            choices:
+                - open_circles
+                - filled_circles 
+                - open_squares 
+                - filled_squares
+            value: filled_circles             
+        Line_Width:
+            type: numericInput
+            value:  1.5
+            min:    0.25
+            max:    5
+            step:   0.25                 
+        Point_Size:
+            type: numericInput
+            value:  1
+            min:    0.25
+            max:    5
+            step:   0.25
+        Color_Palette:
+            type: selectInput
+            choices:
+                - plotly
+            value: plotly  
+        Aggregate:
+            type: selectInput
+            choices:
+                - none
+                - difference
+                - mean
+                - median
+                - sum
+            value: none            
+    X_Axis:  
+        Max_Bins:
+            type: numericInput
+            value:  100
+            min:    50
+            max:    5000
+            step:   50     
+        Bin_Size:
+            type: textInput
+            value:  ""
+    Y_Axis:       
+        Min_Y:
+            type: textInput
+            value:  ""
+        Max_Y:
+            type: textInput
+            value:  ""
+        Force_To_Zero:
+            type: checkboxInput
+            value: true
+        Symmetric:
+            type: checkboxInput
+            value: true

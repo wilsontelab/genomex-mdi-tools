@@ -1,0 +1,16 @@
+trackType:
+    - XY_pileup
+settings:
+    Pileup:
+        Pileup_File:
+            type:   fileInput
+            accept: 
+                - ".bgz"
+override:
+    Track:
+        Height: 1
+# uncomment this section to specify track-specific settings
+# presets:
+#     Preset_Name:
+#         Family:
+#             Option: value

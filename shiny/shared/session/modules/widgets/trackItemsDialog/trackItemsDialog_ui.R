@@ -7,6 +7,7 @@
 trackItemsDialogUI <- function(
     id, 
     itemTypePlural, 
+    isFiles,
     keyColumn,
     extraColumns,
     options
@@ -43,7 +44,15 @@ trackItemsDialogUI <- function(
             )
         ),
         fluidRow(
-            bufferedTableUI(
+            if(isFiles) box(
+                width = 12,
+                serverSourceFilesButtonUI(
+                    ns("shinyFilesButton"),
+                    multiple = TRUE,
+                    buttonType = "primary",
+                    style = "width: 250px;"
+                )
+            ) else bufferedTableUI(
                 ns("availableItems"), 
                 title = paste("Available", itemTypePlural),
                 width = 12

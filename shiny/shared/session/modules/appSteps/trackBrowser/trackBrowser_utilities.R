@@ -304,28 +304,30 @@ getBgzFilesFromItems <- function(track, reference, type){ # return a set of typi
         bgzFiles[file.exists(bgzFiles)]
     }))
 }
-getItemsData.browserTrack <- function(track, reference, coord, dataFn, stranded = FALSE){
+getItemsData.browserTrack <- function(track, reference, coord, dataFn, parseXY = TRUE){
     items <- track$settings$items()
     req(items, length(items) > 0)
-    itemNames <- names(items)
+    itemKeys <- names(items) # derived from keyColumn
     ymin <- NA
     ymax <- NA
-    d <- lapply(itemNames, function(itemName){
-        dd <- dataFn(track, reference, coord, itemName, items[[itemName]])
-        y <- if("y1" %in% names(dd)) dd[, c(y1, y2)] else dd[, y]
-        ymin <<- min(ymin, y, na.rm = TRUE)
-        ymax <<- max(ymax, y, na.rm = TRUE)
+    d <- lapply(itemKeys, function(itemKey){
+        dd <- dataFn(track, reference, coord, itemKey, items[[itemKey]]) # typically, expect dataFn to filter data to the browser window
+        if(parseXY){
+            y <- if("y1" %in% names(dd)) dd[, c(y1, y2)] else dd[, y]
+            ymin <<- min(ymin, y, na.rm = TRUE)
+            ymax <<- max(ymax, y, na.rm = TRUE)
+        }
         dd
     })
-    names(d) <- itemNames
+    names(d) <- itemKeys
     list(
-        d = d,
+        d = d, # at this stage, different items are still separate in a named list
         ymin = ymin,
         ymax = ymax,
-        hasData = any(sapply(itemNames, function(itemName) {
-            nrow(d[[itemName]] > 0) && any(!is.na(d[[itemName]]$x))
+        hasData = any(sapply(itemKeys, function(itemKey) {
+            nrow(d[[itemKey]] > 0) && 
+            (!parseXY || any(!is.na(d[[itemKey]]$x)))
         }))
-
     )
 }
 plotXY.browserTrack <- function(track, d, color = NULL, family = "Plot_Options", ...){

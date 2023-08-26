@@ -5,6 +5,7 @@
 # read a tbi index file into an Rsamtools tabix object
 # cache it since the index load is relatively slow
 getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, force = FALSE, ttl = CONSTANTS$ttl$day){
+    req(file.exists(bgzFile))
     startSpinner(session, message = "loading tabix")
     fileName <- basename(bgzFile)
     if(is.null(cacheDir)) cacheDir <- dirname(bgzFile)

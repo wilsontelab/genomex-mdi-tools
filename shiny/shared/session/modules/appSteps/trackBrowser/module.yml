@@ -49,7 +49,7 @@ packages: # required R packages
     R: 
         - bit64
     Bioconductor:
-        - Rsamtools
+        - Rsamtools # on Windows, GenomeInfoDbData doesn't install via installer, requires confirmation to compile; must install through R
         - magick
 
 ## optional data classes and UI modules this module will use
