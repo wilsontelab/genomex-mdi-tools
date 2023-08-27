@@ -48,9 +48,13 @@ getTabixRangeData <- function(tabix, coord, col.names = NULL, colClasses = NULL)
         seqnames = coord$chromosome, 
         ranges = IRanges::IRanges(start = as.integer(coord$start), end = as.integer(coord$end))
     )
-    fread(
+    if(is.null(col.names)) fread(
         text = Rsamtools::scanTabix(tabix, param = gRange)[[1]],
-        col.names = col.names,
+        colClasses = colClasses,
+        header = FALSE
+    ) else fread(
+        text = Rsamtools::scanTabix(tabix, param = gRange)[[1]],
+        col.names = col.names, # col.names has no default value, NA, NULL and character() all fail when specified as defaults
         colClasses = colClasses,
         header = FALSE
     )

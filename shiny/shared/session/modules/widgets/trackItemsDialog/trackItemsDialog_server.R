@@ -34,27 +34,27 @@ defaults <- lapply(options, function(x){
 #----------------------------------------------------------------------
 # a single file input button for searching for a system file
 #----------------------------------------------------------------------
-serverSourceFilesButtonServer(
-    "shinyFilesButton", 
-    input, 
-    session, 
-    rw = "read", 
-    filetypes = "bgz",
-    loadFn = function(files) {
-        req(files, nrow(files) > 0)
-        files <- data.table(files)
-        for(i in nrow(files)){
-            path <- files[i, datapath]
-            selected <- selected()
-            if(!is.null(selected[[path]])) return()
-            selected[[path]] <- c(files[i, name], basename(dirname(path)))
-            names(selected[[path]]) <- staticColumns
-            selected(selected)    
-            insertSelectedRow(path)
-            updateRowActions()
-        }
-    }
-)
+# serverSourceFilesButtonServer(
+#     "shinyFilesButton", 
+#     input, 
+#     session, 
+#     rw = "read", 
+#     filetypes = "bgz",
+#     loadFn = function(files) {
+#         req(files, nrow(files) > 0)
+#         files <- data.table(files)
+#         for(i in nrow(files)){
+#             path <- files[i, datapath]
+#             selected <- selected()
+#             if(!is.null(selected[[path]])) return()
+#             selected[[path]] <- c(files[i, name], basename(dirname(path)))
+#             names(selected[[path]]) <- staticColumns
+#             selected(selected)    
+#             insertSelectedRow(path)
+#             updateRowActions()
+#         }
+#     }
+# )
 
 #----------------------------------------------------------------------
 # the table of available source items
