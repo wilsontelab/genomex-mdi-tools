@@ -3,6 +3,20 @@
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
+# ordered initialization of the track browser, called by module initialization functions
+#----------------------------------------------------------------------
+initializeNextTrackBrowserElement <- function(loadData, loadSequence){
+    dmsg("initializeNextTrackBrowserElement")
+    if(!isTruthy(loadSequence)) return()
+    nNext <- length(loadSequence)
+    if(nNext > 1){
+        setTimeout(loadSequence[[1]], loadData, loadSequence[2:nNext], delay = 50)
+    } else{
+        setTimeout(loadSequence[[1]], loadData, NA, delay = 50)
+    }
+}
+
+#----------------------------------------------------------------------
 # MDI (as opposed to UCSC) track image assembly
 #----------------------------------------------------------------------
 mdiTrackImage <- function(layout, height, plotFn, message = NULL, ...){ # for track that generate plots
