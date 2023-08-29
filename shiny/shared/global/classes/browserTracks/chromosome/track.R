@@ -32,7 +32,7 @@ chromBandColors <- list(
 build.chromosomeTrack <- function(track, reference, coord, layout){
     req(objectHasData(reference$genome))
     genome <- reference$genome$genome
-    req(track$browser$chromosome)
+    req(coord$chromosome)
     featuresTrack <- getBrowserTrackSetting(track, "Plot_Options", "Feature_Track", "cytoBand") # i.e., a UCSC track
     features <- if(coord$chromosome == "all") getChromosomeSizes(genome)
                 else if(featuresTrack == "none") NULL 
@@ -41,7 +41,7 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
         chromSize <- features[, max(chromEnd)]
     } else {
         chroms <- listUcscChromosomes(genome)
-        chromSize <- chroms[chromosome == track$browser$chromosome, size]        
+        chromSize <- chroms[chromosome == coord$chromosome, size]        
     }
     padding <- padding(track, layout)
     height <- height(track, 0.25) + padding$total
@@ -85,9 +85,12 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
         # chromosome text label
         tmp <- par('xpd')
         par(xpd = TRUE, cex = 1.15)
+        placement <- sideLabelPlacement(layout, coord)
         size <- paste0(round(chromSize / unit$multiplier, 0), " ", unit$unit)
         lab <- paste0(coord$chromosome, ", ", size)
-        text(coord$start, 0.5, lab, pos = 2)
+        labelWidth <- strwidth(lab, font = layout$pointsize, units = "in")
+        if(labelWidth > placement$marginWidth * 0.9) lab <- coord$chromosome
+        text(placement$coord, 0.5, lab, pos = placement$side)
         par(xpd = tmp, cex = 1)
     })
     chromosomeTrackData <<- list(

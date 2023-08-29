@@ -297,6 +297,15 @@ trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
     legend(coord$end + coord$width * 0.01, ylim[1] + diff(ylim) / 2, bty = bty, yjust = 0.5, ...)
     par(xpd = FALSE)
 }
+sideLabelPlacement <- function(layout, coord){
+    isLeft <- layout$nRegions == 1 || layout$regionI == 1 || layout$arrangement == "stacked"
+    list(
+        isLeft = isLeft,
+        side = if(isLeft) 2 else 4,
+        coord = if(isLeft) coord$start else coord$end,
+        marginWidth = if(isLeft) layout$mai$left else layout$mai$right
+    )
+}
 
 #----------------------------------------------------------------------
 # data retrieval and plotting functions

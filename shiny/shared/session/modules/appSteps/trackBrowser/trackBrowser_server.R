@@ -50,7 +50,7 @@ browser$images      <- list()
 #----------------------------------------------------------------------
 # support simultaneous plotting of 1 or more genome regions
 #----------------------------------------------------------------------
-nRegions <- reactive({ browser$settings$get("Browser_Options", "Number_of_Regions", 1) })
+browser$nRegions <- reactive({ browser$settings$get("Browser_Options", "Number_of_Regions", 1) })
 addRegionCoordinates <- function(regionI, initialize){
     elementId <- paste0("coordinates", regionI)
     insertUI(".trackBrowserCoordinateInputs", "beforeEnd", immediate = TRUE, ui = trackBrowserCoordinatesUI(session$ns(elementId), regionI))
@@ -77,9 +77,9 @@ removeRegionImage <- function(regionI){
     browser$images[[regionI]] <<- NULL
 
 }
-observeEvent(nRegions(), {
+observeEvent(browser$nRegions(), {
     req(!browser$isInitializing())
-    nRegions <- nRegions()
+    nRegions <- browser$nRegions()
     nCurrentRegions <- length(browser$coordinates)
     req(nRegions, nCurrentRegions > 0)
     if(nRegions < 1) nRegions <- 1

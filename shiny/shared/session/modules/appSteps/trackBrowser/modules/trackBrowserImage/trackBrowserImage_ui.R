@@ -3,6 +3,8 @@
 trackBrowserImageUI <- function(id, regionI) {
     ns <- NS(id) 
     tags$div(
+        class = "browserTrackImageWrapper",
+        style = "margin-right: 5px;",
         
         # the main browser image, all tracks in one genome region
         mdiInteractivePlotUI(id = ns("image")),

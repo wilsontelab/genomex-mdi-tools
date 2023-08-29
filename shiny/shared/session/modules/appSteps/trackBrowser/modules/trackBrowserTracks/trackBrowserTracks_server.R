@@ -20,7 +20,7 @@ module <- 'trackBrowser'
 # manage browser track types availabe and in use
 #----------------------------------------------------------------------
 trackTypes <- list() # key = trackType, value = settings template file path
-tracks <- list()     # key = trackId,   value = browserTrackServer()
+tracks <- reactiveVal(list())     # key = trackId,   value = browserTrackServer()
 nullTrackOrder <- data.table(trackId = character(), order = integer())
 trackOrder <- reactiveVal(nullTrackOrder)
 orderedTrackIds <- reactive({ # the current track ids, in plotting order
@@ -80,11 +80,13 @@ initTrackTypes <- function(){
 # track identifiers
 getTrackId <- function() gsub("( |:|-)", "_", paste(as.character(Sys.time()), sample.int(1e8, 1)))
 getTrackNames <- function(trackIds){
+    tracks <- tracks()
     sapply(trackIds, function(trackId) getTrackDisplayName(tracks[[trackId]]$track))
 }
 #----------------------------------------------------------------------
 # handle track addition from select input or bookmark
 addTrack <- function(trackType, trackId = NULL){
+    ns <- if(is.null(trackId)) session$ns else browser$session$ns
     if(is.null(trackId)) trackId <- getTrackId()
     cssId <- paste("track", trackId, sep = "_")
     track <- browserTrackServer(
@@ -110,7 +112,8 @@ addTrack <- function(trackType, trackId = NULL){
         where = "beforeEnd",
         multiple = FALSE,
         immediate = TRUE,
-        browserTrackUI(browser$session$ns(cssId), track) # why is this not session$ns()??
+        browserTrackUI(ns(cssId), track) # see above; unclear why different ns is required when addTrack is called from init vs. user action
+
     )
     trackOrder <- trackOrder()
     trackOrder <- rbind(
@@ -118,7 +121,9 @@ addTrack <- function(trackType, trackId = NULL){
         data.table(trackId = trackId, order = nrow(trackOrder) + 1)
     )
     trackOrder(trackOrder)
-    tracks[[trackId]] <<- track
+    tracks_ <- tracks()
+    tracks_[[trackId]] <- track
+    tracks(tracks_)
     trackId
 }
 observeEvent(input$addTrack, {
@@ -134,6 +139,7 @@ observeEvent(input$addTrack, {
 output$duplicateTrack <- renderUI({
     trackIds <- orderedTrackIds()
     req(trackIds)
+    tracks <- tracks()
     names(trackIds) <- paste0(
         getTrackNames(trackIds), 
         " (",
@@ -148,9 +154,9 @@ observeEvent(input$duplicateTrackSelect, {
     dupTrackId <- input$duplicateTrackSelect
     req(dupTrackId != duplicateTrackPromptId)
     updateSelectInput(session, "duplicateTrackSelect", selected = duplicateTrackPromptId) # reset the prompt
-    dupTrack <- tracks[[dupTrackId]]
+    dupTrack <- tracks()[[dupTrackId]]
     trackId <- addTrack(dupTrack$type)
-    tracks[[trackId]]$track$settings$replace(dupTrack$track$settings$all_())    
+    tracks()[[trackId]]$track$settings$replace(dupTrack$track$settings$all_())
     createTrackSettingsObserver(trackId)
 }, ignoreInit = TRUE)
 #----------------------------------------------------------------------
@@ -171,12 +177,15 @@ observeEvent({
         } else nullTrackOrder)
 
         # delete tracks as needed
-        for(trackId in currentTrackIds) 
+        tracks_ <- tracks()
+        for(trackId in currentTrackIds) {
             if(!(trackId %in% newTrackIds)) {
-                tracks[[trackId]] <<- NULL
+                tracks_[[trackId]] <- NULL
                 trackSettingsObservers[[trackId]] <<- NULL
                 if(!is.null(trackSettingsUndoId) && trackSettingsUndoId == trackId) trackSettingsUndoId <<- NULL
             }
+        }
+        tracks(tracks_)
         removeUI(".trackDeleteTarget .browserTrack")
     } else isRankListInit <<- TRUE
 }, ignoreInit = TRUE)
@@ -188,12 +197,14 @@ observeEvent({
 trackSettingsObservers <- list()
 trackSettingsUndoId <- NULL
 createTrackSettingsObserver <- function(trackId){
-    trackSettingsObservers[[trackId]] <<- observeEvent(tracks[[trackId]]$track$settings$all_(), {
+    track <- tracks()[[trackId]]
+    trackSettingsObservers[[trackId]] <<- observeEvent(track$track$settings$all_(), {
         trackSettingsUndoId <<- trackId
         # clearObjectExpansions()
     })
 }
 observeEvent(input$undoTrackSettings, {
+    tracks <- tracks()
     req(trackSettingsUndoId, tracks[[trackSettingsUndoId]])
     tracks[[trackSettingsUndoId]]$track$settings$undo()
 })
@@ -210,9 +221,9 @@ initialize <- function(jobId, loadData, loadSequence){
         lapply(trackIds, function(trackId){
             track <- loadData$outcomes$tracks[[trackId]]         
             addTrack(track$type, trackId)
-            tracks[[trackId]]$track$settings$replace(track$settings)
+            tracks()[[trackId]]$track$settings$replace(track$settings)
             createTrackSettingsObserver(trackId)
-            if(!is.null(track$items)) tracks[[trackId]]$track$settings$items(track$items)
+            if(!is.null(track$items)) tracks()[[trackId]]$track$settings$items(track$items)
         })
     }
     initializeNextTrackBrowserElement(loadData, loadSequence)
@@ -221,11 +232,12 @@ initialize <- function(jobId, loadData, loadSequence){
 #----------------------------------------------------------------------
 # module return value
 list(
-    tracks = reactive({ tracks }),
+    tracks = tracks,
     orderedTrackIds = orderedTrackIds,
     trackOrder = trackOrder,
     bookmarkTracks = reactive({
         trackIds <- trackOrder()[, trackId]
+        tracks <- tracks()
         x <- lapply(trackIds, function(trackId){
             track <- tracks[[trackId]]
             list(

@@ -34,21 +34,19 @@ build.coordinate_axisTrack <- function(track, reference, coord, layout){
             xlim = xlim, xlab = "", xaxt = "n",
             ylim = ylim, ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i") 
+        placement <- sideLabelPlacement(layout, coord) 
         if(axis == "top"){
             axis(3, lwd = lwd)
-            # mtext(xlab, side = 3, line = 2, cex = 1.1)
-            mtext(unit$unit, side = 2, las = 1, at = 1, line = 0.5)
+            mtext(unit$unit, side = placement$side, las = 1, at = 1, line = 0.5)
             box(typ = "o", col = "red")
         } else if(axis == "bottom") {
             axis(1, lwd = lwd)
-            # mtext(xlab, side = 1, line = 2, cex = 1.1)
-            mtext(unit$unit, side = 2, las = 1, at = 1, line = 0.5)
+            mtext(unit$unit, side = placement$side, las = 1, at = 1, line = 0.5)
         } else {
             at <- axis(3, labels = FALSE, tick = FALSE)
             lines(xlim, rep(0.5, 2), lwd = lwd)        
             segments(at, 0, at, 1, lwd = lwd)
         }
-        
     })
     list(
         ylim  = ylim,

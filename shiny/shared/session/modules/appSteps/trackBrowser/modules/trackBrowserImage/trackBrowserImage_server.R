@@ -3,11 +3,52 @@
 trackBrowserImageServer <- function(id, browser, regionI) {
     moduleServer(id, function(input, output, session) {
 #----------------------------------------------------------------------
-coordinates <- browser$coordinates[[regionI]]
+default <- list(
+    arrangement = "stacked",
+    labelWidth = 0.75,
+    legendWidth = 1.25,
+    browserWidth = 7.5
+)
 
 #----------------------------------------------------------------------
-# plot methods shared between browser and expansion tracks
+# access external settings and inputs
 #----------------------------------------------------------------------
+# plot attributes
+browserOptions <- browser$settings$Browser_Options
+arrangement <- reactive({
+    arrangement <- browserOptions()$Region_Arrangement$value
+    if(isTruthy(arrangement)) arrangement else default$arrangement
+})
+observeEvent(arrangement(), {
+    arrangement <- arrangement()
+    display <- if(arrangement == "stacked") "block" else "inline-block"
+    runjs(paste0('$(".browserTrackImageWrapper").css("display", "', display, '")'))
+})
+labelWidth <- reactive({
+    x <- browserOptions()$Label_Width$value
+    if(!isTruthy(x)) x <- default$labelWidth
+    if(arrangement() == "stacked" || regionI == 1) x else 0 # show label on left-most plot only
+})
+legendWidth <- reactive({
+    x <- browserOptions()$Legend_Width$value
+    if(!isTruthy(x)) x <- default$legendWidth
+    if(arrangement() == "stacked" || regionI == browser$nRegions()) x else 0 # show legend on right-most plot only
+})
+browserWidth <- reactive({
+    x <- browserOptions()$Browser_Width$value
+    if(!isTruthy(x)) x <- default$browserWidth
+    if(arrangement() == "stacked") return(x)
+    labelWidth <- browserOptions()$Label_Width$value
+    if(!isTruthy(x)) x <- default$labelWidth
+    legendWidth <- browserOptions()$Legend_Width$value
+    if(!isTruthy(x)) x <- default$legendWidth
+    regionWidth <- (x - labelWidth - legendWidth) / browser$nRegions() # disperse all but legends equally between regions
+    regionWidth + labelWidth() + legendWidth()
+})
+
+#----------------------------------------------------------------------
+# genome region to plot
+coordinates <- browser$coordinates[[regionI]]
 reference <- reactive({ # parse the target genome region
     reference <- list(
         genome = browser$reference$genome(),
@@ -22,6 +63,11 @@ coord <- reactive({ # parse the plot window
     req(coord$width > 0)
     coord 
 })
+
+#----------------------------------------------------------------------
+# plot methods shared between browser and expansion tracks
+#----------------------------------------------------------------------
+
 trackCache <- list( # cache for track images to prevent slow replotting of unchanged tracks
     browser   = list(), # names = trackIds, values = list(trackHash, contents)
     expansion = list()
@@ -52,6 +98,7 @@ buildAllTracks <- function(trackIds, fnName, type, layout){
             trackCache[[type]][[trackId]]$contents
         }, error = function(e) {
             message(paste("buildAllTracks: track error:", tracks[[trackId]]$track$type, trackId))
+            dstr(track)
             print(e)
             NULL
         })
@@ -100,15 +147,15 @@ createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for bot
     coord <- coord()
 
     # parse the plot layout based on plots alone
-    browserSettings <- browser$settings$Browser_Options()
-    lengthUnit <- browserSettings$Length_Unit$value
+    browserOptions <- browserOptions()
+    lengthUnit <- browserOptions$Length_Unit$value
     dpi <- if(isPrint) browser$printDpi else browser$screenDpi
     linesPerInch <- if(isPrint) browser$linesPerInchPrint() else browser$linesPerInchScreen()
-    browserWidth <- getInches(browserSettings$Browser_Width$value, lengthUnit)
 
-    # TODO: apportion these based on regionI
-    labelWidth   <- getInches(browserSettings$Label_Width$value,   lengthUnit)
-    legendWidth  <- getInches(browserSettings$Legend_Width$value,  lengthUnit)
+    # TODO: apportion these based on regionI    
+    browserWidth <- getInches(browserWidth(), lengthUnit)
+    labelWidth   <- getInches(labelWidth(),   lengthUnit)
+    legendWidth  <- getInches(legendWidth(),  lengthUnit)
     plotWidth <- browserWidth - labelWidth - legendWidth
 
     req(plotWidth > 0)
@@ -126,12 +173,16 @@ createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for bot
             right = legendWidth,
             lengthUnit = lengthUnit 
         ),
-        pointsize = as.integer(browserSettings$Font_Size$value)
+        pointsize = as.integer(browserOptions$Font_Size$value),
+        arrangement = arrangement(),
+        nRegions = browser$nRegions(),
+        regionI = regionI
     )
 
     # adjust the label width for UCSC track behavior
-    # TODO: only do this if there are UCSC tracks?
-    layout <- adjustLayoutForUcsc(layout) 
+    tracks <- browser$tracks$tracks()
+    trackTypes <- sapply(tracks, function(x) x$type)
+    if("ucsc_tracks" %in% trackTypes) layout <- adjustLayoutForUcsc(layout) 
 
     # override browser coordinates and width if exactly 1 track has adjustsWidth = TRUE
     adjustingTrackIds <- unlist(sapply(trackIds, function(trackId) {
@@ -318,17 +369,6 @@ yPixelToTrack <- function(x, y){
 # initialization
 #----------------------------------------------------------------------
 initialize <- function(jobId, loadData, loadSequence = NULL){
-    # chromosomes <- reference$chromosomes()
-    # x <- loadData$outcomes$coordinates
-    # if(is.null(x)) x <- list()
-    # x <- if(regionI <= length(x)) x[[regionI]] else list()
-    # loadData$chromosome <- if(is.null(x$chromosome)) chromosomes[1] else x$chromosome
-    # loadData$start      <- if(is.null(x$start))      defaults$start else x$start
-    # loadData$end        <- if(is.null(x$end))        defaults$end   else x$end
-    # updateSelectInput(session, 'chromosome', choices = chromosomes, selected = loadData$chromosome)
-    # updateTextInput(session,   'start',      value    = loadData$start)
-    # updateTextInput(session,   'end',        value    = loadData$end)
-    # pushCoordinateHistory(list(chromosome = loadData$chromosome, start = loadData$start, end = loadData$end))
     if(!is.null(loadSequence)) initializeNextTrackBrowserElement(loadData, loadSequence)
 }
 

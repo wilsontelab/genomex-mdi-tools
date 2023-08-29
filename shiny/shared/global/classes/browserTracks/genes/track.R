@@ -49,6 +49,12 @@ build.genesTrack <- function(track, reference, coord, layout){
 
         # Watson/Crick strand lines
         abline(h = 1:2 + 0.5, col = "grey50", lwd = 0.5)
+        placement <- sideLabelPlacement(layout, coord) 
+        tmp <- par('xpd')
+        par(xpd = TRUE, cex = 1.25)
+        text(placement$coord, 2.5, "+", pos = placement$side)
+        text(placement$coord, 1.5, "\U2012", pos = placement$side)
+        par(xpd = tmp, cex = 1)
 
         # process genes
         if(nrow(genes) == 0) trackNoData(coord, ylim, "no genes in window", y = 0.5) else {
