@@ -1,14 +1,341 @@
 # trackBrowser server module for assembling the composite browser output image
 # there may be one or multiple images rendered by a single browser instance
-trackBrowserImageServer <- function(id, ...) {
+trackBrowserImageServer <- function(id, browser, regionI) {
     moduleServer(id, function(input, output, session) {
 #----------------------------------------------------------------------
+coordinates <- browser$coordinates[[regionI]]
 
+#----------------------------------------------------------------------
+# plot methods shared between browser and expansion tracks
+#----------------------------------------------------------------------
+reference <- reactive({ # parse the target genome region
+    reference <- list(
+        genome = browser$reference$genome(),
+        annotation = browser$reference$annotation()
+    )
+    req(reference$genome)
+    reference
+})
+coord <- reactive({ # parse the plot window
+    coord <- coordinates(coordinates$input)
+    req(coord)
+    req(coord$width > 0)
+    coord 
+})
+trackCache <- list( # cache for track images to prevent slow replotting of unchanged tracks
+    browser   = list(), # names = trackIds, values = list(trackHash, contents)
+    expansion = list()
+)
+buildAllTracks <- function(trackIds, fnName, type, layout){
+    reference <- reference()
+    coord <- coord()
+    sharedHash <- digest(list(reference, coord, layout))
+    nImages <- 0 # may be less than or equal to nTracks, depending on build successes
+    tracks <- browser$tracks$tracks()
+    builds <- lapply(trackIds, function(trackId) {
+        tryCatch({
+            track <- tracks[[trackId]]$track
+            trackHash <- digest(list(
+                track$settings$all_(), 
+                if(is.null(track$settings$items)) NA else track$settings$items(),
+                if(type == "expansion") expandingTrack() else NA,
+                sharedHash
+            ))
+            if(is.null(trackCache[[type]][[trackId]]) || 
+               trackCache[[type]][[trackId]]$trackHash != trackHash) {
+                 trackCache[[type]][[trackId]] <<- list(
+                    trackHash = trackHash,
+                    contents = track[[fnName]](reference, coord, layout)
+                 )
+            }
+            nImages <<- nImages + 1
+            trackCache[[type]][[trackId]]$contents
+        }, error = function(e) {
+            message(paste("buildAllTracks: track error:", tracks[[trackId]]$track$type, trackId))
+            print(e)
+            NULL
+        })
+    })
+    if(nImages == 0) {
+        stopSpinner(session)
+        return(NULL)
+    }
+    builds
+}
+assembleCompositeImage <- function(builds, type, pngFile){
+    fileName <- paste0(app$NAME, "-", id, "-", type, "-image.png")       
+    if(is.null(pngFile)) pngFile <- file.path(sessionDirectory, fileName)
+    composite <- magick::image_append(
+        magick::image_join(lapply(builds[!sapply(builds, is.null)], function(build) build$image)), 
+        stack = TRUE
+    )
+    magick::image_write(composite, path = pngFile, format = "png")
+    stopSpinner(session)
+    pngFile
+}
+adjustLayoutForIP <- function(layout, builds){ # adjust layout for mdiInteractivePlotServer
+    layout$heights <- sapply(builds, function(build) if(is.null(build$image)) 0 else magick::image_info(build$image)$height)
+    layout$height <- sum(layout$heights)
+    layout$browserHeight <- layout$height / layout$dpi
+    layout$ylim <- lapply(builds, function(build) build$ylim)
+    layout$mai  <- lapply(builds, function(build) build$mai)  
+    layout    
+}
 
+#----------------------------------------------------------------------
+# render the composite browser plot image using base graphics
+#----------------------------------------------------------------------
+browserLayout <- list()
+createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for both screen and image file download
+    isPrint <- !is.null(pngFile)
+
+    # collect the track list
+    trackIds <- browser$tracks$orderedTrackIds()
+    nTracks <- length(trackIds)    
+    req(nTracks > 0)
+    tracks <- browser$tracks$tracks()
+
+    # inherit plot targets from the browser inputs
+    reference <- reference()
+    coord <- coord()
+
+    # parse the plot layout based on plots alone
+    browserSettings <- browser$settings$Browser_Options()
+    lengthUnit <- browserSettings$Length_Unit$value
+    dpi <- if(isPrint) browser$printDpi else browser$screenDpi
+    linesPerInch <- if(isPrint) browser$linesPerInchPrint() else browser$linesPerInchScreen()
+    browserWidth <- getInches(browserSettings$Browser_Width$value, lengthUnit)
+
+    # TODO: apportion these based on regionI
+    labelWidth   <- getInches(browserSettings$Label_Width$value,   lengthUnit)
+    legendWidth  <- getInches(browserSettings$Legend_Width$value,  lengthUnit)
+    plotWidth <- browserWidth - labelWidth - legendWidth
+
+    req(plotWidth > 0)
+    startSpinner(session)    
+    layout <- list(
+        isPrint = isPrint,
+        printMultiplier = if(isPrint) browser$printDpi / browser$screenDpi else 1,
+        dpi = dpi,
+        linesPerInch = linesPerInch,
+        browserWidth = browserWidth,
+        width = browserWidth * dpi,
+        plotWidth = plotWidth,
+        mai = list(
+            left  = labelWidth, 
+            right = legendWidth,
+            lengthUnit = lengthUnit 
+        ),
+        pointsize = as.integer(browserSettings$Font_Size$value)
+    )
+
+    # adjust the label width for UCSC track behavior
+    # TODO: only do this if there are UCSC tracks?
+    layout <- adjustLayoutForUcsc(layout) 
+
+    # override browser coordinates and width if exactly 1 track has adjustsWidth = TRUE
+    adjustingTrackIds <- unlist(sapply(trackIds, function(trackId) {
+        x <- tracks[[trackId]]$track$adjustsWidth
+        if(is.null(x) || !x) character() else trackId
+    }))
+    req(length(adjustingTrackIds <= 1))
+    if(length(adjustingTrackIds) == 1){
+        tryCatch({
+            x <- tracks[[adjustingTrackIds]]$track$adjustWidth(reference, coord, layout)
+            # coord <- x$coord
+            layout <- x$layout
+        }, error = function(e) {
+            print(e)
+            stopSpinner(session)
+            req(FALSE)
+        })
+    }
+
+    # build all tracks using reactives
+    builds <- buildAllTracks(trackIds, "buildTrack", "browser", layout)
+    if(is.null(builds)) return(NULL)
+
+    # assemble and return the composite browser image
+    list(
+        pngFile = assembleCompositeImage(builds, "browser", pngFile),
+        preBuildLayout = layout,  
+        layout = adjustLayoutForIP(layout, builds),      
+        parseLayout = yPixelToTrack
+    ) 
+}
+browserPlot <- mdiInteractivePlotServer(
+    "image", 
+    contents = reactive({
+        req(!browser$isInitializing())
+        contents <- createBrowserPlot()
+        browserLayout <<- contents[c("preBuildLayout", "layout")]
+        isolate({ browserIsDone( browserIsDone() + 1 ) })
+        contents
+    })
+)
+browserIsDone <- reactiveVal(0)
+
+# # ----------------------------------------------------------------------
+# # render the expansion plot image using base graphics
+# # ----------------------------------------------------------------------
+# expandingTrack <- reactiveVal(NULL)
+# createExpansionPlot <- function(trackId, pngFile = NULL){ # called to generate plot for both screen and image file download
+
+#     # build all expansion track images using reactives
+#     builds <- buildAllTracks(trackId, "buildExpansion", "expansion", browserLayout$preBuildLayout)
+#     if(is.null(builds)) return(NULL)
+
+#     # assemble and return the composite expansion image
+#     list(
+#         pngFile = assembleCompositeImage(builds, "expansion", pngFile),       
+#         layout = adjustLayoutForIP(browserLayout$layout, builds),  
+#         parseLayout = yPixelToTrack
+#     )
+# }
+# expansionImage <- mdiInteractivePlotServer(
+#     "expansionImage", 
+#     contents = reactive({
+#         expandingTrack <- expandingTrack()
+#         if(is.list(expandingTrack)) {
+#             show(selector = ".expansionImageWrapper")
+#             createExpansionPlot(expandingTrack$trackId)            
+#         } else {
+#             hide(selector = ".expansionImageWrapper")
+#             NULL 
+#         }
+#     })
+# )
+
+#----------------------------------------------------------------------
+# handle user interactions with the browser plot
+#----------------------------------------------------------------------
+
+# convert a Y pixel to the plot it landed in for use by mdiInteractivePlotServer
+interactingTrack <- NULL
+yPixelToTrack <- function(x, y){
+    req(browserLayout)
+    req(y)
+    layout <- browserLayout$layout
+    cumHeights <- cumsum(layout$heights)
+    i <- which(cumHeights > y)[1]
+    y <- if(i == 1) y else y - cumHeights[i - 1] # distance from top of track
+    interactingTrack <<- tracks[[ trackOrder()[i, trackId] ]]$track
+    coord <- coord()
+    list(
+        x = x, # no transformation required, tracks are never side by side
+        y = y,
+        layout = list(
+            width  = layout$width,
+            height = layout$heights[i],
+            dpi    = layout$dpi,
+            xlim   = as.integer64(c(coord$start, coord$end)),
+            ylim   = layout$ylim[[i]],            
+            mai    = layout$mai[[i]]
+        )        
+    )
+}
+
+# # transmit the click and hover actions to the track
+# doTrackClick <- function(click){
+#     req(interactingTrack$click)     
+#     click(interactingTrack, click)    
+# }
+# observeEvent(browser$click(), {
+#     click <- browser$click()
+#     if(click$keys$alt){ # on all tracks, Alt-click opens the track settings (leaves no-key, Ctrl and Shift for track use)
+#         interactingTrack$settings$open()
+#     } else {
+#         doTrackClick(click)
+#     }
+# })
+# observeEvent(browser$hover(), {
+#     req(interactingTrack$hover)
+#     hover(interactingTrack, browser$hover())
+# })
+
+# # transmit brush action to in-window zoom by default
+# observeEvent(browser$brush(), {
+#     brush <- browser$brush() 
+#     if(isTruthy(interactingTrack$forceBrush)) {
+#         brush(interactingTrack, brush)
+#     } else if(all(!as.logical(brush$keys))){ # on all tracks, a no-key brush creates a window coordinate zoom
+#         x <- sort(c(brush$coord$x1, brush$coord$x2))
+#         if(x[1] < x[2]){ # make sure this isn't an accidental brush that was supposed to be a click
+#             jumpToCoordinates(input$chromosome, x[1], x[2])
+#         } else { # handle zero-width brushes as clicks
+#             brush$coord$x <- mean(x)
+#             brush$coord$y <- mean(brush$coord$y1, brush$coord$y2)
+#             doTrackClick(brush)
+#         }  
+#     } else if(isTruthy(interactingTrack$brush)) { # tracks optionally handles key+brush events
+#         brush(interactingTrack, brush)
+#     }
+# })
+
+# #----------------------------------------------------------------------
+# # additional within-track navigation actions, e.g., scrolling through/tabulating a feature list
+# #----------------------------------------------------------------------
+# output$trackNavs <- renderUI({
+
+#     # process track list
+#     trackIds <- tracks$orderedTrackIds()
+#     nTracks <- length(trackIds)    
+#     req(nTracks > 0)
+#     trackNames <- getTrackNames(trackIds)
+#     names(trackNames) <- trackIds
+
+#     # extract any required navigation input rows
+#     nNavs <- 0
+#     navs <- lapply(trackIds, function(trackId) {
+#         track <- tracks[[trackId]]$track
+#         hasNav <- isTruthy(track$navigation)
+#         if(!hasNav) return(NULL)
+#         ui <- tryCatch({ navigation(track, session, id, reference, coord) }, error = function(e) NULL)
+#         if(is.null(ui)) return(NULL)
+#         nNavs <<- nNavs + 1
+#         list(
+#             ui = ui,
+#             name = trackNames[[trackId]]
+#         )
+#     })
+
+#     # if needed, populate the trackNav rows
+#     if(nNavs == 0) NULL else lapply(navs, function(nav){
+#         if(is.null(nav)) return(NULL)
+#         class <- nav$ui[[1]]$attribs$class
+#         if(!is.null(class) && class == "trackBrowserInput") tags$div(
+#             style = "margin-bottom: 8px;",
+#             tags$p(
+#                 style = "display: inline-block; margin: 30px 10px 5px 10px",
+#                 tags$strong(nav$name)
+#             ),
+#             nav$ui
+#         ) else  nav$ui
+#     })
+# })
+
+#----------------------------------------------------------------------
+# initialization
+#----------------------------------------------------------------------
+initialize <- function(jobId, loadData, loadSequence = NULL){
+    # chromosomes <- reference$chromosomes()
+    # x <- loadData$outcomes$coordinates
+    # if(is.null(x)) x <- list()
+    # x <- if(regionI <= length(x)) x[[regionI]] else list()
+    # loadData$chromosome <- if(is.null(x$chromosome)) chromosomes[1] else x$chromosome
+    # loadData$start      <- if(is.null(x$start))      defaults$start else x$start
+    # loadData$end        <- if(is.null(x$end))        defaults$end   else x$end
+    # updateSelectInput(session, 'chromosome', choices = chromosomes, selected = loadData$chromosome)
+    # updateTextInput(session,   'start',      value    = loadData$start)
+    # updateTextInput(session,   'end',        value    = loadData$end)
+    # pushCoordinateHistory(list(chromosome = loadData$chromosome, start = loadData$start, end = loadData$end))
+    if(!is.null(loadSequence)) initializeNextTrackBrowserElement(loadData, loadSequence)
+}
 
 # module return value
 list(
-
+    initialize = initialize,
+    NULL
 )
 #----------------------------------------------------------------------
 })}

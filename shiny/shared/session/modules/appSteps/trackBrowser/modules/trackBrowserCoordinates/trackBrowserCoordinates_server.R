@@ -1,12 +1,13 @@
 # trackBrowser server module for setting plot coordinates in genome via various inputs
 # there may be one or multiple distinct sets of coordinates plotted by a single browser instance
-trackBrowserCoordinatesServer <- function(
-    id, 
-    browserId, browserOptions, browserInput, browserSettings,
-    reference, regionI
-) {
+trackBrowserCoordinatesServer <- function(id, browser, regionI) {
     moduleServer(id, function(input, output, session) {
 #----------------------------------------------------------------------
+defaults <- list(
+    start = 1,
+    end = 10000
+)
+class(input) <- append("browserInput", class(input))
 
 #----------------------------------------------------------------------
 # browser navigation history, to support the back button
@@ -31,7 +32,7 @@ observeEvent(input$back,  {
 # browser navigation support functions
 #----------------------------------------------------------------------
 isStrict <- function(){
-    x <- browserSettings$Browser_Options()$Strict_Coordinates$value
+    x <- browser$setting$Browser_Options()$Strict_Coordinates$value
     if(is.null(x)) FALSE else x
 }
 jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = TRUE, then = NULL){ # arguments are strict coordinates
@@ -48,24 +49,24 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         start <- as.integer64(start - padding)
         end   <- as.integer64(end   + padding)
     }
-    genome <- reference$genome()
-    chromosomeSize <- getTargetChromosomeSize(chromosome) 
+    genome <- browser$reference$genome()
+    chromosomeSize <- browser$reference$getChromosomeSize(chromosome) 
     if(start < 1) start <- 1
     if(end > chromosomeSize) end <- chromosomeSize
-    clearObjectExpansions()
+    # clearObjectExpansions()
     if(history) pushCoordinateHistory(list(chromosome = chromosome, start = start, end = end))
     updateSelectInput(session, "chromosome", selected = chromosome)
     updateTextInput(session, "start", value = as.character(start))
     updateTextInput(session, "end",   value = as.character(end))
-    if(!is.null(then)) thenObserver <- observeEvent(browserIsDone(), {
-        setTimeout(then, delay = 100)
-        thenObserver$destroy()
-    }, ignoreInit = TRUE)
+    # if(!is.null(then)) thenObserver <- observeEvent(browserIsDone(), {
+    #     setTimeout(then, delay = 100)
+    #     thenObserver$destroy()
+    # }, ignoreInit = TRUE)
 }
 doZoom <- function(exp){
     start  <- as.integer64(input$start)
     end    <- as.integer64(input$end)
-    factor <- browserSettings$get("Browser_Options", "Zoom_Factor", 10)
+    factor <- browser$settings$get("Browser_Options", "Zoom_Factor", 10)
     width  <- (end - start + 1)
     center <- start + width / 2
     newHalfWidth <- (width * factor ** exp) / 2
@@ -95,7 +96,7 @@ observeEvent(input$nudgeLeft,  { doMove(0.05, -1) }, ignoreInit = TRUE)
 observeEvent(input$nudgeRight, { doMove(0.05,  1) }, ignoreInit = TRUE)
 observeEvent(input$moveRight,  { doMove(1,     1) }, ignoreInit = TRUE)
 observeEvent(input$all, { 
-    jumpToCoordinates(input$chromosome, 1, currentChromosomeSize(), strict = TRUE) 
+    jumpToCoordinates(input$chromosome, 1, browser$reference$getChromosomeSize(input$chromosome), strict = TRUE) 
 }, ignoreInit = TRUE)
 center <- function(x){
     coord <- coordinates(input)
@@ -112,7 +113,7 @@ center <- function(x){
 # jumpTo coordinates
 #----------------------------------------------------------------------
 checkJumpChrom <- function(chrom_){  
-    chrom <- chromosomeSizes()[name == chrom_, .(name, size)]
+    chrom <- browser$reference$chromosomeSizes()[name == chrom_, .(name, size)]
     req(nrow(chrom) == 1)
     chrom
 }
@@ -135,8 +136,8 @@ checkJumpEnd <- function(chrom, start, end_){
     end
 }
 checkJumpGene <- function(gene){
-    genome <- reference$genome()
-    annotation <- reference$annotation()
+    genome <- browser$reference$genome()
+    annotation <- browser$reference$annotation()
     req(gene, objectHasData(genome), objectHasData(annotation))
     gene <- getGene(genome, annotation, gene) %>% setUcscFeatureEndpoints(annotation)
     req(nrow(gene) == 1)
@@ -193,8 +194,8 @@ observeEvent(input$jumpTo,  {
 # gene search popup navigation
 #----------------------------------------------------------------------
 genes <- reactive({
-    genome <- reference$genome()
-    annotation <- reference$annotation()
+    genome <- browser$reference$genome()
+    annotation <- browser$reference$annotation()
     req(nrow(genome) > 0, nrow(annotation) > 0)
     getGenomeGenes(genome, annotation) %>% setUcscFeatureEndpoints(annotation) 
 })
@@ -234,11 +235,22 @@ observeEvent(annotationSearchInput(),  {
 #----------------------------------------------------------------------
 # initialization
 #----------------------------------------------------------------------
+observeEvent(browser$reference$chromosomes(), {
+    chromosomes <- browser$reference$chromosomes()
+    req(chromosomes)
+    current <- input$chromosome
+    selected <- if(is.null(current) || !(current %in% chromosomes)) chromosomes[1] else current
+    freezeReactiveValue(input, "chromosome")
+    updateSelectInput(session, "chromosome", choices = chromosomes, selected = selected)   
+})
 initialize <- function(jobId, loadData, loadSequence = NULL){
-    chromosomes <- reference$chromosomes()
-    loadData$chromosome  <- if(is.null(loadData$input$chromosome)) chromosomes[1] else loadData$input$chromosome
-    loadData$start       <- if(is.null(loadData$input$start)) 1   else loadData$input$start
-    loadData$end         <- if(is.null(loadData$input$end)) 10000 else loadData$input$end
+    chromosomes <- browser$reference$chromosomes()
+    x <- loadData$outcomes$coordinates
+    if(is.null(x)) x <- list()
+    x <- if(regionI <= length(x)) x[[regionI]] else list()
+    loadData$chromosome <- if(is.null(x$chromosome)) chromosomes[1] else x$chromosome
+    loadData$start      <- if(is.null(x$start))      defaults$start else x$start
+    loadData$end        <- if(is.null(x$end))        defaults$end   else x$end
     updateSelectInput(session, 'chromosome', choices = chromosomes, selected = loadData$chromosome)
     updateTextInput(session,   'start',      value    = loadData$start)
     updateTextInput(session,   'end',        value    = loadData$end)
@@ -249,8 +261,11 @@ initialize <- function(jobId, loadData, loadSequence = NULL){
 # module return value
 list(
     initialize = initialize,
+    input = input,
     jumpToCoordinates = jumpToCoordinates,
     center = center,
+    chromosomeSize = reactive({ browser$reference$getChromosomeSize(input$chromosome) }),
+    coordinateWidth = reactive({ as.integer64(input$end) - as.integer64(input$start) + 1 }),
     NULL
 )
 #----------------------------------------------------------------------

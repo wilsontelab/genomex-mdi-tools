@@ -1,9 +1,6 @@
 # trackBrowser server module for loading a reference genome and assoicated annotation
 # there is always a single reference genome selected at a time
-trackBrowserReferenceServer <- function(
-    id, 
-    browserId, browserOptions, browserInput, browserSettings
-) {
+trackBrowserReferenceServer <- function(id, browser) {
     moduleServer(id, function(input, output, session) {
 #----------------------------------------------------------------------
 defaults <- list(
@@ -12,7 +9,7 @@ defaults <- list(
 )
 
 #----------------------------------------------------------------------
-# fill cascading genome > chromosomes
+# fill cascading genome > annotations, chromosomes
 #----------------------------------------------------------------------
 # genome
 genomes <- reactiveVal( listUcscGenomes() )
@@ -103,19 +100,13 @@ observeEvent(genome(), {
     genome <- genome()
     req(nrow(genome()) > 0)
     annotations(listUcscAnnotations(genome$genome))
-    # if(loadingBookmark){
-    #     loadingBookmark <<- FALSE
-    # } else {
-        # if(isLoadingDefaultGenome) isLoadingDefaultGenome <- FALSE
-        # else 
-        annotationInput(data.table())            
-        chromosomes(c(listCanonicalChromosomes(genome$genome), "all"))
-        # freezeReactiveValue(input, "chromosome")
-        # updateSelectInput(session, "chromosome", choices = chromosomes(), selected = NULL)        
-    # }
+    annotationInput(data.table())            
+    chromosomes(c(listCanonicalChromosomes(genome$genome), "all"))     
 })
+
 #----------------------------------------------------------------------
 # additional metadata
+#----------------------------------------------------------------------
 genomeSize <- reactive({
     genome <- genome()
     req(nrow(genome()) > 0)
@@ -131,17 +122,19 @@ getChromosomeSize <- function(chrom_){
     if(chrom_ == "all") genomeSize()
     else chromosomeSizes()[name == chrom_, size]    
 }
+
 #----------------------------------------------------------------------
 # initialization
+#----------------------------------------------------------------------
 initializeGenome <- function(jobId, loadData, loadSequence){
-    if(is.null(loadData$genome)) loadData$genome <- genomes()[genome == defaults$genome]
-    annotations(listUcscAnnotations(loadData$genome$genome))
-    genomeInput(loadData$genome)
+    if(is.null(loadData$outcomes$genome)) loadData$outcomes$genome <- genomes()[genome == defaults$genome]
+    annotations(listUcscAnnotations(loadData$outcomes$genome$genome))
+    genomeInput(loadData$outcomes$genome)
     initializeNextTrackBrowserElement(loadData, loadSequence)
 }
 initializeAnnotation <- function(jobId, loadData, loadSequence){
-    if(is.null(loadData$annotation)) loadData$annotation <- annotations()[track == defaults$annotation]
-    annotationInput(loadData$annotation)
+    if(is.null(loadData$outcomes$annotation)) loadData$outcomes$annotation <- annotations()[track == defaults$annotation]
+    annotationInput(loadData$outcomes$annotation)
     initializeNextTrackBrowserElement(loadData, loadSequence)
 }
 #----------------------------------------------------------------------
