@@ -44,14 +44,17 @@ trackItemsDialogUI <- function(
             )
         ),
         fluidRow(
+            # if(isFiles) box(
+            #     width = 12,
+            #     serverSourceFilesButtonUI(
+            #         ns("shinyFilesButton"),
+            #         multiple = TRUE,
+            #         buttonType = "primary",
+            #         style = "width: 250px;"
+            #     )
             if(isFiles) box(
                 width = 12,
-                serverSourceFilesButtonUI(
-                    ns("shinyFilesButton"),
-                    multiple = TRUE,
-                    buttonType = "primary",
-                    style = "width: 250px;"
-                )
+                serverFileSelectorUI(ns("serverFileSelector"))
             ) else bufferedTableUI(
                 ns("availableItems"), 
                 title = paste("Available", itemTypePlural),
