@@ -52,7 +52,7 @@ adjustLayoutForUcsc <- function(layout){
     layout
 }
 ucscTrackImage <- function(genome, coord, layout, tracks = list(), ruler = FALSE){
-    req(tracks)    
+    req(tracks, length(tracks) > 0)    
     startSpinner(session, message = "getting UCSC tracks")
 
     # assemble the get url query
