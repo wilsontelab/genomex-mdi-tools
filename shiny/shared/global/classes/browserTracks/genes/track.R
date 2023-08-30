@@ -10,7 +10,9 @@ new_genesTrack <- function(trackId) {
         hover = FALSE,
         brush = FALSE,
         items = FALSE,
-        navigation = FALSE # whether the track offers a custom, additional row of within-track navigation inputs
+        navigation = FALSE, # whether the track offers a custom, additional row of within-track navigation inputs
+        expand = FALSE,
+        expand2 = FALSE
     )
 }
 
@@ -118,7 +120,7 @@ build.genesTrack <- function(track, reference, coord, layout){
 
 # plot interaction methods for the S3 class
 # called by trackBrowser if track$click, $hover, or $brush is TRUE, above
-click.genesTrack <- function(track, click){
+click.genesTrack <- function(track, click, regionI){
 
     # get the target gene
     strand_ <- if(click$coord$y < 2) "-" else "+"
@@ -145,6 +147,6 @@ click.genesTrack <- function(track, click){
 
     # execute simple click navigation to gene limits                   
     } else {
-        app$browser$jumpToCoordinates(genes[1, chrom], genes[, min(start)], genes[, max(end)])
+        app$browser$jumpToCoordinates(regionI, genes[1, chrom], genes[, min(start)], genes[, max(end)])
     }
 }

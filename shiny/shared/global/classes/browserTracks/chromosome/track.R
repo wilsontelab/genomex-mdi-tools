@@ -106,16 +106,17 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
 
 # plot interaction methods for the S3 class
 # called by trackBrowser if track$click or track$hover is TRUE, above
-click.chromosomeTrack <- function(track, click){
+click.chromosomeTrack <- function(track, click, regionI){
     d <- chromosomeTrackData
     req(d$coord)
-    app$browser$center((click$coord$x - d$coord$start) / d$coord$width * d$chromSize)  
+    app$browser$center(regionI, (click$coord$x - d$coord$start) / d$coord$width * d$chromSize)  
 }
-brush.chromosomeTrack <- function(track, brush){
+brush.chromosomeTrack <- function(track, brush, regionI){
     d <- chromosomeTrackData
     req(d$coord)
     getX <- function(x) (x - d$coord$start) / d$coord$width * d$chromSize
     app$browser$jumpToCoordinates(
+        regionI,
         d$coord$chromosome, 
         getX(brush$coord$x1), 
         getX(brush$coord$x2), 

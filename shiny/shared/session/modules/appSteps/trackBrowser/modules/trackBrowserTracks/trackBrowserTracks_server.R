@@ -1,5 +1,5 @@
 # trackBrowser server module for selecting and ordering browser tracks
-# there is always a single set of tracks selected at a time and applied to all output images
+# there is always a single set of tracks selected at a time applied to all regions
 trackBrowserTracksServer <- function(id, browser) {
     moduleServer(id, function(input, output, session) {
 #----------------------------------------------------------------------
@@ -17,10 +17,10 @@ suite  <- 'genomex-mdi-tools'
 module <- 'trackBrowser'
 
 #----------------------------------------------------------------------
-# manage browser track types availabe and in use
+# manage browser track types available and in use
 #----------------------------------------------------------------------
-trackTypes <- list() # key = trackType, value = settings template file path
-tracks <- reactiveVal(list())     # key = trackId,   value = browserTrackServer()
+trackTypes <- list()          # key = trackType, value = settings template file path
+tracks <- reactiveVal(list()) # key = trackId,   value = browserTrackServer()
 nullTrackOrder <- data.table(trackId = character(), order = integer())
 trackOrder <- reactiveVal(nullTrackOrder)
 orderedTrackIds <- reactive({ # the current track ids, in plotting order
@@ -85,8 +85,7 @@ getTrackNames <- function(trackIds){
 }
 #----------------------------------------------------------------------
 # handle track addition from select input or bookmark
-addTrack <- function(trackType, trackId = NULL){
-    ns <- if(is.null(trackId)) session$ns else browser$session$ns
+addTrack <- function(trackType, trackId = NULL, ns){
     if(is.null(trackId)) trackId <- getTrackId()
     cssId <- paste("track", trackId, sep = "_")
     track <- browserTrackServer(
@@ -112,7 +111,7 @@ addTrack <- function(trackType, trackId = NULL){
         where = "beforeEnd",
         multiple = FALSE,
         immediate = TRUE,
-        browserTrackUI(ns(cssId), track) # see above; unclear why different ns is required when addTrack is called from init vs. user action
+        browserTrackUI(ns(cssId), track) # unclear why different ns is required when addTrack is called from init vs. user action
 
     )
     trackOrder <- trackOrder()
@@ -131,7 +130,7 @@ observeEvent(input$addTrack, {
     req(trackType)
     req(trackType != addTrackPrompt)
     updateSelectInput(session, "addTrack", selected = addTrackPrompt) # reset the prompt
-    trackId <- addTrack(trackType)
+    trackId <- addTrack(trackType, ns = session$ns)
     createTrackSettingsObserver(trackId)
 }, ignoreInit = TRUE)
 #----------------------------------------------------------------------
@@ -155,7 +154,7 @@ observeEvent(input$duplicateTrackSelect, {
     req(dupTrackId != duplicateTrackPromptId)
     updateSelectInput(session, "duplicateTrackSelect", selected = duplicateTrackPromptId) # reset the prompt
     dupTrack <- tracks()[[dupTrackId]]
-    trackId <- addTrack(dupTrack$type)
+    trackId <- addTrack(dupTrack$type, ns = session$ns)
     tracks()[[trackId]]$track$settings$replace(dupTrack$track$settings$all_())
     createTrackSettingsObserver(trackId)
 }, ignoreInit = TRUE)
@@ -200,7 +199,7 @@ createTrackSettingsObserver <- function(trackId){
     track <- tracks()[[trackId]]
     trackSettingsObservers[[trackId]] <<- observeEvent(track$track$settings$all_(), {
         trackSettingsUndoId <<- trackId
-        # clearObjectExpansions()
+        app$browser$clearObjectExpansions()
     })
 }
 observeEvent(input$undoTrackSettings, {
@@ -215,18 +214,18 @@ observeEvent(input$undoTrackSettings, {
 initialize <- function(jobId, loadData, loadSequence){
     initTrackTypes()
     if(is.null(loadData$outcomes$trackOrder)){
-        for(trackType in defaultTrackTypes) addTrack(trackType)
+        for(trackType in defaultTrackTypes) addTrack(trackType, ns = browser$session$ns)
     } else {
         trackIds <- loadData$outcomes$trackOrder[order(order), trackId]
         lapply(trackIds, function(trackId){
             track <- loadData$outcomes$tracks[[trackId]]         
-            addTrack(track$type, trackId)
+            addTrack(track$type, trackId, ns = browser$session$ns)
             tracks()[[trackId]]$track$settings$replace(track$settings)
             createTrackSettingsObserver(trackId)
             if(!is.null(track$items)) tracks()[[trackId]]$track$settings$items(track$items)
         })
     }
-    initializeNextTrackBrowserElement(loadData, loadSequence)
+    doNextLoadSequenceItem(loadData, loadSequence)
 }
 
 #----------------------------------------------------------------------
@@ -240,8 +239,7 @@ list(
         tracks <- tracks()
         x <- lapply(trackIds, function(trackId){
             track <- tracks[[trackId]]
-            list(
-                # cssId = track$cssId,  
+            list( 
                 type = track$type,
                 settings = track$track$settings$all_(),
                 items = if(is.null(track$track$settings$items)) NULL 
@@ -251,6 +249,7 @@ list(
         names(x) <- trackIds
         x
     }),
+    getTrackNames = getTrackNames,
     initialize = initialize    
 )
 #----------------------------------------------------------------------

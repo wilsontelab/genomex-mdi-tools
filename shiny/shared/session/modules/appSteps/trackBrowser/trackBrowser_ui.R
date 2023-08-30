@@ -1,26 +1,16 @@
 #----------------------------------------------------------------------
 # UI components for the trackBrowser appStep module
 #----------------------------------------------------------------------
-
-# module ui function
 trackBrowserUI <- function(id, options) {
-
-    # initialize namespace
     module <- 'trackBrowser'
     appStepDir <- getAppStepDir(module)
     ns <- NS(id)
-    
-    # override missing options to module defaults
     options <- setDefaultOptions(options, stepModuleInfo$trackBrowser)
-
-    # return the UI contents
     standardSequentialTabItem(
 
-        # page header text
+        # page header
         options$longLabel,
         options$leaderText,
-
-        # page header links, uncomment as needed
         id = id,
         # documentation = TRUE,
         # terminal = TRUE,
@@ -33,75 +23,78 @@ trackBrowserUI <- function(id, options) {
         tags$style(slurpFile(file.path(appStepDir, "trackBrowser.css"))),
         tags$script(slurpFile(file.path(appStepDir, "trackBrowser.js"))),
 
-        #----------------------------------------------------------------------
-        # top row of browser-level options and navigation
-        #----------------------------------------------------------------------
+        # top row of nav inputs
         tags$div(
             style = "white-space: nowrap;",
             class = "trackBrowserSelectizeWrapper",
+
+            # singular genome reference + annotation
             trackBrowserReferenceUI(ns("reference")),
+
+            # one or more sets of region inputs filled by trackBrowserServer
             tags$div(
                 style = "display: inline-block;",
                 tags$div(
-                    class = "trackBrowserCoordinateInputs",
-                    # style = "display: inline-block;" # one or more sets of span inputs filled by trackBrowserServer
+                    class = "trackBrowserCoordinateInputs"
                 ),
-        #         # additional track navigation options, one set only, if multiple regions, must handle dispersal elsewhere
-        #         tags$div(
-        #             id = ns("trackNavWrapper"),
-        #             class = "trackNavWrapper",
-        #             uiOutput(ns("trackNavs"))
-        #         ),                
-                NULL
-            ),
-            NULL
+
+                # singular additional track-level navigation options; if multiple regions, track must handle dispersal
+                tags$div(
+                    id = ns("trackNavWrapper"),
+                    class = "trackNavWrapper",
+                    uiOutput(ns("trackNavs"))
+                )
+            )
         ),
+
+        # second row of tracks and image outputs
         tags$div(
-            style = "white-space: nowrap;", #; margin-top: 4px
+            style = "white-space: nowrap;",
             class = "trackBrowserSelectizeWrapper",
+
+            # track configuration
             trackBrowserTracksUI(ns("tracks")),
-            #----------------------------------------------------------------------
-            # the browser output area, with additional track nav options
-            #----------------------------------------------------------------------
+
+            # the browser output area
             tags$div(
                 class = "trackBrowserImages",
-                style = "display: inline-block; white-space: nowrap;",
-                NULL
-            ),
-            NULL
+                style = "display: inline-block; white-space: nowrap;"
+            )
         ),
 
-        # # tables for display data describing either an object itself and/or its expansion details
-        # # put these below to provide maximum width for complex tables
-        # fluidRow(
-        #     class = "objectTableWrapper browserExpansionWrapper",
-        #     style = "display: none;",
-        #     bufferedTableUI(
-        #         id = ns("objectTable"), 
-        #         title = NULL, 
-        #         downloadable = TRUE, 
-        #         width = 12,
-        #         collapsible = TRUE,
-        #         collapsed = FALSE
-        #     )
-        # ),
-        # fluidRow(
-        #     class = "expansionTableWrapper browserExpansionWrapper",
-        #     style = "display: none;",
-        #     bufferedTableUI(
-        #         id = ns("expansionTable"), 
-        #         title = NULL, 
-        #         downloadable = TRUE, 
-        #         width = 12,
-        #         collapsible = TRUE,
-        #         collapsed = FALSE
-        #     )  
-        # ),
+        # tables for displaying data describing either...
+        # ... an object itself ...
+        fluidRow(
+            class = "objectTableWrapper browserExpansionWrapper",
+            style = "display: none;",
+            bufferedTableUI(
+                id = ns("objectTable"), 
+                title = NULL, 
+                downloadable = TRUE, 
+                width = 12,
+                collapsible = TRUE,
+                collapsed = FALSE
+            )
+        ),
 
-        # # a further place for arbitrary, track-defined UI content based on expand[2] actions
-        # fluidRow(
-        #     uiOutput(ns("expansionUI"))
-        # ),
-        NULL
+        # ... or expansion details about that object
+        # row selection in expansionTable might populate expansionUI
+        fluidRow(
+            class = "expansionTableWrapper browserExpansionWrapper",
+            style = "display: none;",
+            bufferedTableUI(
+                id = ns("expansionTable"), 
+                title = NULL, 
+                downloadable = TRUE, 
+                width = 12,
+                collapsible = TRUE,
+                collapsed = FALSE
+            )  
+        ),
+
+        # a place for arbitrary, track-defined UI content based on expand2 or other click actions
+        fluidRow(
+            uiOutput(ns("expansionUI"))
+        )
     )
 }

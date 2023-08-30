@@ -1,5 +1,5 @@
 # trackBrowser UI module for setting plot coordinates in genome via various inputs
-# there may be one or multiple distinct sets of coordinates plotted by a single browser instance
+# there may be one or multiple distinct sets of coordinates, i.e., regions, plotted by a single browser instance
 trackBrowserCoordinatesUI <- function(id, regionI) {
     ns <- NS(id) 
     getLabel <- function(label) if(regionI == 1) label else NULL

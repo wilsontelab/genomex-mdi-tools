@@ -1,5 +1,5 @@
 # trackBrowser UI module for selecting and ordering browser tracks
-# there is always a single set of tracks selected at a time and applied to all output images
+# there is always a single set of tracks selected at a time applied to all regions
 trackBrowserTracksUI <- function(id, ...) {
     ns <- NS(id) 
     trackRankListId <- "trackRankListGroup"

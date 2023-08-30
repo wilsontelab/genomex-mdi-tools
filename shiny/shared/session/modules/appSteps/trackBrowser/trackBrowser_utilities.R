@@ -3,20 +3,6 @@
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
-# ordered initialization of the track browser, called by module initialization functions
-#----------------------------------------------------------------------
-initializeNextTrackBrowserElement <- function(loadData, loadSequence){
-    dmsg("initializeNextTrackBrowserElement")
-    if(!isTruthy(loadSequence)) return()
-    nNext <- length(loadSequence)
-    if(nNext > 1){
-        setTimeout(loadSequence[[1]], loadData, loadSequence[2:nNext], delay = 50)
-    } else{
-        setTimeout(loadSequence[[1]], loadData, NA, delay = 50)
-    }
-}
-
-#----------------------------------------------------------------------
 # MDI (as opposed to UCSC) track image assembly
 #----------------------------------------------------------------------
 mdiTrackImage <- function(layout, height, plotFn, message = NULL, ...){ # for track that generate plots
@@ -465,13 +451,13 @@ trackNavCanNavigate.browserTrack <- function(track){
 trackNavCanExpand.browserTrack <- function(track){
     getBrowserTrackSetting(track, "Track", "Show_Navigation", "hide") %in% c("expand", "navigate_and_expand")
 }
-handleTrackNavTableClick <- function(track, chrom, start, end, expandFn = NULL){
+handleTrackNavTableClick <- function(regionI, track, chrom, start, end, expandFn = NULL){
     navigate <- trackNavCanNavigate(track)
     expand   <- trackNavCanExpand(track)
     if(navigate && expand){
-        app$browser$jumpToCoordinates(chrom, start, end, then = expandFn)
+        app$browser$jumpToCoordinates(regionI, chrom, start, end, then = expandFn)
     } else if(navigate){
-        app$browser$jumpToCoordinates(chrom, start, end)
+        app$browser$jumpToCoordinates(regionI, chrom, start, end)
     } else if(expand){
         expandFn()
     }

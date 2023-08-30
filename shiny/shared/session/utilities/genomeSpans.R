@@ -42,7 +42,7 @@ genomex_loadWindowGenomeSpans <- function(track, reference, coord, bgzFile, ...)
 #     handleRowClick <- function(selectedRow){
 #         req(selectedRow)
 #         span <- trackNavDataUnformatted()[selectedRow]
-#         handleTrackNavTableClick(track, span$chrom, span$start + 1, span$end)
+#         handleTrackNavTableClick(regionI, track, span$chrom, span$start + 1, span$end)
 #     }
 #     tagList(
 #         trackNavTable(

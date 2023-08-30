@@ -17,7 +17,7 @@ suite  <- 'genomex-mdi-tools'
 module <- 'trackBrowser'
 class(input) <- unique(append("browserInput", class(input)))
 appStepDir <- getAppStepDir(module)
-browser <- list(
+browser <- list( # the single object passed to modules for access to appStep and sub-module-level objects
     isInitializing = reactiveVal(TRUE),
     id = id,
     input = input,
@@ -32,7 +32,7 @@ browser$settings <- activateMdiHeaderLinks( # uncomment as needed
     baseDirs = appStepDir, # for code viewer/editor
     download = downloadHandler(
         filename = paste0(app$NAME, "-", id, ".png"), 
-        content = function(pngFile) createBrowserPlot(pngFile) # TODO: build composite image
+        content = constructDownloadComposite
     ),
     settings = id, # for step-level settings
     size = "m",
@@ -48,9 +48,12 @@ browser$tracks      <- trackBrowserTracksServer("tracks", browser)
 browser$images      <- list()
 
 #----------------------------------------------------------------------
-# support simultaneous plotting of 1 or more genome regions
+# support simultaneous plotting of one or multiple genome regions
+# each region has its own set of coordinate inputs and associated output image
 #----------------------------------------------------------------------
-browser$nRegions <- reactive({ browser$settings$get("Browser_Options", "Number_of_Regions", 1) })
+browser$nRegions <- reactive({ 
+    browser$settings$get("Browser_Options", "Number_of_Regions", 1) 
+})
 addRegionCoordinates <- function(regionI, initialize){
     elementId <- paste0("coordinates", regionI)
     insertUI(".trackBrowserCoordinateInputs", "beforeEnd", immediate = TRUE, ui = trackBrowserCoordinatesUI(session$ns(elementId), regionI))
@@ -61,8 +64,8 @@ addRegionCoordinates <- function(regionI, initialize){
 removeRegionCoordinates <- function(regionI){
     elementId <- paste0("coordinates", regionI)
     removeUI(paste0("#", session$ns(elementId)), immediate = TRUE)
+    browser$coordinates[[regionI]]$destroy()
     browser$coordinates[[regionI]] <<- NULL
-
 }
 addRegionImage <- function(regionI, initialize){
     elementId <- paste0("image", regionI)
@@ -74,8 +77,8 @@ addRegionImage <- function(regionI, initialize){
 removeRegionImage <- function(regionI){
     elementId <- paste0("image", regionI)
     removeUI(paste0("#", session$ns(elementId)), immediate = TRUE)
+    browser$images[[regionI]]$destroy()
     browser$images[[regionI]] <<- NULL
-
 }
 observeEvent(browser$nRegions(), {
     req(!browser$isInitializing())
@@ -95,35 +98,6 @@ observeEvent(browser$nRegions(), {
         }
     }
 }, ignoreInit = TRUE)
-
-# browserIsInitialized <- reactiveVal(FALSE)
-# isLoadingDefaultGenome <- FALSE
-# confirmBrowserInit <- function(...) {
-#     hide("initMessage")
-#     browserIsInitialized(TRUE) 
-#     genome <- genome()
-#     if(!objectHasData(genome)) {
-#         genomes <- genomes()
-#         req(objectHasData(genomes))
-#         genomeInput(genomes[genome == defaultGenome])
-#     }
-#     annotation <- annotation()
-#     if(!objectHasData(annotation)) {
-#         isLoadingDefaultGenome <<- TRUE
-#         annotations <- annotations()
-#         req(objectHasData(annotations))
-#         annotationInput(annotations[track == defaultAnnotation])
-#     }
-#     if(length(names(tracks)) == 0) isolate({ # set default header tracks if not loading a bookmark
-#         for(i in seq_along(c(defaultTrackTypes, options$defaultTrackTypes))){
-#             trackId <- getTrackId()
-#             cssId <- paste("track", trackId, sep = "_")
-#             tracks[[trackId]] <<- initTrack(cssId, trackId, defaultTrackTypes[i])
-#             createTrackSettingsObserver(trackId)
-#         }
-#     })
-# }
-# setTimeout(confirmBrowserInit, delay = 1000)
 
 #----------------------------------------------------------------------
 # image scaling support
@@ -151,75 +125,146 @@ getLinesPerInch <- function(dpi){ # conversion between lines and inches based on
 browser$linesPerInchScreen <- reactive( getLinesPerInch(browser$screenDpi) )
 browser$linesPerInchPrint  <- reactive( getLinesPerInch(browser$printDpi) )
 
-# # ----------------------------------------------------------------------
-# # create a single object description table - any click that sets objectTableData() replaces the table contents
-# # ----------------------------------------------------------------------
-# objectTableData <- reactiveVal(NULL)
-# objectTable <- bufferedTableServer(
-#     "objectTable",
-#     id,
-#     input,
-#     tableData = objectTableData,
-#     selection = 'none',
-#     options = list(
-#         searching = FALSE,
-#         paging = FALSE,
-#         info = FALSE
-#     )
-# )
-# observeEvent(objectTableData(), {
-#     toggle(selector = ".objectTableWrapper", condition = isTruthy(objectTableData()))
-# }, ignoreNULL = FALSE)
+#----------------------------------------------------------------------
+# additional track-level navigation actions, e.g., tabulating a feature list
+# these start hidden even if offered by a track; user must enable them, typically for just one track
+#----------------------------------------------------------------------
+output$trackNavs <- renderUI({
 
-# # ----------------------------------------------------------------------
-# # create a single expansion table - any click that sets expansionTableData() replaces the table contents
-# # ----------------------------------------------------------------------
-# expansionTableData <- reactiveVal(NULL)
-# expansionTable <- bufferedTableServer(
-#     "expansionTable",
-#     id,
-#     input,
-#     tableData = expansionTableData,
-#     selection = 'single',
-#     selectionFn = function(selectedRow){
-#         expandingTrack <- expandingTrack()     
-#         req(selectedRow, expandingTrack)
-#         track <- tracks[[expandingTrack$trackId]]
-#         req(track, track$track$expand2)
-#         expand2(track$track, reference(), coord(), expansionTableData()[selectedRow])
-#     },
-#     options = list()
-# )
-# observeEvent(expansionTableData(), {
-#     toggle(selector = ".expansionTableWrapper", condition = isTruthy(expansionTableData()))
-# }, ignoreNULL = FALSE)
-# clearObjectExpansions <- function(){
-#     hide(selector = ".browserExpansionWrapper")
-#     expandingTrack(NULL)
-#     objectTableData(NULL)
-#     expansionTableData(NULL)
-#     expansionUI(NULL)
-# }
+    # process track list
+    trackIds <- browser$tracks$orderedTrackIds()
+    nTracks <- length(trackIds)    
+    req(nTracks > 0)
+    trackNames <- browser$tracks$getTrackNames(trackIds)
+    names(trackNames) <- trackIds
 
-# # ----------------------------------------------------------------------
-# # futher enable tracks to add add arbitrary bottom content in response to expand[2] actions
-# # ----------------------------------------------------------------------
-# expansionUI <- reactiveVal(NULL)
-# output$expansionUI <- renderUI({
-#     ui <- expansionUI()
-#     req(ui)
-#     ui
-# })
+    # extract any required navigation input rows
+    nNavs <- 0
+    tracks <- browser$tracks$tracks()
+    navs <- lapply(trackIds, function(trackId) {
+        track <- tracks[[trackId]]$track
+        hasNav <- isTruthy(track$navigation)
+        if(!hasNav) return(NULL)
+        ui <- tryCatch({ navigation(track, session, id, browser) }, error = function(e) NULL)
+        if(is.null(ui)) return(NULL)
+        nNavs <<- nNavs + 1
+        list(
+            ui = ui,
+            name = trackNames[[trackId]]
+        )
+    })
+
+    # if needed, populate the trackNav rows
+    if(nNavs == 0) NULL else lapply(navs, function(nav){
+        if(is.null(nav)) return(NULL)
+        class <- nav$ui[[1]]$attribs$class
+        if(!is.null(class) && class == "trackBrowserInput") tags$div(
+            style = "margin-bottom: 8px;",
+            tags$p(
+                style = "display: inline-block; margin: 30px 10px 5px 10px",
+                tags$strong(nav$name)
+            ),
+            nav$ui
+        ) else  nav$ui
+    })
+})
+
+# ----------------------------------------------------------------------
+# create a single object description table - any click that sets objectTableData() replaces the table contents
+# ----------------------------------------------------------------------
+objectTableData <- reactiveVal(NULL)
+objectTable <- bufferedTableServer(
+    "objectTable",
+    id,
+    input,
+    tableData = objectTableData,
+    selection = 'none',
+    options = list(
+        searching = FALSE,
+        paging = FALSE,
+        info = FALSE
+    )
+)
+observeEvent(objectTableData(), {
+    toggle(selector = ".objectTableWrapper", condition = isTruthy(objectTableData()))
+}, ignoreNULL = FALSE)
+
+# ----------------------------------------------------------------------
+# create a single expansion table - any click that sets expansionTableData() replaces the table contents
+# ----------------------------------------------------------------------
+expansionTableData <- reactiveVal(NULL)
+expandingTrack <- reactiveVal(NULL)
+expansionTable <- bufferedTableServer(
+    "expansionTable",
+    id,
+    input,
+    tableData = expansionTableData,
+    selection = 'single',
+    selectionFn = function(selectedRow){
+        expandingTrack <- expandingTrack()   
+        req(selectedRow, expandingTrack)
+        track <- browser$tracks$tracks()[[expandingTrack$trackId]]
+        req(track, track$track$expand2)
+        ui <- expand2(track$track, browser, expansionTableData()[selectedRow])
+        req(ui)
+        expansionUI(ui)
+    },
+    options = list()
+)
+observeEvent(expansionTableData(), {
+    toggle(selector = ".expansionTableWrapper", condition = isTruthy(expansionTableData()))
+}, ignoreNULL = FALSE)
+clearObjectExpansions <- function(){
+    hide(selector = ".browserExpansionWrapper")
+    expandingTrack(NULL)
+    for(regionI in 1:browser$nRegions()) browser$images[[regionI]]$expandingTrack(NULL)
+    objectTableData(NULL)
+    expansionTableData(NULL)
+    expansionUI(NULL)
+}
+
+# ----------------------------------------------------------------------
+# futher enable tracks to add add arbitrary bottom content in response to expand2 or other actions
+# ----------------------------------------------------------------------
+expansionUI <- reactiveVal(NULL)
+output$expansionUI <- renderUI({
+    ui <- expansionUI()
+    req(ui)
+    ui
+})
 
 #----------------------------------------------------------------------
-# define bookmarking actions and initialize the browser
+# construct a composite print quality image for download
+#----------------------------------------------------------------------
+constructDownloadComposite <- function(pngFile) {
+    startSpinner(session, message = "rendering download")
+    nRegions <- browser$nRegions()
+    png <- if(nRegions == 1) browser$images[[1]]$createBrowserPlot(pngFile) else {
+        arrangement <- browser$settings$Browser_Options()$Region_Arrangement$value
+        blankImage <-  magick::image_blank(30, 30, color = "white")
+        getImage <- function(regionI){
+            browser$images[[regionI]]$createBrowserPlot(pngFile)
+            magick::image_read(pngFile)
+        }
+        images <- getImage(1)
+        for(regionI in 2:nRegions) images <- c(images, blankImage, getImage(regionI))
+        composite <- magick::image_append(images, stack = arrangement == "stacked")
+        magick::image_write(composite, path = pngFile, format = "png")
+    }
+    stopSpinner(session)
+    png
+}
+
+#----------------------------------------------------------------------
+# define bookmarking actions and initialize the browser load sequence
 #----------------------------------------------------------------------
 bookmarkObserver <- observe({
     bm <- getModuleBookmark(id, module, bookmark, locks, fail = FALSE)  
     loadingBookmark <- isTruthy(bm)
     if(loadingBookmark) browser$settings$replace(bm$settings)    
     loadData <- if(loadingBookmark) bm else list()
-    nRegions <- if(loadingBookmark && !is.null(bm$settings$Browser_Options$Number_of_Regions)) bm$settings$Browser_Options$Number_of_Regions$value else 1
+    nRegions <- loadData$settings$Browser_Options$Number_of_Regions$value
+    if(is.null(nRegions)) nRegions <- 1
     loadSequence <- c(
         list(
             browser$reference$initializeGenome,
@@ -232,7 +277,7 @@ bookmarkObserver <- observe({
         lapply(1:nRegions, addRegionImage, FALSE),
         function(...) reportProgress("browser is initialized")
     )
-    initializeNextTrackBrowserElement(loadData, loadSequence)
+    doNextLoadSequenceItem(loadData, loadSequence)
     browser$isInitializing(FALSE)
     bookmarkObserver$destroy()
 })
@@ -251,17 +296,20 @@ list(
         annotation  = browser$reference$annotationInput,  
         coordinates = reactive({ lapply(browser$coordinates, function(x) reactiveValuesToList(x$input)) }),
         trackOrder  = browser$tracks$trackOrder,
-        tracks      = browser$tracks$bookmarkTracks,
-        NULL
+        tracks      = browser$tracks$bookmarkTracks
     ),
-    # jumpToCoordinates = jumpToCoordinates,
-    # center = center,
-    # expandingTrack = expandingTrack,          # to describe the source of the expansion image/table as expandingTrack(trackId = trackId, object = xxx)
-    # objectTableData = objectTableData,        # to populate the object description table (e.g., a gene)
-    # expansionTableData = expansionTableData,  # to populate the object expansion table   (e.g., a gene's transripts)
-    # expansionUI = expansionUI,                # arbitrary expansion UI content passed to renderUI
-    # isReady = reactive({ getStepReadiness(options$source, ...) }),
-    NULL
+    browserIsDoneReactive = function(regionI) reactive({ browser$images[[regionI]]$browserIsDone() }),
+    jumpToCoordinates = function(regionI, ...) browser$coordinates[[regionI]]$jumpToCoordinates(...),
+    center = function(regionI, ...) browser$coordinates[[regionI]]$center(...),
+    expandingTrack = function(regionI, trackData){ # to describe the source of the expansion image/table as expandingTrack(list(trackId = trackId, object = xxx))
+        expandingTrack(trackData)
+        browser$images[[regionI]]$expandingTrack(trackData)
+    },
+    objectTableData = objectTableData,         # to populate the object description table (e.g., a gene)
+    expansionTableData = expansionTableData,   # to populate the object expansion table   (e.g., a gene's transripts)
+    expansionUI = expansionUI,                 # arbitrary expansion UI content passed to renderUI
+    clearObjectExpansions = clearObjectExpansions,
+    isReady = reactive({ getStepReadiness(options$source) })
 )
 
 #----------------------------------------------------------------------

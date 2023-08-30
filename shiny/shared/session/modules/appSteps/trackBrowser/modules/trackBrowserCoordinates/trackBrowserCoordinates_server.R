@@ -1,13 +1,15 @@
 # trackBrowser server module for setting plot coordinates in genome via various inputs
-# there may be one or multiple distinct sets of coordinates plotted by a single browser instance
+# there may be one or multiple distinct sets of coordinates, i.e., regions plotted by a single browser instance
 trackBrowserCoordinatesServer <- function(id, browser, regionI) {
     moduleServer(id, function(input, output, session) {
 #----------------------------------------------------------------------
+class(input) <- append("browserInput", class(input))
+browserIsDone <- app$browser$browserIsDoneReactive(regionI) # since coordinates are initialized first, browser$images is empty here
 defaults <- list(
     start = 1,
     end = 10000
 )
-class(input) <- append("browserInput", class(input))
+observers <- list()
 
 #----------------------------------------------------------------------
 # browser navigation history, to support the back button
@@ -24,7 +26,7 @@ popCoordinateHistory <- function(){
     coordinateHistory <<- coordinateHistory[2:length(coordinateHistory)]    
     coordinateHistory[[1]]
 }
-observeEvent(input$back,  { 
+observers$back <- observeEvent(input$back,  { 
     do.call(jumpToCoordinates, popCoordinateHistory())
 }, ignoreInit = TRUE)  
 
@@ -36,6 +38,7 @@ isStrict <- function(){
     if(is.null(x)) FALSE else x
 }
 jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = TRUE, then = NULL){ # arguments are strict coordinates
+    if(!isTruthy(chromosome)) chromosome <- input$chromosome
     req(chromosome, start, end)
     start <- as.integer64(start)
     end   <- as.integer64(end)
@@ -53,15 +56,15 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
     chromosomeSize <- browser$reference$getChromosomeSize(chromosome) 
     if(start < 1) start <- 1
     if(end > chromosomeSize) end <- chromosomeSize
-    # clearObjectExpansions()
+    app$browser$clearObjectExpansions()
     if(history) pushCoordinateHistory(list(chromosome = chromosome, start = start, end = end))
     updateSelectInput(session, "chromosome", selected = chromosome)
     updateTextInput(session, "start", value = as.character(start))
     updateTextInput(session, "end",   value = as.character(end))
-    # if(!is.null(then)) thenObserver <- observeEvent(browserIsDone(), {
-    #     setTimeout(then, delay = 100)
-    #     thenObserver$destroy()
-    # }, ignoreInit = TRUE)
+    if(!is.null(then)) thenObserver <- observeEvent(browserIsDone(), {
+        setTimeout(then, delay = 50) # sequence the expansion image to load after the main image
+        thenObserver$destroy()
+    }, ignoreInit = TRUE)
 }
 doZoom <- function(exp){
     start  <- as.integer64(input$start)
@@ -77,8 +80,8 @@ doZoom <- function(exp){
         strict = TRUE
     )
 }
-observeEvent(input$zoomOut, { doZoom( 1) }, ignoreInit = TRUE)
-observeEvent(input$zoomIn,  { doZoom(-1) }, ignoreInit = TRUE)
+observers$zoomOut <- observeEvent(input$zoomOut, { doZoom( 1) }, ignoreInit = TRUE)
+observers$zoomIn <- observeEvent(input$zoomIn,  { doZoom(-1) }, ignoreInit = TRUE)
 doMove <- function(factor, direction){
     start  <- as.integer64(input$start)
     end    <- as.integer64(input$end)
@@ -91,11 +94,11 @@ doMove <- function(factor, direction){
         strict = TRUE
     )
 }
-observeEvent(input$moveLeft,   { doMove(1,    -1) }, ignoreInit = TRUE)
-observeEvent(input$nudgeLeft,  { doMove(0.05, -1) }, ignoreInit = TRUE)
-observeEvent(input$nudgeRight, { doMove(0.05,  1) }, ignoreInit = TRUE)
-observeEvent(input$moveRight,  { doMove(1,     1) }, ignoreInit = TRUE)
-observeEvent(input$all, { 
+observers$moveLeft   <- observeEvent(input$moveLeft,   { doMove(1,    -1) }, ignoreInit = TRUE)
+observers$nudgeLeft  <- observeEvent(input$nudgeLeft,  { doMove(0.05, -1) }, ignoreInit = TRUE)
+observers$nudgeRight <- observeEvent(input$nudgeRight, { doMove(0.05,  1) }, ignoreInit = TRUE)
+observers$moveRight  <- observeEvent(input$moveRight,  { doMove(1,     1) }, ignoreInit = TRUE)
+observers$all <- observeEvent(input$all, { 
     jumpToCoordinates(input$chromosome, 1, browser$reference$getChromosomeSize(input$chromosome), strict = TRUE) 
 }, ignoreInit = TRUE)
 center <- function(x){
@@ -154,7 +157,7 @@ executeJumpTo <- function(action = NULL){
     updateTextInput(session, "end", value = "")
     do.call(jumpToCoordinates, action)
 }
-observeEvent(input$jumpTo,  { 
+observers$jumpTo <- observeEvent(input$jumpTo,  { 
     req(input$jumpTo)    
     jumpTo <- trimws(input$jumpTo)
     req(jumpTo)
@@ -226,7 +229,7 @@ annotationSearchInput <- popupInputServer(
     # ,
     # actionLink(session$ns("getUcscGenomes"), "Reload from UCSC")
 )
-observeEvent(annotationSearchInput(),  { 
+observers$annotationSearchInput <- observeEvent(annotationSearchInput(),  { 
     gene <- annotationSearchInput()
     action <- checkJumpGene(gene)
     executeJumpTo(action)
@@ -235,7 +238,7 @@ observeEvent(annotationSearchInput(),  {
 #----------------------------------------------------------------------
 # initialization
 #----------------------------------------------------------------------
-observeEvent(browser$reference$chromosomes(), {
+observers$chromosomes <- observeEvent(browser$reference$chromosomes(), {
     chromosomes <- browser$reference$chromosomes()
     req(chromosomes)
     current <- input$chromosome
@@ -255,7 +258,7 @@ initialize <- function(jobId, loadData, loadSequence = NULL){
     updateTextInput(session,   'start',      value    = loadData$start)
     updateTextInput(session,   'end',        value    = loadData$end)
     pushCoordinateHistory(list(chromosome = loadData$chromosome, start = loadData$start, end = loadData$end))
-    if(!is.null(loadSequence)) initializeNextTrackBrowserElement(loadData, loadSequence)
+    if(!is.null(loadSequence)) doNextLoadSequenceItem(loadData, loadSequence)
 }
 
 # module return value
@@ -266,7 +269,10 @@ list(
     center = center,
     chromosomeSize = reactive({ browser$reference$getChromosomeSize(input$chromosome) }),
     coordinateWidth = reactive({ as.integer64(input$end) - as.integer64(input$start) + 1 }),
-    NULL
+    destroy = function(){
+        for(observer in observers) observer$destroy()
+        observers <<- list()
+    }
 )
 #----------------------------------------------------------------------
 })}

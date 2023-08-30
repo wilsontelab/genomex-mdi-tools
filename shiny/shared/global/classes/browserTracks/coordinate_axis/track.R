@@ -57,6 +57,6 @@ build.coordinate_axisTrack <- function(track, reference, coord, layout){
 
 # plot interaction methods for the S3 class
 # called by trackBrowser if track$click or track$hover is TRUE, above
-click.coordinate_axisTrack <- function(track, click){
-    app$browser$center(click$coord$x)
+click.coordinate_axisTrack <- function(track, click, regionI){
+    app$browser$center(regionI, click$coord$x)
 }

@@ -130,12 +130,12 @@ initializeGenome <- function(jobId, loadData, loadSequence){
     if(is.null(loadData$outcomes$genome)) loadData$outcomes$genome <- genomes()[genome == defaults$genome]
     annotations(listUcscAnnotations(loadData$outcomes$genome$genome))
     genomeInput(loadData$outcomes$genome)
-    initializeNextTrackBrowserElement(loadData, loadSequence)
+    doNextLoadSequenceItem(loadData, loadSequence)
 }
 initializeAnnotation <- function(jobId, loadData, loadSequence){
     if(is.null(loadData$outcomes$annotation)) loadData$outcomes$annotation <- annotations()[track == defaults$annotation]
     annotationInput(loadData$outcomes$annotation)
-    initializeNextTrackBrowserElement(loadData, loadSequence)
+    doNextLoadSequenceItem(loadData, loadSequence)
 }
 #----------------------------------------------------------------------
 # module return value
@@ -149,8 +149,7 @@ list(
     chromosomeSizes = chromosomeSizes,
     getChromosomeSize = getChromosomeSize,
     initializeGenome = initializeGenome,
-    initializeAnnotation = initializeAnnotation,
-    NULL
+    initializeAnnotation = initializeAnnotation
 )
 #----------------------------------------------------------------------
 })}
