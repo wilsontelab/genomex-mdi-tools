@@ -1,167 +1,117 @@
 #----------------------------------------------------------------------
 # genome_spans is a track type for creating many plot types from standarized BED format span files
 # files do not need to actually be named ".bed", but they will functionally be BED if they can be read by this track type
-# expects one or more input bed.bgz files, i.e., with at least columns (in this order):
+# expects one or more input bed[.bgz] files, i.e., with at least columns (in this order):
 #   chrom
 #   start (0-indexed)
 #   end   (1-indexed)
-# plus the following optional columns (in this order)
-#   name(character) or score(numeric or integer, if 4 columns and score mode is selected)
-#   score(numeric or integer, if >=5 columns and score mode is selected)
-#   strand(+|-|., if >=6 columns and stranded mode is selected)
-#   addition columns allowed but ignored
+# plus variable additional columns name, score and strand, as per parseTabixBedFormat(),
+# silent errors are thrown if a column required for a plot type is not found in the data.table
 #----------------------------------------------------------------------
 # genome_spans is not a complete track class, it is used by calling function from your track class
 #----------------------------------------------------------------------
 
 # track build function
-build.genome_spans_track <- function(track, reference, coord, layout, dataFn, ...){
+build.genome_spans_track <- function(track, reference, coord, layout, dataFn, trackBuffer = NULL,
+                                     spansFamily = "Spans", scoresFamily = "Scores", yAxisFamily = "Y_Axis"){
 
-    # collect all individual items
-    dmsg()
-    dmsg("build.genome_spans_track")
+    # collect all individual bed tracks
     itemsList <- getItemsData(track, reference, coord, dataFn, parseXY = FALSE)
-    dmsg("back to build.genome_spans_track")
-    if(!itemsList$hasData) return(trackInfo(track, coord, layout, "no usable data to plot"))
+    if(!itemsList$hasData) return(trackInfo(track, coord, layout, "no spans in region"))
+    itemNames <- sub(".bed.bgz", "", sapply(names(itemsList$d), basename))
+    nItems <- length(itemNames)
 
-    dstr(itemsList)
+    # parse the data into XY coordinates base on requested plot type
+    Plot_Spans_As <- trimws(getTrackSetting(track, spansFamily, "Plot_Spans_As", "scores"))
+    Stranded <- getTrackSetting(track, spansFamily, "Stranded", TRUE)
+    nullStrand <- if(Stranded) "+" else "."
 
-    req(FALSE)
+    # score plot types
+    if(Plot_Spans_As == "scores"){
+        Score_Position <- getTrackSetting(track, spansFamily, "Score_Position", "center") 
+        itemsList$d <- lapply(itemsList$d, function(dt){
+            if(!("score" %in% names(dt))) return(NA) else {
+                x <- data.table(
+                    strand = if("strand" %in% names(dt)) dt$strand else nullStrand,                
+                    x = switch(
+                        Score_Position,
+                        start   = dt$start + 1,
+                        center  = dt$start + 1 + (dt$end - dt$start - 1) / 2,
+                        end     = dt$end
+                    ),
+                    y = dt$score
+                )    
+                itemsList$ymin <<- min(itemsList$ymin, x$y, na.rm = TRUE)
+                itemsList$ymax <<- max(itemsList$ymax, x$y, na.rm = TRUE)    
+                x 
+            }
+        })
+        missingScores <- is.na(itemsList$d)
+        if(any(missingScores)) {
+            return(trackInfo(track, coord, layout, paste("no score column:", paste(itemNames[missingScores], collapse = ", ")), isError = TRUE))
+        }
+        itemData <- mergeXYTrackItems(itemsList, itemNames)
+        if(!is.null(trackBuffer)) trackBuffer[[track$id]] <- itemData
+        buildXYTrackImage(
+            track, coord, layout,
+            itemsList, itemNames, itemData,
+            stranded = Stranded, allowNeg = TRUE, ylab = NULL,
+            dataFamily = scoresFamily, yAxisFamily = yAxisFamily
+        )
 
-    # itemNames <- names(itemsList$d)
-    # nItems <- length(itemNames)
-    # originalItemNames <- itemNames
-    # originialNItems <- nItems  
-
-    # # merge samples up to a single table to get all possible x values
-    # itemData <- Reduce(function(dt1, dt2) merge(dt1, dt2, by = c("strand","x"), all=TRUE), itemsList$d)
-    # setnames(itemData, c("strand", "x", itemNames)) 
-
-    # # if requested, aggregate multiple items together or plot as a change relative to the first item
-    # Aggregate <- getTrackSetting(track, "Data", "Aggregate", "none")
-    # if(nItems > 1 && Aggregate != "none"){
-    #     if(Aggregate == "difference"){
-    #         for(i in 2:nItems) itemData[[i + 2]] <- itemData[[i + 2]] - itemData[[3]]
-    #         itemData[[3]] <- NULL
-    #         itemNames <- paste(itemNames[2:nItems], itemNames[1], sep = " - ")
-    #         setnames(itemData, c("strand", "x", itemNames))
-    #         itemsList$ymin <- itemData[, min(.SD, na.rm = TRUE), .SDcols = itemNames]
-    #         itemsList$ymax <- itemData[, max(.SD, na.rm = TRUE), .SDcols = itemNames]
-    #         nItems <- nItems - 1
-    #     } else {
-    #         itemData[[3]] <- apply(itemData[, .SD, .SDcols = itemNames], 1, get(Aggregate), na.rm = TRUE)
-    #         itemData <- itemData[, .SD, .SDcols = c("strand", "x", itemNames[1])]
-    #         itemNames <- Aggregate   
-    #         setnames(itemData, c("strand", "x", itemNames))
-    #         itemsList$ymin <- min(itemData[[3]], na.rm = TRUE) 
-    #         itemsList$ymax <- max(itemData[[3]], na.rm = TRUE) 
-    #         nItems <- 1
-    #     }        
-    # }
-
-    # # set the plot frame
-    # padding <- padding(track, layout)
-    # height <- height(track, 2) + padding$total # or set a known, fixed height in inches
-    # ylab <- ylab(track,
-    #     if(is.null(ylab)) ""
-    #     else if(is.function(ylab)) ylab()
-    #     else ylab
-    # )
-
-    # # set the dynamic Y-axis
-    # Min_Y         <- trimws(getTrackSetting(track, "Y_Axis", "Min_Y", ""))
-    # Max_Y         <- trimws(getTrackSetting(track, "Y_Axis", "Max_Y", ""))
-    # Force_To_Zero <- getTrackSetting(track, "Y_Axis", "Force_To_Zero", TRUE)
-    # Symmetric     <- getTrackSetting(track, "Y_Axis", "Symmetric", TRUE)
-    # if(is.infinite(itemsList$ymin)) itemsList$ymin <- 0
-    # if(is.infinite(itemsList$ymax)) itemsList$ymax <- 0.01
-    # ylim <- if(stranded || allowNeg) {
-    #     extremeValue <- max(abs(c(
-    #         itemsList$ymin, 
-    #         itemsList$ymax
-    #     )))
-    #     if(Symmetric) c(
-    #         if(Min_Y == "") -extremeValue else as.numeric(Min_Y), 
-    #         if(Max_Y == "")  extremeValue else as.numeric(Max_Y)
-    #     ) else if(Force_To_Zero) c(
-    #         if(Min_Y == "") min(0, itemsList$ymin) else as.numeric(Min_Y), 
-    #         if(Max_Y == "") max(0, itemsList$ymax) else as.numeric(Max_Y)
-    #     ) else c(
-    #         if(Min_Y == "") itemsList$ymin else as.numeric(Min_Y), 
-    #         if(Max_Y == "") itemsList$ymax else as.numeric(Max_Y)
-    #     )                
-    # } else {
-    #     if(Force_To_Zero) c(
-    #         if(Min_Y == "") 0              else as.numeric(Min_Y), 
-    #         if(Max_Y == "") itemsList$ymax else as.numeric(Max_Y)
-    #     ) else c(
-    #         if(Min_Y == "") itemsList$ymin else as.numeric(Min_Y), 
-    #         if(Max_Y == "") itemsList$ymax else as.numeric(Max_Y)
-    #     )  
-    # }
-
-    # # if requested, center the plot point in their bins
-    # if(center) itemData[, x := x + binSize / 2]
-
-    # # make the plot
-    # mai <- NULL    
-    # image <- mdiTrackImage(layout, height, function(...){
-    #     mai <<- setMdiTrackMai(layout, padding, mar = list(top = 0, bottom = 0))
-    #     plot(0, 0, type = "n", bty = "n",
-    #         xlim = coord$range, xlab = "", xaxt = "n", # nearly always set `xlim`` to `coord$range`
-    #         ylim = ylim,  ylab = ylab, # yaxt = "n",
-    #         xaxs = "i", yaxs = "i") # always set `xaxs` and `yaxs` to "i"
-
-    #     # add horizontal rules if requested  
-    #     zeroLine(track)  
-    #     hLines(track, ylim)   
-
-    #     # randomize point order to avoid overplotting
-    #     I <- 1:nItems
-    #     palette <- CONSTANTS$palettes[[getTrackSetting(track, "Data", "Color_Palette", "plotly")]]        
-    #     if(getTrackSetting(track, "Data", "Plot_As", "points") == "points"){
-    #         dd <- do.call(rbind, lapply(I, function(i) itemData[, 
-    #             .(strand = strand, x = x, y = .SD[[itemNames[i]]], color = palette[[i]])
-    #         ]))[order(sample(.N))]
-    #         if(stranded) for(strand_ in c("+", "-")){
-    #             ddd <- dd[strand == strand_]
-    #             plotXY(track, ddd, color = ddd$color, family = "Data")
-    #         } else {
-    #             plotXY(track, dd,  color = dd$color,  family = "Data")
-    #         }
-
-    #     # other track types are inherently overplotted    
-    #     # order in items list determines plot order         
-    #     } else {
-    #         for(i in I){ 
-    #             dd <- itemData[, .(strand = strand, x = x, y = .SD[[itemNames[i]]])]
-    #             if(stranded) for(strand_ in c("+", "-")){
-    #                 plotXY(track, dd[strand == strand_], color = palette[[i]], family = "Data")
-    #             } else {
-    #                 plotXY(track, dd, color = palette[[i]], family = "Data")
-    #             }
-    #         }            
-    #     }
-
-    #     # add a legend
-    #     if(Aggregate == "none"){
-    #         legend <- itemNames
-    #         colors <- unlist(palette[I])
-    #     } else if(Aggregate == "difference"){
-    #         legend <- originalItemNames
-    #         legend[1] <- paste("x - ", legend[1])
-    #         colors <- c(NA, unlist(palette[I]))
-    #     } else {
-    #         legend <- c(Aggregate, originalItemNames)
-    #         colors <- c(palette[[1]], rep(NA, originialNItems))
-    #     }
-    #     trackLegend(track, coord, ylim, legend = legend, pch = 19, cex = 1, col = colors)
-    # })
-
-    # # return the track's magick image and associated metadata
-    # list(
-    #     ylim  = ylim,
-    #     mai   = mai,
-    #     image = image
-    # )
+    # span plot types (including when the Y-axis is the score value)
+    } else {
+        # Multi_Sample <- trimws(getTrackSetting(track, spansFamily, "Multi_Sample", "admixed"))
+        itemsList$hasScore <- logical()
+        itemsList$d <- lapply(1:nItems, function(i){
+            dt <- itemsList$d[[i]]
+            hasScore <- "score" %in% names(dt)
+            x <- data.table(
+                source = itemNames[i],
+                strand = if("strand" %in% names(dt)) dt$strand else nullStrand,                
+                x1 = dt$start + 1,
+                x2 = dt$end,
+                y = if(!hasScore) NA else dt$score
+            )    
+            itemsList$ymin <<- min(itemsList$ymin, x$y, na.rm = TRUE)
+            itemsList$ymax <<- max(itemsList$ymax, x$y, na.rm = TRUE)   
+            itemsList$hasScore <<- c(itemsList$hasScore, hasScore)
+            x 
+        })
+        missingScores <- !itemsList$hasScore
+        if(any(missingScores) && Plot_Spans_As == "scored_spans") {
+            return(trackInfo(track, coord, layout, paste("no score column:", paste(itemNames[missingScores], collapse = ", ")), isError = TRUE))
+        }
+        itemData <- do.call(rbind, itemsList$d)[order(x1, x2)]
+        ylim <- NULL
+        yaxt <- "s"
+        if(Plot_Spans_As == "packed_spans"){
+            Pack_Padding_Fraction <- getTrackSetting(track, spansFamily, "Pack_Padding_Fraction", 0.025)
+            padding <- coord$width * Pack_Padding_Fraction
+            ends <- 0
+            itemData[, y := NA_integer_]
+            for(i in 1:nrow(itemData)){
+                for(j in 1:length(ends)) if(itemData[i, x1] >= ends[j] + padding) itemData[i, y := j]
+                if(is.na(itemData[i, y])) itemData[i, y := length(ends) + 1]
+                ends[itemData[i, y]] <- itemData[i, x2]
+            }
+            itemsList$ymin <- 0.5
+            itemsList$ymax <- length(ends) + 0.5
+            ylim <- c(itemsList$ymin, itemsList$ymax)
+            yaxt <- "n"
+        } else if(Plot_Spans_As == "unpacked_spans"){
+            itemData[, y := 1:.N]
+            itemsList$ymin <- 0.5
+            itemsList$ymax <- nrow(itemData) + 0.5
+            ylim <- c(itemsList$ymin, itemsList$ymax)
+            yaxt <- "n"
+        } # default from above is scored_spans
+        if(!is.null(trackBuffer)) trackBuffer[[track$id]] <- itemData
+        buildSpanTrackImage (
+            track, coord, layout,
+            itemsList, itemNames, itemData,
+            stranded = Stranded, allowNeg = TRUE, ylab = NULL, ylim = ylim, yaxt = yaxt,
+            dataFamily = spansFamily, yAxisFamily = yAxisFamily, hLines = Plot_Spans_As == "scored_spans"
+        )
+    }
 }

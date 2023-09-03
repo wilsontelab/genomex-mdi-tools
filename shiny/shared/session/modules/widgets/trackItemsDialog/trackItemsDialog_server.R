@@ -9,6 +9,7 @@
 trackItemsDialogServer <- function(
     id,
     isFiles,
+    extensions,
     tableData,
     keyColumn,
     extraColumns,
@@ -36,7 +37,7 @@ defaults <- lapply(options, function(x){
 #----------------------------------------------------------------------
 serverFileSelector <- serverFileSelectorServer(
     "serverFileSelector",
-    extensions = "mdi"
+    extensions = extensions
 )
 observers$serverFileSelector <- observeEvent(serverFileSelector$selectedFile(), {
     path <- serverFileSelector$selectedFile()

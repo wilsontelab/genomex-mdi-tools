@@ -387,6 +387,15 @@ plotXY.browserTrack <- function(track, d, color = NULL, family = "Plot_Options",
         )
     )
 }
+plotSpans.browserTrack <- function(track, d, color = NULL, family = "Plot_Options", ...){
+    if(nrow(d) == 0) return()
+    if(is.null(color)) color <- col(track, family = family) 
+    Span_Line_Width <- getTrackSetting(track, family, "Span_Line_Width", 2)
+    for(i in 1:nrow(d)){
+        span <- d[i]
+        lines(c(span$x1 - 0.5, span$x2 + 0.5), rep(span$y, 2), col = color, lwd = Span_Line_Width)
+    }
+}
 
 #----------------------------------------------------------------------
 # trackNav builder support functions

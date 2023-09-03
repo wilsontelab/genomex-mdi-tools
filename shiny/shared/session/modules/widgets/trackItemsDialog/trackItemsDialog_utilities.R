@@ -7,6 +7,7 @@ showTrackItemsDialog <- function(
     title, # title for the dialog
     itemTypePlural = "Items", # for labeling the 'Selected' and Available' boxes
     isFiles = FALSE, # if TRUE, offers a file loader instead of a table of selections
+    extensions = character(), # allowed file types when isFiles == TRUE
     tableData, # a reactive, or function with no arguments, that returns a data.frame or data.table
     keyColumn, # the unique identifier column in `tableData()`
     extraColumns = list(), # additional `tableData()` columns to display in the selection panel
@@ -18,6 +19,7 @@ showTrackItemsDialog <- function(
     dialog <- trackItemsDialogServer(
         id,
         isFiles, 
+        extensions,
         tableData,
         keyColumn,
         extraColumns,
@@ -63,13 +65,15 @@ showTrackSamplesDialog <- function(track, session, ...){
 }
 
 # common form of a track items dialog that allows users to select one or more system files
-showTrackFilesDialog <- function(track, session, ...){
+showTrackFilesDialog <- function(track, session, extensions = character(), ...){
+    ext <- if(length(extensions > 0)) paste0("(", paste(extensions, collapse = ", "), ")") else ""
     showTrackItemsDialog(
         track$settings,
         session,
-        title = "Select Files",
+        title = paste("Select Files", ext),
         itemTypePlural = "Files",
         isFiles = TRUE,
+        extensions = extensions,
         tableData = NA,
         keyColumn = "fileName",
         extraColumns = "parentDir",

@@ -5,6 +5,7 @@
 #----------------------------------------------------------------------
 
 # objects instantiated here are available to all appStep modules in a session
+sessionCache <- new_dataCache('trackBrowserCache')
 
 # appServer() is called after all modules are instantiated
 appServer <- function(){

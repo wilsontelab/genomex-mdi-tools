@@ -2,14 +2,56 @@ include:
     - height # Track options
     - hLines
 settings:
-    Data:
+    Spans:
+        Plot_Spans_As:
+            type: selectInput
+            choices:
+                - scores
+                - packed_spans 
+                - unpacked_spans 
+                - scored_spans
+            value: scores
+        Score_Position:
+            type: selectInput
+            choices:
+                - start
+                - center 
+                - end
+            value: center
+        Pack_Padding_Fraction:
+            type: numericInput
+            value:  0.025
+            min:    0.01
+            max:    0.10
+            step:   0.005
+        Span_Line_Width:
+            type: numericInput
+            value:  2
+            min:    1
+            max:    20
+            step:   1
+        # Multi_Sample:
+        #     type: selectInput
+        #     choices:
+        #         - admixed
+        #         - stacked
+        #     value: admixed
+        Spans_Color_Palette:
+            type: selectInput
+            choices:
+                - plotly
+            value: plotly    
+        Stranded:
+            type: checkboxInput
+            value: true
+    Scores:
         Plot_As:
             type: selectInput
             choices:
                 - points
                 - lines 
                 - both 
-                - area 
+                # - area 
                 - histogram
             value: lines
         Point_Symbol:
@@ -36,26 +78,7 @@ settings:
             type: selectInput
             choices:
                 - plotly
-            value: plotly  
-        Aggregate:
-            type: selectInput
-            choices:
-                - none
-                - difference
-                - mean
-                - median
-                - sum
-            value: none            
-    X_Axis:  
-        Max_Bins:
-            type: numericInput
-            value:  100
-            min:    50
-            max:    5000
-            step:   50     
-        Bin_Size:
-            type: textInput
-            value:  ""
+            value: plotly            
     Y_Axis:       
         Min_Y:
             type: textInput

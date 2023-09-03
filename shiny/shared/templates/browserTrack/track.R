@@ -101,7 +101,7 @@ expand2.__MODULE_NAME__Track <- function(track, browser, selectedRowData){
 
 # method for the S3 class to populate one or more trackNav inputs above the browser output
 # only one navigation set is shown per track, your navigation should decide how to handle multiple regions
-navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference, coord){
+navigation.__MODULE_NAME__Track <- function(track, session, id, browser){
 
     # initialize the trackNavs, including input observers to handle user actions
     # initTrackNav will fail silenty if setting Track/Show_Navigation is not set or =="hide"
@@ -137,7 +137,7 @@ navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference
         trackNavTable(
             track, 
             session, 
-            browserId,
+            browser$id,
             navName2, # the name as provided by initTrackNav
             tableData = trackNavData, # populate a table based on track settings, etc.
             actionFn = function(selectedRow){
