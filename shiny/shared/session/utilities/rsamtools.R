@@ -167,13 +167,20 @@ expandTabixBinRuns <- function(dt, binSize, stranded = TRUE, na.value = 0, minus
 
 # if too many bins, reduce the number of plotted XY points
 # pass in an object from expandTabixBinRuns, or any similar format with no missing bins
-aggregateTabixBins <- function(bins, track, coord, plotBinSize, aggFn = mean){
+aggregateTabixBins <- function(bins, track, coord, plotBinSize, aggFn = mean, 
+                               asFractionOfMax = FALSE, maxY = NULL, limitToOne = TRUE){
     if(nrow(bins) == 0) return(data.table(strand = character(), x = integer(), y = double()))
-    bins[, x := floor(x / plotBinSize) * plotBinSize]
-    bins[, 
+    bins[, x := floor(x / plotBinSize) * plotBinSize + 1] # thus, x is the leftmost coordinate of the plot bin
+    bins <- bins[, 
         .(
             y = aggFn(as.double(y), na.rm = FALSE)
         ), 
         by = .(strand, x)
-    ]    
+    ] 
+    if(asFractionOfMax) {
+        if(is.null(maxY) || maxY == 0) maxY <- bins[, max(y, na.rm = FALSE)]
+        bins[, y := y / maxY]
+        if(limitToOne) bins[, y := pmin(1, y)]
+    }
+    bins
 }

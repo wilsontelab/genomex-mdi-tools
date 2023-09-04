@@ -99,6 +99,9 @@ getItemsData <- function(x, ...) {
 plotXY <- function(x, ...) {
     UseMethod("plotXY", x)
 }
+plotHeatMap <- function(x, ...) {
+    UseMethod("plotHeatMap", x)
+}
 plotSpans <- function(x, ...) {
     UseMethod("plotSpans", x)
 }

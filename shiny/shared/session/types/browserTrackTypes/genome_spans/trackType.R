@@ -27,7 +27,38 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
     nullStrand <- if(Stranded) "+" else "."
 
     # score plot types
-    if(Plot_Spans_As == "scores"){
+    if(Plot_Spans_As == "heat_map"){
+        Heat_Map_Bins <- getTrackSetting(track, spansFamily, "Heat_Map_Bins", 100) 
+        Heat_Map_Max  <- getTrackSetting(track, spansFamily, "Heat_Map_Max", 0) 
+        plotBinSize <- round(coord$width / Heat_Map_Bins, 0)
+        itemsList$d <- lapply(itemsList$d, function(dt){
+            if(!("score" %in% names(dt))) return(NA) else {
+                if(!("strand" %in% names(dt))) dt[, strand := nullStrand]
+                dt[, start := start + 1]
+                bins <- expandTabixBinRuns(dt, binSize = 1, stranded = Stranded, na.value = 0, minusStrandNeg = FALSE) %>%
+                        aggregateTabixBins(track, coord, plotBinSize, aggFn = mean, 
+                                           asFractionOfMax = TRUE, maxY = Heat_Map_Max, limitToOne = TRUE)
+                bins[, .(
+                    strand = strand,
+                    x1 = x,
+                    x2 = x + plotBinSize - 1,
+                    alpha = y
+                )]
+            }
+        })
+        missingScores <- is.na(itemsList$d)
+        if(any(missingScores)) {
+            return(trackInfo(track, coord, layout, paste("no score column:", paste(itemNames[missingScores], collapse = ", ")), isError = TRUE))
+        }
+        if(!is.null(trackBuffer)) trackBuffer[[track$id]] <- itemsList$d
+        buildHeatMapTrackImage(
+            track, coord, layout,
+            itemsList, itemNames,
+            stranded = Stranded, ylab = NULL,
+            dataFamily = spansFamily
+        )  
+
+    } else if(Plot_Spans_As == "scores"){
         Score_Position <- getTrackSetting(track, spansFamily, "Score_Position", "center") 
         itemsList$d <- lapply(itemsList$d, function(dt){
             if(!("score" %in% names(dt))) return(NA) else {
@@ -57,7 +88,7 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
             itemsList, itemNames, itemData,
             stranded = Stranded, allowNeg = TRUE, ylab = NULL,
             dataFamily = scoresFamily, yAxisFamily = yAxisFamily
-        )
+        )            
 
     # span plot types (including when the Y-axis is the score value)
     } else {

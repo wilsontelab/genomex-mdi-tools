@@ -10,6 +10,7 @@ settings:
                 - packed_spans 
                 - unpacked_spans 
                 - scored_spans
+                - heat_map
             value: scores
         Score_Position:
             type: selectInput
@@ -40,7 +41,25 @@ settings:
             type: selectInput
             choices:
                 - plotly
-            value: plotly    
+            value: plotly 
+        Heat_Map_Bins:
+            type: numericInput
+            value:  100
+            min:    10
+            max:    1000
+            step:   10
+        Heat_Map_Max:
+            type: numericInput
+            value:  0
+            min:    0
+            max:    1000000
+            step:   1
+        Heat_Map_Exponent:
+            type: numericInput
+            value:  1
+            min:    1
+            max:    10
+            step:   1
         Stranded:
             type: checkboxInput
             value: true
@@ -51,7 +70,7 @@ settings:
                 - points
                 - lines 
                 - both 
-                # - area 
+                - area 
                 - histogram
             value: lines
         Point_Symbol:

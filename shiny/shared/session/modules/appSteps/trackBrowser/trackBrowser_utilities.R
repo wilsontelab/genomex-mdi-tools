@@ -341,6 +341,7 @@ getItemsData.browserTrack <- function(track, reference, coord, dataFn, parseXY =
 }
 plotXY.browserTrack <- function(track, d, color = NULL, family = "Plot_Options", ...){
     if(is.null(color)) color <- col(track, family = family) 
+    if(nrow(d) == 0) return()
     switch(
         getTrackSetting(track, family, "Plot_As", "lines"),
         points = points(
@@ -396,6 +397,18 @@ plotSpans.browserTrack <- function(track, d, color = NULL, family = "Plot_Option
         lines(c(span$x1 - 0.5, span$x2 + 0.5), rep(span$y, 2), col = color, lwd = Span_Line_Width)
     }
 }
+plotHeatMap.browserTrack <- function(track, d, color = NULL, exponent = 1, family = "Plot_Options", ...){
+    if(is.null(color)) color <- col(track, family = family) 
+    if(nrow(d) == 0) return()
+    rect(
+        d$x1 - 0.5, # expects integer base values in x1 and x2
+        d$y  - 0.5, # expects integer line numbers in y
+        d$x2 + 0.5, 
+        d$y  + 0.5, 
+        col = addAlphaToColor(color, 1 - (1 - d$alpha)**exponent), # expects alpha as a fraction of 1
+        border = NA
+    )
+} 
 
 #----------------------------------------------------------------------
 # trackNav builder support functions
