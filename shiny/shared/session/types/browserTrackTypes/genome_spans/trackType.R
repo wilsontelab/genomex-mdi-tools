@@ -11,6 +11,34 @@
 # genome_spans is not a complete track class, it is used by calling function from your track class
 #----------------------------------------------------------------------
 
+# support for span packing
+getPackedSpans <- function(track, coord, spansFamily, itemsList, itemData){
+    Pack_Padding_Fraction <- getTrackSetting(track, spansFamily, "Pack_Padding_Fraction", 0.025)
+    padding <- coord$width * Pack_Padding_Fraction
+    ends <- 0
+    itemData[, y := NA_integer_]
+    for(i in 1:nrow(itemData)){
+        for(j in 1:length(ends)) if(itemData[i, x1] >= ends[j] + padding) itemData[i, y := j]
+        if(is.na(itemData[i, y])) itemData[i, y := length(ends) + 1]
+        ends[itemData[i, y]] <- itemData[i, x2]
+    }
+    itemsList$ymin <- 0.5
+    itemsList$ymax <- length(ends) + 0.5
+    list(
+        itemsList = itemsList,
+        itemData = itemData
+    )
+}
+getUnpackedSpans <- function(itemsList, itemData){
+    itemData[, y := 1:.N]
+    itemsList$ymin <- 0.5
+    itemsList$ymax <- nrow(itemData) + 0.5  
+    list(
+        itemsList = itemsList,
+        itemData = itemData
+    )
+}
+
 # track build function
 build.genome_spans_track <- function(track, reference, coord, layout, dataFn, trackBuffer = NULL,
                                      spansFamily = "Spans", scoresFamily = "Scores", yAxisFamily = "Y_Axis"){
@@ -114,34 +142,23 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
             return(trackInfo(track, coord, layout, paste("no score column:", paste(itemNames[missingScores], collapse = ", ")), isError = TRUE))
         }
         itemData <- do.call(rbind, itemsList$d)[order(x1, x2)]
-        ylim <- NULL
         yaxt <- "s"
         if(Plot_Spans_As == "packed_spans"){
-            Pack_Padding_Fraction <- getTrackSetting(track, spansFamily, "Pack_Padding_Fraction", 0.025)
-            padding <- coord$width * Pack_Padding_Fraction
-            ends <- 0
-            itemData[, y := NA_integer_]
-            for(i in 1:nrow(itemData)){
-                for(j in 1:length(ends)) if(itemData[i, x1] >= ends[j] + padding) itemData[i, y := j]
-                if(is.na(itemData[i, y])) itemData[i, y := length(ends) + 1]
-                ends[itemData[i, y]] <- itemData[i, x2]
-            }
-            itemsList$ymin <- 0.5
-            itemsList$ymax <- length(ends) + 0.5
-            ylim <- c(itemsList$ymin, itemsList$ymax)
+            x <- getPackedSpans(track, coord, spansFamily, itemsList, itemData)
+            itemsList <- x$itemsList
+            itemData <- x$itemData
             yaxt <- "n"
         } else if(Plot_Spans_As == "unpacked_spans"){
-            itemData[, y := 1:.N]
-            itemsList$ymin <- 0.5
-            itemsList$ymax <- nrow(itemData) + 0.5
-            ylim <- c(itemsList$ymin, itemsList$ymax)
+            x <- getUnpackedSpans(itemsList, itemData)
+            itemsList <- x$itemsList
+            itemData <- x$itemData
             yaxt <- "n"
         } # default from above is scored_spans
         if(!is.null(trackBuffer)) trackBuffer[[track$id]] <- itemData
         buildSpanTrackImage (
             track, coord, layout,
             itemsList, itemNames, itemData,
-            stranded = Stranded, allowNeg = TRUE, ylab = NULL, ylim = ylim, yaxt = yaxt,
+            stranded = Stranded, allowNeg = TRUE, ylab = NULL, ylim = c(itemsList$ymin, itemsList$ymax), yaxt = yaxt,
             dataFamily = spansFamily, yAxisFamily = yAxisFamily, hLines = Plot_Spans_As == "scored_spans"
         )
     }

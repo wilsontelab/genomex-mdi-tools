@@ -70,6 +70,7 @@ genomex_genomeSpansNavTable <- function(track, session, id, browser, loadFn, ...
 }
 
 # parse standardized input to create consistently formatted XY plots of various types
+getPackedSpans 
 buildSpanTrackImage <- function(track, coord, layout,
                                itemsList, itemNames, itemData,
                                stranded = TRUE, allowNeg = FALSE, ylab = NULL, ylim = NULL, yaxt = "s",
@@ -111,6 +112,7 @@ buildSpanTrackImage <- function(track, coord, layout,
         for(i in I){ 
             dd <- itemData[source == itemNames[i]]
             if(nrow(dd) == 0) next
+            dstr(dd)
             if(stranded) for(strand_ in c("+", "-")){
                 ddd <- dd[strand == strand_]
                 if(nrow(ddd) == 0) next
