@@ -34,29 +34,6 @@ defaults <- lapply(options, function(x){
 #----------------------------------------------------------------------
 # a single file input button for searching for a system file
 #----------------------------------------------------------------------
-<<<<<<< HEAD
-# serverSourceFilesButtonServer(
-#     "shinyFilesButton", 
-#     input, 
-#     session, 
-#     rw = "read", 
-#     filetypes = "bgz",
-#     loadFn = function(files) {
-#         req(files, nrow(files) > 0)
-#         files <- data.table(files)
-#         for(i in nrow(files)){
-#             path <- files[i, datapath]
-#             selected <- selected()
-#             if(!is.null(selected[[path]])) return()
-#             selected[[path]] <- c(files[i, name], basename(dirname(path)))
-#             names(selected[[path]]) <- staticColumns
-#             selected(selected)    
-#             insertSelectedRow(path)
-#             updateRowActions()
-#         }
-#     }
-# )
-=======
 serverFileSelector <- serverFileSelectorServer(
     "serverFileSelector",
     extensions = "mdi"
@@ -72,7 +49,6 @@ observers$serverFileSelector <- observeEvent(serverFileSelector$selectedFile(), 
     insertSelectedRow(path)
     updateRowActions()
 })
->>>>>>> main
 
 #----------------------------------------------------------------------
 # the table of available source items
