@@ -23,23 +23,28 @@ buildHeatMapTrackImage <- function(track, coord, layout,
             ylim = ylim, ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i") # always set `xaxs` and `yaxs` to "i" 
         I <- 1:nItems
-        palette <- CONSTANTS$palettes[[getTrackSetting(track, dataFamily, "Color_Palette", "plotly")]]        
+        colorPalette <- getTrackSetting(track, dataFamily, "Spans_Color_Palette", "plotly")
+        isGreyscale <- colorPalette == "greyscale"
+        palettes <- CONSTANTS$palettes[[colorPalette]]        
         for(i in I){ 
+            color <- if(isGreyscale) "#000000" else palettes[[i]]
             if(stranded) for(strand_ in c("+", "-")){
                 dd <- itemsList$d[[i]][strand == strand_]
                 dd[, y := ylim[2] + 0.5 - i * ((strand_ == "-") + 1) ] # plot 1st sample on top, + on top of - strands
-                plotHeatMap(track, dd, color = palette[[i]], exponent = Heat_Map_Exponent, family = dataFamily)
+                plotHeatMap(track, dd, color = color, exponent = Heat_Map_Exponent, family = dataFamily)
             } else {
                 dd <- itemsList$d[[i]]
                 dd[, y := ylim[2] + 0.5 - i ]
-                plotHeatMap(track, dd, color = palette[[i]], exponent = Heat_Map_Exponent, family = dataFamily)
+                plotHeatMap(track, dd, color = color, exponent = Heat_Map_Exponent, family = dataFamily)
             }
         }            
 
         # add a legend
-        legend <- itemNames
-        colors <- unlist(palette[I])
-        trackLegend(track, coord, ylim, legend = legend, pch = 19, cex = 1, col = colors)
+        if(!isGreyscale){
+            legend <- itemNames
+            colors <- unlist(palettes[I])
+            trackLegend(track, coord, ylim, legend = legend, pch = 19, cex = 1, col = colors)
+        }
     })
 
     # return the track's magick image and associated metadata

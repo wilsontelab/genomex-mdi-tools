@@ -473,9 +473,38 @@ trackNavCanNavigate.browserTrack <- function(track){
 trackNavCanExpand.browserTrack <- function(track){
     getBrowserTrackSetting(track, "Track", "Show_Navigation", "hide") %in% c("expand", "navigate_and_expand")
 }
+getTargetRegionAsync <- function(callback, purpose, ...){ # if mulitple regions, allow user to select a target region, with asynchronous callback to parent
+    nRegions <- app$browser$settings()$Browser_Options$Number_of_Regions$value
+    if(nRegions == 1) callback(1, ...) else showUserDialog( # if a single region, action occurs on region 1 synchronously
+        "Select Target Region", 
+        radioButtons(
+            "targetRegionSelect",
+            label = paste("Target Region for", purpose),
+            choices = 1:nRegions,
+            selected = 1,
+            inline = TRUE
+        ), 
+        callback = function(parentInput) {
+            regionI <- parentInput$targetRegionSelect 
+            req(regionI) # do nothing if use aborts the action
+            callback(as.integer(regionI), ...)
+        },
+        size = "s", 
+        type = 'okCancel', 
+        easyClose = TRUE, 
+        fade = FALSE
+    )
+}
 handleTrackNavTableClick <- function(regionI, track, chrom, start, end, expandFn = NULL){
     navigate <- trackNavCanNavigate(track)
     expand   <- trackNavCanExpand(track)
+    if(is.null(regionI) && navigate) return(
+        getTargetRegionAsync(
+            callback = handleTrackNavTableClick, 
+            purpose = "Navigation",
+            track, chrom, start, end, expandFn
+        )
+    )
     if(navigate && expand){
         app$browser$jumpToCoordinates(regionI, chrom, start, end, then = expandFn)
     } else if(navigate){

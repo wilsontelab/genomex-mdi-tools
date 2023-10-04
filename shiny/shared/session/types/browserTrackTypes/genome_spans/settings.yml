@@ -41,6 +41,7 @@ settings:
             type: selectInput
             choices:
                 - plotly
+                - greyscale
             value: plotly 
         Heat_Map_Bins:
             type: numericInput
@@ -97,6 +98,7 @@ settings:
             type: selectInput
             choices:
                 - plotly
+                - greyscale
             value: plotly            
     Y_Axis:       
         Min_Y:

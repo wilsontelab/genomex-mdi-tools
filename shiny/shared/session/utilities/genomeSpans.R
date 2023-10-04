@@ -50,12 +50,11 @@ genomex_genomeSpansNavTable <- function(track, session, id, browser, loadFn, ...
     handleRowClick <- function(selectedRow){
         req(selectedRow)
         span <- trackNavData()[selectedRow]
-        regionI <- 1
         if(span$end - span$start < 10){
             span$start <- span$start - 10
             span$end   <- span$end   + 10
         }
-        handleTrackNavTableClick(regionI, track, span$chrom, span$start + 1, span$end)
+        handleTrackNavTableClick(NULL, track, span$chrom, span$start + 1, span$end)
     }
     tagList(
         trackNavTable(

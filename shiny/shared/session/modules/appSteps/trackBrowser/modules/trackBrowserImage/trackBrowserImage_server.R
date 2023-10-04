@@ -96,8 +96,10 @@ buildAllTracks <- function(trackIds, fnName, type, layout){
             nImages <<- nImages + 1
             trackCache[[type]][[trackId]]$contents
         }, error = function(e) {
-            message(paste("buildAllTracks: track error:", tracks[[trackId]]$track$type, trackId))
-            print(e)
+            if(serverEnv$IS_DEVELOPER){
+                message(paste("buildAllTracks: track error:", tracks[[trackId]]$track$type, trackId))
+                print(e)                
+            }
             NULL
         })
     })
@@ -293,11 +295,11 @@ observers$click <- observeEvent(browserPlot$click(), {
     } else {
         doTrackClick(click)
     }
-}, ignoreInit = TRUE)
+}, ignoreInit = FALSE)
 observers$hover <- observeEvent(browserPlot$hover(), {
     req(interactingTrack$hover)
     hover(interactingTrack, browserPlot$hover(), regionI)
-}, ignoreInit = TRUE)
+}, ignoreInit = FALSE)
 #----------------------------------------------------------------------
 # transmit brush action to in-window zoom by default
 observers$brush <- observeEvent(browserPlot$brush(), {
@@ -316,7 +318,7 @@ observers$brush <- observeEvent(browserPlot$brush(), {
     } else if(isTruthy(interactingTrack$brush)) { # tracks optionally handles key+brush events
         brush(interactingTrack, brush, regionI)
     }
-}, ignoreInit = TRUE)
+}, ignoreInit = FALSE)
 
 #----------------------------------------------------------------------
 # initialization
