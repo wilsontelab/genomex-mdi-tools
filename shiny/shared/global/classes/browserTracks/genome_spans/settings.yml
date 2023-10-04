@@ -1,0 +1,10 @@
+trackType:
+    - genome_spans
+# override:
+#     Track:
+#         Height: 1
+# uncomment this section to specify track-specific settings
+# presets:
+#     Preset_Name:
+#         Family:
+#             Option: value

@@ -44,14 +44,6 @@ trackItemsDialogUI <- function(
             )
         ),
         fluidRow(
-            # if(isFiles) box(
-            #     width = 12,
-            #     serverSourceFilesButtonUI(
-            #         ns("shinyFilesButton"),
-            #         multiple = TRUE,
-            #         buttonType = "primary",
-            #         style = "width: 250px;"
-            #     )
             if(isFiles) box(
                 width = 12,
                 serverFileSelectorUI(ns("serverFileSelector"))

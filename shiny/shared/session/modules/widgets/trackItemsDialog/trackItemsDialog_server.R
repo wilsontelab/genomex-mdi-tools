@@ -9,6 +9,7 @@
 trackItemsDialogServer <- function(
     id,
     isFiles,
+    extensions,
     tableData,
     keyColumn,
     extraColumns,
@@ -36,7 +37,7 @@ defaults <- lapply(options, function(x){
 #----------------------------------------------------------------------
 serverFileSelector <- serverFileSelectorServer(
     "serverFileSelector",
-    extensions = "mdi"
+    extensions = extensions
 )
 observers$serverFileSelector <- observeEvent(serverFileSelector$selectedFile(), {
     path <- serverFileSelector$selectedFile()
@@ -124,23 +125,6 @@ initSelected <- observe({
 #----------------------------------------------------------------------
 # update item selections
 #----------------------------------------------------------------------
-
-# add a selected item
-# observers$selectItemLinkId <- observeEvent(input[[selectItemLinkId]], {
-#     i <- getTableActionLinkRow(input, selectItemLinkId)
-#     row <- tableData()[i]
-#     key <- row[[keyColumn]]
-#     selected <- selected()
-#     if(!is.null(selected[[key]])) return()
-#     selected[[key]] <- c(
-#         lapply(staticColumns, function(col) row[[col]]),
-#         defaults
-#     )
-#     names(selected[[key]]) <- c(staticColumns, names(defaults))
-#     selected(selected)    
-#     insertSelectedRow(key)
-#     updateRowActions()
-# }, ignoreInit = TRUE)
 selectItemHandler <- function(x){
     i <- getTableActionLinkRow2(x)
     row <- tableData()[i]

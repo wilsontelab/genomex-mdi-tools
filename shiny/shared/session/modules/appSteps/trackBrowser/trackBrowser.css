@@ -1,9 +1,11 @@
 /* top row of track navigation inputs */
-.trackBrowserInput {
+.trackBrowserInput, 
+.trackBrowserInput2 {
     display: inline-block;
     vertical-align: top;
 }
-.trackBrowserInput .shiny-input-container {
+.trackBrowserInput  .shiny-input-container,
+.trackBrowserInput2 .shiny-input-container {
     width: 90px;
 }
 .trackBrowserWideInput .shiny-input-container {
@@ -18,12 +20,13 @@
 .coordinateInput .shiny-input-container {
     width: 95px;
 }
-.backButton {
-    margin: 32px 5px 0px 5px;
-}
-.annotationSearchInput .shiny-input-container {
+.annotationSearchInput1 .shiny-input-container {
     width: 15px;
-    margin: 12px 0px 0px 5px;
+    margin: 32px 0px 0px 5px;
+}
+.annotationSearchInput2 .shiny-input-container {
+    width: 15px;
+    margin: 8px 0px 0px 5px;
 }
 .genomeInput .selectize-input div {
     max-width: 80px;
@@ -32,7 +35,8 @@
     line-height: 19px;
     vertical-align: text-bottom;
 }
-.trackBrowserInput .selectize-control,
+.trackBrowserInput  .selectize-control,
+.trackBrowserInput2 .selectize-control,
 .addTrack .selectize-control {
     margin: 0;
 }
@@ -41,6 +45,11 @@
     text-align: center;
     padding: 6px 0;
     margin-top: 25px;
+}
+.trackBrowserInput2:not(.ucscInput) button {
+    width: 30px;
+    text-align: center;
+    padding: 6px 0;
 }
 .trackBrowserInput .checkbox {
     margin-top: 30px;
