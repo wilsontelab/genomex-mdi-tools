@@ -283,6 +283,15 @@ trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
     legend(coord$end + coord$width * 0.01, ylim[1] + diff(ylim) / 2, bty = bty, yjust = 0.5, ...)
     par(xpd = FALSE)
 }
+sideLabelPlacement <- function(layout, coord){
+    isLeft <- layout$nRegions == 1 || layout$regionI == 1 || layout$arrangement == "stacked"
+    list(
+        isLeft = isLeft,
+        side = if(isLeft) 2 else 4,
+        coord = if(isLeft) coord$start else coord$end,
+        marginWidth = if(isLeft) layout$mai$left else layout$mai$right
+    )
+}
 
 #----------------------------------------------------------------------
 # data retrieval and plotting functions
@@ -304,32 +313,35 @@ getBgzFilesFromItems <- function(track, reference, type){ # return a set of typi
         bgzFiles[file.exists(bgzFiles)]
     }))
 }
-getItemsData.browserTrack <- function(track, reference, coord, dataFn, stranded = FALSE){
+getItemsData.browserTrack <- function(track, reference, coord, dataFn, parseXY = TRUE){
     items <- track$settings$items()
     req(items, length(items) > 0)
-    itemNames <- names(items)
+    itemKeys <- names(items) # derived from keyColumn
     ymin <- NA
     ymax <- NA
-    d <- lapply(itemNames, function(itemName){
-        dd <- dataFn(track, reference, coord, itemName, items[[itemName]])
-        y <- if("y1" %in% names(dd)) dd[, c(y1, y2)] else dd[, y]
-        ymin <<- min(ymin, y, na.rm = TRUE)
-        ymax <<- max(ymax, y, na.rm = TRUE)
+    d <- lapply(itemKeys, function(itemKey){
+        dd <- dataFn(track, reference, coord, itemKey, items[[itemKey]]) # typically, expect dataFn to filter data to the browser window
+        if(parseXY){
+            y <- if("y1" %in% names(dd)) dd[, c(y1, y2)] else dd[, y]
+            ymin <<- min(ymin, y, na.rm = TRUE)
+            ymax <<- max(ymax, y, na.rm = TRUE)
+        }
         dd
     })
-    names(d) <- itemNames
+    names(d) <- itemKeys
     list(
-        d = d,
+        d = d, # at this stage, different items are still separate in a named list
         ymin = ymin,
         ymax = ymax,
-        hasData = any(sapply(itemNames, function(itemName) {
-            nrow(d[[itemName]] > 0) && any(!is.na(d[[itemName]]$x))
+        hasData = any(sapply(itemKeys, function(itemKey) {
+            nrow(d[[itemKey]] > 0) && 
+            (!parseXY || any(!is.na(d[[itemKey]]$x)))
         }))
-
     )
 }
 plotXY.browserTrack <- function(track, d, color = NULL, family = "Plot_Options", ...){
     if(is.null(color)) color <- col(track, family = family) 
+    if(nrow(d) == 0) return()
     switch(
         getTrackSetting(track, family, "Plot_As", "lines"),
         points = points(
@@ -376,6 +388,27 @@ plotXY.browserTrack <- function(track, d, color = NULL, family = "Plot_Options",
         )
     )
 }
+plotSpans.browserTrack <- function(track, d, color = NULL, family = "Plot_Options", ...){
+    if(nrow(d) == 0) return()
+    if(is.null(color)) color <- col(track, family = family) 
+    Span_Line_Width <- getTrackSetting(track, family, "Span_Line_Width", 2)
+    for(i in 1:nrow(d)){
+        span <- d[i]
+        lines(c(span$x1 - 0.5, span$x2 + 0.5), rep(span$y, 2), col = color, lwd = Span_Line_Width)
+    }
+}
+plotHeatMap.browserTrack <- function(track, d, color = NULL, exponent = 1, family = "Plot_Options", ...){
+    if(is.null(color)) color <- col(track, family = family) 
+    if(nrow(d) == 0) return()
+    rect(
+        d$x1 - 0.5, # expects integer base values in x1 and x2
+        d$y  - 0.5, # expects integer line numbers in y
+        d$x2 + 0.5, 
+        d$y  + 0.5, 
+        col = addAlphaToColor(color, 1 - (1 - d$alpha)**exponent), # expects alpha as a fraction of 1
+        border = NA
+    )
+} 
 
 #----------------------------------------------------------------------
 # trackNav builder support functions
@@ -440,13 +473,42 @@ trackNavCanNavigate.browserTrack <- function(track){
 trackNavCanExpand.browserTrack <- function(track){
     getBrowserTrackSetting(track, "Track", "Show_Navigation", "hide") %in% c("expand", "navigate_and_expand")
 }
-handleTrackNavTableClick <- function(track, chrom, start, end, expandFn = NULL){
+getTargetRegionAsync <- function(callback, purpose, ...){ # if mulitple regions, allow user to select a target region, with asynchronous callback to parent
+    nRegions <- app$browser$settings()$Browser_Options$Number_of_Regions$value
+    if(nRegions == 1) callback(1, ...) else showUserDialog( # if a single region, action occurs on region 1 synchronously
+        "Select Target Region", 
+        radioButtons(
+            "targetRegionSelect",
+            label = paste("Target Region for", purpose),
+            choices = 1:nRegions,
+            selected = 1,
+            inline = TRUE
+        ), 
+        callback = function(parentInput) {
+            regionI <- parentInput$targetRegionSelect 
+            req(regionI) # do nothing if use aborts the action
+            callback(as.integer(regionI), ...)
+        },
+        size = "s", 
+        type = 'okCancel', 
+        easyClose = TRUE, 
+        fade = FALSE
+    )
+}
+handleTrackNavTableClick <- function(regionI, track, chrom, start, end, expandFn = NULL){
     navigate <- trackNavCanNavigate(track)
     expand   <- trackNavCanExpand(track)
+    if(is.null(regionI) && navigate) return(
+        getTargetRegionAsync(
+            callback = handleTrackNavTableClick, 
+            purpose = "Navigation",
+            track, chrom, start, end, expandFn
+        )
+    )
     if(navigate && expand){
-        app$browser$jumpToCoordinates(chrom, start, end, then = expandFn)
+        app$browser$jumpToCoordinates(regionI, chrom, start, end, then = expandFn)
     } else if(navigate){
-        app$browser$jumpToCoordinates(chrom, start, end)
+        app$browser$jumpToCoordinates(regionI, chrom, start, end)
     } else if(expand){
         expandFn()
     }

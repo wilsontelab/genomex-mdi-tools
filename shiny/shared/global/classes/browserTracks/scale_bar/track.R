@@ -24,19 +24,21 @@ build.scale_barTrack <- function(track, reference, coord, layout){
             xlim = coord$range, xlab = "", xaxt = "n",
             ylim = ylim, ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i")
-        strw <- strwidth(" 888 Mb  ") * 1.1 / 2         
+
+        # the scale bar
+        placement <- sideLabelPlacement(layout, coord)       
         exponent <- 9
-        while(10^exponent > coord$width - strw) exponent <- exponent - 1
+        while(10^exponent > coord$width * 0.95) exponent <- exponent - 1
         barWidth <- 10^exponent
         unit <- parseUnit(scaleUnit(track), barWidth)
         lab <- paste(" ", barWidth / unit$multiplier, " ", unit$unit, "  ", sep = "")
-        strw <- strwidth(lab) * 1.1
-        rect(coord$start, 0.6, coord$start + barWidth, 0.4, col = "black")
+        if(placement$isLeft) rect(coord$start,         0.6, coord$start + barWidth, 0.4, col = "black")
+                        else rect(coord$end- barWidth, 0.6, coord$end,              0.4, col = "black")
 
         # margin text label
         tmp <- par('xpd')
         par(xpd = TRUE, cex = 1.15)
-        text(coord$start - strw / 2, 0.5, lab)
+        text(placement$coord, 0.5, lab, pos = placement$side)
         par(xpd = tmp, cex = 1)
     })
     list(

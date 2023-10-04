@@ -1,0 +1,115 @@
+include:
+    - height # Track options
+    - hLines
+settings:
+    Spans:
+        Plot_Spans_As:
+            type: selectInput
+            choices:
+                - scores
+                - packed_spans 
+                - unpacked_spans 
+                - scored_spans
+                - heat_map
+            value: scores
+        Score_Position:
+            type: selectInput
+            choices:
+                - start
+                - center 
+                - end
+            value: center
+        Pack_Padding_Fraction:
+            type: numericInput
+            value:  0.025
+            min:    0.01
+            max:    0.10
+            step:   0.005
+        Span_Line_Width:
+            type: numericInput
+            value:  2
+            min:    1
+            max:    20
+            step:   1
+        # Multi_Sample:
+        #     type: selectInput
+        #     choices:
+        #         - admixed
+        #         - stacked
+        #     value: admixed
+        Spans_Color_Palette:
+            type: selectInput
+            choices:
+                - plotly
+                - greyscale
+            value: plotly 
+        Heat_Map_Bins:
+            type: numericInput
+            value:  100
+            min:    10
+            max:    1000
+            step:   10
+        Heat_Map_Max:
+            type: numericInput
+            value:  0
+            min:    0
+            max:    1000000
+            step:   1
+        Heat_Map_Exponent:
+            type: numericInput
+            value:  1
+            min:    1
+            max:    10
+            step:   1
+        Stranded:
+            type: checkboxInput
+            value: true
+    Scores:
+        Plot_As:
+            type: selectInput
+            choices:
+                - points
+                - lines 
+                - both 
+                - area 
+                - histogram
+            value: lines
+        Point_Symbol:
+            type: selectInput
+            choices:
+                - open_circles
+                - filled_circles 
+                - open_squares 
+                - filled_squares
+            value: filled_circles             
+        Line_Width:
+            type: numericInput
+            value:  1.5
+            min:    0.25
+            max:    5
+            step:   0.25                 
+        Point_Size:
+            type: numericInput
+            value:  1
+            min:    0.25
+            max:    5
+            step:   0.25
+        Color_Palette:
+            type: selectInput
+            choices:
+                - plotly
+                - greyscale
+            value: plotly            
+    Y_Axis:       
+        Min_Y:
+            type: textInput
+            value:  ""
+        Max_Y:
+            type: textInput
+            value:  ""
+        Force_To_Zero:
+            type: checkboxInput
+            value: true
+        Symmetric:
+            type: checkboxInput
+            value: true

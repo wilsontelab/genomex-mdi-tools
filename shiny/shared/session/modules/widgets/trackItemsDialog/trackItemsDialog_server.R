@@ -8,6 +8,8 @@
 #----------------------------------------------------------------------
 trackItemsDialogServer <- function(
     id,
+    isFiles,
+    extensions,
     tableData,
     keyColumn,
     extraColumns,
@@ -31,17 +33,38 @@ defaults <- lapply(options, function(x){
 })
 
 #----------------------------------------------------------------------
+# a single file input button for searching for a system file
+#----------------------------------------------------------------------
+serverFileSelector <- serverFileSelectorServer(
+    "serverFileSelector",
+    extensions = extensions
+)
+observers$serverFileSelector <- observeEvent(serverFileSelector$selectedFile(), {
+    path <- serverFileSelector$selectedFile()
+    req(path)
+    selected <- selected()
+    if(!is.null(selected[[path]])) return()
+    selected[[path]] <- c(basename(path), basename(dirname(path)))
+    names(selected[[path]]) <- staticColumns
+    selected(selected)    
+    insertSelectedRow(path)
+    updateRowActions()
+})
+
+#----------------------------------------------------------------------
 # the table of available source items
 #----------------------------------------------------------------------
+selectHandlerId <- session$ns(selectItemLinkId)
 sourceData <- reactive({ # add row selection links to the caller's table
+    if(isFiles) return(NULL)
     tableData <- tableData()
     req(tableData)
     cbind(
-        Action = tableActionLinks(session$ns(selectItemLinkId), nrow(tableData), "Select"),
+        Action = tableActionLinks(selectHandlerId, nrow(tableData), "Select", useMdiSharedHandler = TRUE),
         as.data.table(tableData)
     )
 })
-sourceTable <- bufferedTableServer(
+sourceTable <- if(isFiles) list(observers = list()) else bufferedTableServer(
     "availableItems",
     id,
     input,
@@ -60,7 +83,8 @@ sourceTable <- bufferedTableServer(
 insertSelectedRow <- function(key){
     row <- selected()[[key]]
     insertUI(
-        paste0("#", session$ns("selectedItems")),
+        # paste0("#", session$ns("selectedItems")), # a version of Shiny stopped properly handling dom id's for some elements in modals 
+        ".trackItemsTable tbody", 
         where = "beforeEnd",
         ui = tags$tr(
             "data-key" = key,
@@ -101,10 +125,8 @@ initSelected <- observe({
 #----------------------------------------------------------------------
 # update item selections
 #----------------------------------------------------------------------
-
-# add a selected item
-observers$selectItemLinkId <- observeEvent(input[[selectItemLinkId]], {
-    i <- getTableActionLinkRow(input, selectItemLinkId)
+selectItemHandler <- function(x){
+    i <- getTableActionLinkRow2(x)
     row <- tableData()[i]
     key <- row[[keyColumn]]
     selected <- selected()
@@ -117,7 +139,8 @@ observers$selectItemLinkId <- observeEvent(input[[selectItemLinkId]], {
     selected(selected)    
     insertSelectedRow(key)
     updateRowActions()
-}, ignoreInit = TRUE)
+}
+addMdiSharedEventHandler(selectHandlerId, selectItemHandler)
 
 # remove a selected item
 observers$removeItemLinkId <- observeEvent(input[[removeItemLinkId]], {

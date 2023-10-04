@@ -6,6 +6,8 @@ showTrackItemsDialog <- function(
     session, 
     title, # title for the dialog
     itemTypePlural = "Items", # for labeling the 'Selected' and Available' boxes
+    isFiles = FALSE, # if TRUE, offers a file loader instead of a table of selections
+    extensions = character(), # allowed file types when isFiles == TRUE
     tableData, # a reactive, or function with no arguments, that returns a data.frame or data.table
     keyColumn, # the unique identifier column in `tableData()`
     extraColumns = list(), # additional `tableData()` columns to display in the selection panel
@@ -16,6 +18,8 @@ showTrackItemsDialog <- function(
     nsId <- session$ns(id)
     dialog <- trackItemsDialogServer(
         id,
+        isFiles, 
+        extensions,
         tableData,
         keyColumn,
         extraColumns,
@@ -26,7 +30,8 @@ showTrackItemsDialog <- function(
         title = title,
         trackItemsDialogUI(
             nsId,
-            itemTypePlural, 
+            itemTypePlural,
+            isFiles, 
             keyColumn,
             extraColumns,
             options
@@ -59,6 +64,23 @@ showTrackSamplesDialog <- function(track, session, ...){
     )
 }
 
+# common form of a track items dialog that allows users to select one or more system files
+showTrackFilesDialog <- function(track, session, extensions = character(), ...){
+    ext <- if(length(extensions > 0)) paste0("(", paste(extensions, collapse = ", "), ")") else ""
+    showTrackItemsDialog(
+        track$settings,
+        session,
+        title = paste("Select Files", ext),
+        itemTypePlural = "Files",
+        isFiles = TRUE,
+        extensions = extensions,
+        tableData = NA,
+        keyColumn = "fileName",
+        extraColumns = "parentDir",
+        size = "l"
+    )
+}
+
 # parse a track's selected samples into named list where sourceId -> data.table of samples
 getSourcesFromTrackSamples <- function(selectedSamples){ # selectedSamples is a list of sample lists, each with Sample_ID and Project
     sources <- list()
@@ -72,14 +94,16 @@ getSourcesFromTrackSamples <- function(selectedSamples){ # selectedSamples is a 
 }
 
 # assign a unique color to each unique selected sample
-getColorsBySelectedSample <- function(selectedSources){ # selected sources as returned by getSourcesFromTrackSamples
-    allSamples <- unique(unlist(lapply(selectedSources, function(x) x$Sample_ID)))
+getColorsBySelectedSample <- function(selectedTargets, isMultiSample = TRUE, dt = NULL){ # selected sources as returned by getSourcesFromTrackSamples
+    allSamples <- if(isMultiSample) unique(unlist(lapply(selectedSources, function(x) x$Sample_ID)))
+                  else unique(dt[, unlist(strsplit(samples, ","))])
+    allSamples <- allSamples[allSamples != ""]
     sampleCols <- as.list(1:length(allSamples))
     names(sampleCols) <- paste0(",", allSamples, ",") 
     sampleCols   
 }
-dt_colorBySelectedSample <- function(dt, selectedSources){ # dt expected to have samples columns, and usually nSamples, columns
-    sampleCols <- getColorsBySelectedSample(selectedSources)
+dt_colorBySelectedSample <- function(dt, selectedTargets, isMultiSample = TRUE){ # dt expected to have samples columns, and usually nSamples, columns
+    sampleCols <- getColorsBySelectedSample(selectedTargets, isMultiSample, dt)
     if("nSamples" %in% names(dt)){
         dt[, color := ifelse(
             nSamples > 1,

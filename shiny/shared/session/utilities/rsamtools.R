@@ -2,41 +2,136 @@
 # support functions for reading browser track data from TABIX-indexed files
 #----------------------------------------------------------------------
 
-# read a tbi index file into an Rsamtools tabix object
+# if needed, bgzip a file to file.bgz; does nothing if
+#   file is a bgz file, i.e., ends with .bgz
+#   file.bgz already exists
+# return the bgz file path for getCachedTabix
+bgzipForTabix <- function(file){
+    if(endsWith(file, "bgz")) return(file)
+    bgzFile <- paste0(file, ".bgz")
+    if(!file.exists(bgzFile)) Rsamtools::bgzip(file)
+    bgzFile
+} 
+
+# read (and if needed, create) a tbi index file into an Rsamtools tabix object
 # cache it since the index load is relatively slow
-getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, force = FALSE, ttl = CONSTANTS$ttl$day){
-    startSpinner(session, message = "loading tabix")
-    fileName <- basename(bgzFile)
-    if(is.null(cacheDir)) cacheDir <- dirname(bgzFile)
-    rdsFile <- file.path(cacheDir, paste(fileName, "rds", sep = "."))
-    if(!file.exists(rdsFile) || create){
-        startSpinner(session, message = "loading tabix...")
-        unlink(rdsFile)
-        saveRDS(Rsamtools::TabixFile(bgzFile), file = rdsFile)
-    }
-    rdsFile <- loadPersistentFile(
-        file = rdsFile,
-        force = create || force,
-        ttl = ttl
-    )
-    persistentCache[[rdsFile]]$data
+# expects at least BED3 format if we are to create the tabix index
+# otherwise, getCachedTabix and getTabixRangeData enforce no requirements on column content
+getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, index = FALSE, force = FALSE, ttl = CONSTANTS$ttl$day){
+    req(file.exists(bgzFile))
+    tryCatch({
+        startSpinner(session, message = "loading tabix")
+        fileName <- basename(bgzFile)
+        if(is.null(cacheDir)) cacheDir <- dirname(bgzFile)
+        rdsFile <- file.path(cacheDir, paste(fileName, "rds", sep = "."))
+        if(!file.exists(rdsFile) || create){
+            indexFile <- paste(bgzFile, "tbi", sep = ".")
+            if(!file.exists(indexFile) || index) {
+                startSpinner(session, message = "indexing bgz...")
+                Rsamtools::indexTabix(
+                    bgzFile, 
+                    seq = 1,
+                    start = 2,
+                    end = 3
+                )
+            }
+            startSpinner(session, message = "loading tabix...")
+            unlink(rdsFile)
+            saveRDS(Rsamtools::TabixFile(bgzFile), file = rdsFile)
+        }
+        rdsFile <- loadPersistentFile(
+            file = rdsFile,
+            force = create || force,
+            ttl = ttl
+        )
+        persistentCache[[rdsFile]]$data
+    }, error = function(e){
+        print(e)
+        stopSpinner(session)
+        req(FALSE)
+    })
 }
 
-# query a bgz or other tabixed file by the current window coordinates
+# query and filter a bgz or other tabixed file against the current window coordinates
 # pass in an object from getCachedTabix
-# always use standardized column names when applicable: chrom, start, end, name, score, strand
+# always use standardized column names when provided: chrom, start, end, name, score, strand
+# otherwise, caller is responsible for parsing columns of the returned data.table
 getTabixRangeData <- function(tabix, coord, col.names = NULL, colClasses = NULL){
     req(coord$chromosome, coord$chromosome != "all")
     gRange <- GenomicRanges::GRanges(
         seqnames = coord$chromosome, 
         ranges = IRanges::IRanges(start = as.integer(coord$start), end = as.integer(coord$end))
     )
-    fread(
-        text = Rsamtools::scanTabix(tabix, param = gRange)[[1]],
+
+    lines <- Rsamtools::scanTabix(tabix, param = gRange)[[1]]
+    if(length(lines) == 1) lines <- paste0(lines, "\n")
+    if(is.null(col.names)) fread( # fread does not seem to offer any acceptable NA/NULL value for col.names
+        text = lines,
+        colClasses = colClasses,
+        header = FALSE
+    ) else fread(
+        text = lines,
         col.names = col.names,
         colClasses = colClasses,
         header = FALSE
     )
+}
+
+# when the column content of getTabixRangeData is not enforced a priori by an app or track,
+# use getTabixRangeData() %>% parseTabixBedFormat() to coerce data.table to one of:
+#   chrom, start, end (BED3)
+#   chrom, start, end, name  (BED4 v1)
+#   chrom, start, end, score (BED4 v2)
+#   chrom, start, end, name, score (BED5)
+#   chrom, start, end, name, score, strand (BED6)
+# where the input data.table must already be one of the above formats (plus any extra columns, which are dropped)
+# i.e., we simply recognize, name and trim the BED column format based on column data types, we do not create it by guessing at column identities
+parseTabixBedFormat <- function(dt){
+    if(nrow(dt) == 0) return(data.table(
+        chrom   = character(), 
+        start   = integer(), 
+        end     = integer(), 
+        name    = character(), 
+        score   = double(), 
+        strand  = character()
+    )) 
+    ncol <- ncol(dt)  
+    req(ncol >= 3)
+    colNames <- c("chrom", "start", "end")
+    checkCol4 <- function(dt){
+        if(ncol(dt) < 4){
+            dt
+        } else if(typeof(dt[[4]]) == "character"){
+            colNames <<- c(colNames, "name")   
+            dt     
+        } else {
+            colNames <<- c(colNames, "score")   
+            dt[, 1:4]         
+        }
+    }
+    checkCol5 <- function(dt){
+        if(ncol(dt) < 5){
+            dt
+        } else if(typeof(dt[[5]]) != "character"){
+            colNames <<- c(colNames, "score")   
+            dt     
+        } else {   
+            dt[, 1:4]         
+        }
+    }
+    checkCol6 <- function(dt){
+        if(ncol(dt) < 6){
+            dt
+        } else if(typeof(dt[[6]]) == "character"){
+            colNames <<- c(colNames, "strand")   
+            dt[, 1:6]          
+        } else {   
+            dt[, 1:5]         
+        }
+    }
+    dt <- checkCol4(dt) %>% checkCol5() %>% checkCol6()
+    setnames(dt, colNames)
+    dt
 }
 
 # for files compressed as runs of bins with the same score, expand the runs out to individual bins
@@ -72,13 +167,20 @@ expandTabixBinRuns <- function(dt, binSize, stranded = TRUE, na.value = 0, minus
 
 # if too many bins, reduce the number of plotted XY points
 # pass in an object from expandTabixBinRuns, or any similar format with no missing bins
-aggregateTabixBins <- function(bins, track, coord, plotBinSize, aggFn = mean){
+aggregateTabixBins <- function(bins, track, coord, plotBinSize, aggFn = mean, 
+                               asFractionOfMax = FALSE, maxY = NULL, limitToOne = TRUE){
     if(nrow(bins) == 0) return(data.table(strand = character(), x = integer(), y = double()))
-    bins[, x := floor(x / plotBinSize) * plotBinSize]
-    bins[, 
+    bins[, x := floor(x / plotBinSize) * plotBinSize + 1] # thus, x is the leftmost coordinate of the plot bin
+    bins <- bins[, 
         .(
             y = aggFn(as.double(y), na.rm = FALSE)
         ), 
         by = .(strand, x)
-    ]    
+    ] 
+    if(asFractionOfMax) {
+        if(is.null(maxY) || maxY == 0) maxY <- bins[, max(y, na.rm = FALSE)]
+        bins[, y := y / maxY]
+        if(limitToOne) bins[, y := pmin(1, y)]
+    }
+    bins
 }

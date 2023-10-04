@@ -2,6 +2,19 @@
 # support functions for incorporating UCSC browser tracks into MDI trackBrowsers
 # or otherwise retrieving genomic data from UCSC resources
 #----------------------------------------------------------------------
+ucscTimeout <- 30 # seconds
+ucscGet <- function(url, ...){
+    tryCatch({
+        httr::GET(url, ..., httr::timeout(ucscTimeout))
+    }, error = function(e){
+        message()
+        message("UCSC RETRIEVAL FAILURE")
+        message(url)
+        print(e)
+        stopSpinner(session)
+        req(FALSE)
+    })
+}
 
 #----------------------------------------------------------------------
 # rendering UCSC track images
@@ -39,7 +52,7 @@ adjustLayoutForUcsc <- function(layout){
     layout
 }
 ucscTrackImage <- function(genome, coord, layout, tracks = list(), ruler = FALSE){
-    req(tracks)    
+    req(tracks, length(tracks) > 0)    
     startSpinner(session, message = "getting UCSC tracks")
 
     # assemble the get url query
@@ -61,7 +74,7 @@ ucscTrackImage <- function(genome, coord, layout, tracks = list(), ruler = FALSE
     names(trackOrder) <- paste0(names(tracks), "_imgOrd")
 
     # one MDI track might stack multiple UCSC tracks
-    ucsc <- httr::GET(ucscRenderTracksUrl, query = c( 
+    ucsc <- ucscGet(ucscRenderTracksUrl, query = c( 
         query, 
         tracks, # name = track, value = full|dense|pack|hide 
         trackOrder   
@@ -70,7 +83,7 @@ ucscTrackImage <- function(genome, coord, layout, tracks = list(), ruler = FALSE
     # TODO: use a better null error image if UCSC fails
     if(is.null(ucsc) || !isTruthy(ucsc$status_code) || ucsc$status_code != 200) {
         print(ucsc$url)
-        ucsc <- httr::GET(ucscRenderTracksUrl)
+        ucsc <- ucscGet(ucscRenderTracksUrl)
     }
     image <- magick::image_read(ucsc$content)
     info  <- magick::image_info(image)
@@ -119,7 +132,7 @@ listUcscGenomes <- function(force = FALSE){
             startSpinner(session, message = "getting UCSC genomes")
             target <- "ucscGenomes"
             url <- paste0(ucscListPrefix, target)
-            ucsc <- httr::GET(url, httr::accept_json()) 
+            ucsc <- ucscGet(url, httr::accept_json()) 
             ucsc <- httr::content(ucsc, type = "application/json")[[target]]
             dt <- data.table(do.call(rbind, ucsc))
             dt[, genome := names(ucsc)]
@@ -145,7 +158,7 @@ listUcscTracks <- function(genome, force = FALSE){
             startSpinner(session, message = paste("getting", genome, "tracks"))
             target <- "tracks"
             url <- paste0(ucscListPrefix, target)
-            ucsc <- httr::GET(url, httr::accept_json(), 
+            ucsc <- ucscGet(url, httr::accept_json(), 
                               query = list(genome = genome, trackLeavesOnly = 1))
             ucsc <- httr::content(ucsc, type = "application/json")[[genome]]
             cols <- c("type", "group", "shortLabel", "longLabel")   
@@ -176,7 +189,7 @@ listUcscChromosomes <- function(genome, force = FALSE){
             startSpinner(session, message = paste("getting", genome, "chromosomes"))
             target <- "chromosomes"
             url <- paste0(ucscListPrefix, target)
-            ucsc <- httr::GET(url, httr::accept_json(), query = list(genome = genome)) 
+            ucsc <- ucscGet(url, httr::accept_json(), query = list(genome = genome)) 
             ucsc <- httr::content(ucsc, type = "application/json")[[target]]
             saveRDS(
                 data.table(chromosome = names(ucsc), size = unlist(ucsc)), 
@@ -250,7 +263,7 @@ getUcscTrackTable <- function(genome, track, chromosome = NULL,
         create = function(file){
             startSpinner(session, message = paste("downloading", genome, "track", track))
             url <- paste0(ucscGetPrefix, "track")
-            ucsc <- httr::GET(url, httr::accept_json(), query = list(
+            ucsc <- ucscGet(url, httr::accept_json(), query = list(
                 genome = genome, 
                 track  = track,
                 chrom  = chromosome,

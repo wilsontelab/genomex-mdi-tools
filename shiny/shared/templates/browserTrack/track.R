@@ -48,13 +48,14 @@ build.__MODULE_NAME__Track <- function(track, reference, coord, layout){
 
 # plot interaction methods for the S3 class
 # called by trackBrowser if track$click, $hover, or $brush is TRUE, above
-click.__MODULE_NAME__Track <- function(track, click){
+# regionI indicates the region plot the user interacted with, the value must be passed to app$browser$jumpToCoordinates, etc.
+click.__MODULE_NAME__Track <- function(track, click, regionI){
     # custom actions, use str(click) to explore
 }
-hover.__MODULE_NAME__Track <- function(track, hover){
+hover.__MODULE_NAME__Track <- function(track, hover, regionI){
     # custom actions, use str(hover) to explore
 }
-brush.__MODULE_NAME__Track <- function(track, brush){
+brush.__MODULE_NAME__Track <- function(track, brush, regionI){
     # custom actions, use str(brush) to explore
 }
 
@@ -84,19 +85,23 @@ items.__MODULE_NAME__Track <- function(track, session, input, reference){
 }
 
 # expand method for the S3 class
-expand.__MODULE_NAME__Track <- function(track, reference, coord, layout){
+# one expansion image can be shown per region, with same width as the main plots
+# regionI must be passed to app$browser$expandingTrack
+expand.__MODULE_NAME__Track <- function(track, reference, coord, layout, regionI){
     # build a track image the same way as for the main track build
     # typically, need to pass data from "build" to "expand" via a variable scoped to the app
     # expansion tracks may follow the browser genome coordinate, or have an entirely different layout
 }
 
 # expand2 method for the S3 class
-expand2.__MODULE_NAME__Track <- function(track, reference, coord, selectedRowData){
+# a single output at browser bottom, replaced on call to any expand2 function
+expand2.__MODULE_NAME__Track <- function(track, browser, selectedRowData){
     # return a tagList of arbitrary UI content in response to an expansion table click
 }
 
 # method for the S3 class to populate one or more trackNav inputs above the browser output
-navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference, coord){
+# only one navigation set is shown per track, your navigation should decide how to handle multiple regions
+navigation.__MODULE_NAME__Track <- function(track, session, id, browser){
 
     # initialize the trackNavs, including input observers to handle user actions
     # initTrackNav will fail silenty if setting Track/Show_Navigation is not set or =="hide"
@@ -132,7 +137,7 @@ navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference
         trackNavTable(
             track, 
             session, 
-            browserId,
+            browser$id,
             navName2, # the name as provided by initTrackNav
             tableData = trackNavData, # populate a table based on track settings, etc.
             actionFn = function(selectedRow){
@@ -140,7 +145,7 @@ navigation.__MODULE_NAME__Track <- function(track, session, browserId, reference
                 d <- trackNavData()[selectedRow]
                 # do other work as needed based on the input value (e.g., open a modal, navigate)
                 # you should honor the value of trackNavCanNavigate(track) and trackNavCanExpand(track)
-                # the easiest way is to use handleTrackNavTableClick(track, chrom, start, end, expandFn)
+                # the easiest way is to use handleTrackNavTableClick(regionI, track, chrom, start, end, expandFn)
             }
             # add other argument to pass to bufferedTableServer, but omit "selection" and "width"
         )
