@@ -66,4 +66,16 @@ sub getQryOnRef {
     return \@qryOnRef;
 }
 
+sub getN50 {
+    my (@sizes) = @_;
+    my $sumSizes = 0;
+    map { $sumSizes += $_ } @sizes;
+    my $halfSumSizes = $sumSizes / 2;
+    my $runningSum = 0;
+    foreach my $size(sort {$b <=> $a} @sizes){
+        $runningSum += $size;
+        $runningSum >= $halfSumSizes and return $size;
+    }
+}
+
 1;

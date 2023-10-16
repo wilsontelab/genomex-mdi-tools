@@ -43,6 +43,9 @@ elif [[ "$FASTQ_FILE1" != "" && "$FASTQ_FILE2" = "" ]]; then
 elif [[ "$FASTQ_FILE1" = "" && "$SRA_FILES" = "" ]]; then
     echo "missing sequence read file(s); expected two paired .fastq.gz files or a set of .sra files"
     exit 1  
+elif [ "$CHECK_FASTQ_ONLY" != "" ]; then
+    echo "sequence read file(s) were found as expected; exiting quietly"
+    exit
 else
 
 #------------------------------------------------------------------
