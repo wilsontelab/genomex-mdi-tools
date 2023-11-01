@@ -53,9 +53,10 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         end   <- as.integer64(end   + padding)
     }
     genome <- browser$reference$genome()
-    chromosomeSize <- browser$reference$getChromosomeSize(chromosome) 
-    if(start < 1) start <- 1
-    if(end > chromosomeSize) end <- chromosomeSize
+    minChromosomePosition <- browser$reference$getChromosomeStart(chromosome) 
+    maxChromosomePosition <- browser$reference$getChromosomeEnd(chromosome) 
+    if(start < minChromosomePosition) start <- minChromosomePosition
+    if(end > maxChromosomePosition) end <- maxChromosomePosition
     app$browser$clearObjectExpansions()
     if(history) pushCoordinateHistory(list(chromosome = chromosome, start = start, end = end))
     updateSelectInput(session, "chromosome", selected = chromosome)
@@ -99,7 +100,12 @@ observers$nudgeLeft  <- observeEvent(input$nudgeLeft,  { doMove(0.05, -1) }, ign
 observers$nudgeRight <- observeEvent(input$nudgeRight, { doMove(0.05,  1) }, ignoreInit = TRUE)
 observers$moveRight  <- observeEvent(input$moveRight,  { doMove(1,     1) }, ignoreInit = TRUE)
 observers$all <- observeEvent(input$all, { 
-    jumpToCoordinates(input$chromosome, 1, browser$reference$getChromosomeSize(input$chromosome), strict = TRUE) 
+    jumpToCoordinates(
+        input$chromosome, 
+        browser$reference$getChromosomeStart(input$chromosome), 
+        browser$reference$getChromosomeEnd(input$chromosome), 
+        strict = TRUE
+    )
 }, ignoreInit = TRUE)
 center <- function(x){
     coord <- coordinates(input)

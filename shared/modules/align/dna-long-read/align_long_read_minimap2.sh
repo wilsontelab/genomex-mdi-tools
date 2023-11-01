@@ -8,9 +8,9 @@
 #     $FORCE_ALIGNMENT   [default: don't overwrite output file]
 #     $MINIMAP2_ACCURACY ["high", "low"; default if missing: high, which places cigar/cg tag in PAF]
 # input (in precedence order):
-#     a single unaligned sam.gz file
-#     a single unaligned bam file
-#     a set of FASTQ files, or
+#     unaligned sam.gz
+#     unaligned bam
+#     FASTQ
 # output:
 #     $NAME_PAF_FILE = PAF format, +/- CIGAR strings depending on $MINIMAP2_ACCURACY
 
@@ -52,8 +52,8 @@ if [ "$USAM_FILES" != "" ]; then
     PARSE_READS2="samtools fastq -"
 elif [ "$UBAM_FILES" != "" ]; then
     INPUT_TYPE="ubam" # convert to fastq as required by minimap2 
-    PARSE_READS1="samtools fastq $UBAM_FILES"
-    PARSE_READS2="cat"
+    PARSE_READS1="samtools cat $UBAM_FILES"
+    PARSE_READS2="samtools fastq -"
 else 
     INPUT_TYPE="fastq"
     PARSE_READS1="perl $SHARED_MODULE_DIR/index_fastq.pl" # for sequence retrieval during SV extraction, to avoid carrying all big sequences in PAF

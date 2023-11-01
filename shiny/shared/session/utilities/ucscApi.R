@@ -122,6 +122,9 @@ getUcscRdsFile <- function(relPath, fileName){
 # 'genome' arguments take a single character genome name
 #----------------------------------------------------------------------
 listUcscGenomes <- function(force = FALSE){
+
+force <- TRUE
+
     file <- getUcscRdsFile("genomes", "genomes")
     file <- loadPersistentFile(
         file = file,
@@ -138,8 +141,9 @@ listUcscGenomes <- function(force = FALSE){
             dt[, genome := names(ucsc)]
             cols <- c("organism", "genome", "scientificName", "description", "orderKey")
             dt <- dt[, .SD, .SDcols = cols][, lapply(.SD, unlist, recursive = FALSE)] 
+            dt[, source := "UCSC"]
             saveRDS(
-                dt[order(organism, orderKey), .(genome, organism, scientificName, description)], 
+                dt[order(organism, orderKey), .(source, genome, organism, scientificName, description)], 
                 file = file
             )
             stopSpinner(session)
@@ -170,7 +174,7 @@ listUcscTracks <- function(genome, force = FALSE){
                 dt[, .SD, .SDcols = c("track", cols)], 
                 file = file
             )   
-            stopSpinner(session)           
+            stopSpinner(session)
         }
     )
     persistentCache[[file]]$data
@@ -200,51 +204,6 @@ listUcscChromosomes <- function(genome, force = FALSE){
     )
     persistentCache[[file]]$data
 }
-listCanonicalChromosomes <- function(genome, force = FALSE){
-    chromosomes <- listUcscChromosomes(genome, force)
-    req(chromosomes)
-    chroms <- chromosomes$chromosome
-    arabic <- c(1:100, "X", "Y", "M")
-    roman <- c(as.character(as.roman(1:100)), "Y", "M")
-    isUpper  <- any(startsWith("CHR", chroms))
-    isArabic <- any(grepl("^CHR\\d", toupper(chroms)))
-    allowed <- if(!isUpper &&  isArabic) paste0("chr", arabic)
-          else if( isUpper &&  isArabic) paste0("CHR", arabic)
-          else if(!isUpper && !isArabic) paste0("chr", roman)
-          else if( isUpper && !isArabic) paste0("CHR", roman)
-          else chroms
-    standardized <- allowed[allowed %in% chroms]
-    required <- sort(chroms[!grepl('_', chroms)])
-    unique(c(required[!(required %in% standardized)], standardized))
-}
-getChromosomeSizes <- function(genome){
-    chroms <- listCanonicalChromosomes(genome)
-    sizes <- listUcscChromosomes(genome)[, .(chromosome, size)]
-    sizes <- sapply(chroms, function(chrom) sizes[chromosome == chrom, size])
-    ends <- cumsum(as.numeric(sizes))
-    starts <- c(1, ends - 1)[1:length(ends)]
-    data.table(
-        chrom = "all",
-        chromStart = starts,
-        chromEnd = ends,
-        size = sizes,
-        name = chroms,
-        gieStain = rep(c("odd", "even"), 50)[1:length(chroms)]
-    )   
-}
-getChromosomeSize <- function(genome, chrom_){
-    req(genome, chrom_)
-    if(chrom_ == "all") return(getGenomeSize(genome))
-    chroms <- getChromosomeSizes(genome)
-    chrom <- chroms[name == chrom_]
-    req(nrow(chrom) == 1)
-    chrom[, size]
-}
-getGenomeSize <- function(genome){
-    chroms <- listCanonicalChromosomes(genome)
-    listUcscChromosomes(genome)[chromosome %in% chroms, sum(as.integer64(size))]
-}
-
 #----------------------------------------------------------------------
 # generic track get function; caller decides whether to work by chromosome or whole genome
 # 'genome' and 'track' arguments take a single character entity name
@@ -317,14 +276,26 @@ getUcscTrackTable <- function(genome, track, chromosome = NULL,
 
 #----------------------------------------------------------------------
 # retrieve low-resolution chromosomeone metadata, for chromosome track
-# 'genome' and 'chrom' arguments take a single character entity name
 #----------------------------------------------------------------------
-getChromosomeFeatures <- function(genome, track){
+getUcscChromosomeFeatures <- function(reference, chromosome, track){
+    genome <- if(reference$genome$source == "UCSC"){
+        reference$genome$genome
+    } else if({
+        x <- getCustomCompositeType(reference)
+        isTruthy(x) && x == "UCSC"
+    }) {
+        delimiter <- getCustomCompositeDelimiter(reference$metadata)
+        x <- strsplit(chromosome, delimiter)[[1]] # expects composite chromosome names in form ChromDelimiterGenome, e.g., chr3_hg38
+        chromosome <- x[1]
+        x[2]
+    } else {
+        return(NULL)
+    }
     availableTracks <- listUcscTracks(genome)
     req(availableTracks)
     if(!(track %in% availableTracks$track)) return(NULL)
     tryCatch({
-        getUcscTrackTable(
+        dt <- getUcscTrackTable(
             genome, 
             track,
             col.names = switch(
@@ -340,6 +311,7 @@ getChromosomeFeatures <- function(genome, track){
                 gap          = c("character", "integer", "integer", "character", "integer")
             )
         )
+        dt[chrom == chromosome]
     }, error = function(e) NULL)
 }
 

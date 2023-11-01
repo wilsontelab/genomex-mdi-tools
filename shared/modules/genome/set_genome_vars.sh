@@ -41,8 +41,11 @@ export GENOME_UMAP_DIR=$GENOME_METADATA_DIR/umap
 # bad genome regions
 export BAD_REGIONS_FILE=$GENOME_ENCODE_DIR/$GENOME-blacklist.v2.bed.gz
 
-# genome size from canonical chromosomes
-export GENOME_SIZE=`awk '$1!~/_/{s+=$2}END{print s}' $GENOME_FASTA.fai`
-
-# chromosomes, including chr#, chrX, chrY, chrM
-export GENOME_CHROMS=`cat $GENOME_FASTA.fai | cut -f1 | grep -v _ | grep -v chrEBV | sort | uniq`    
+# genome size from canonical chromosomes and chromosomes
+if [[ "$USE_ALL_CHROMS" == "" || "$USE_ALL_CHROMS" == "0" ]]; then
+    export GENOME_SIZE=`awk '$1!~/_/{s+=$2}END{print s}' $GENOME_FASTA.fai`
+    export GENOME_CHROMS=`cat $GENOME_FASTA.fai | cut -f1 | grep -v _ | grep -v chrEBV | sort | uniq`  
+else
+    export GENOME_SIZE=`awk '{s+=$2}END{print s}' $GENOME_FASTA.fai`
+    export GENOME_CHROMS=`cat $GENOME_FASTA.fai | cut -f1| sort | uniq`  
+fi

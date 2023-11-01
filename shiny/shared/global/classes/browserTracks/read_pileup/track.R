@@ -31,6 +31,9 @@ items.read_pileupTrack <- function(...) showTrackSamplesDialog(...)
 
 # build method for the S3 class; REQUIRED
 build.read_pileupTrack <- function(track, reference, coord, layout){
+
+    # TODO: allow for rescaling of large windows
+
     build.XY_pileup_track(
         track, reference, coord, layout,
         allValues = c("A","C","G","T","-","+","M"), # places M on top of alt bases

@@ -4,6 +4,7 @@ trackBrowserReferenceServer <- function(id, browser) {
     moduleServer(id, function(input, output, session) {
 #----------------------------------------------------------------------
 defaults <- list(
+    source = "UCSC",
     genome = "hg38",
     annotation = "wgEncodeGencodeBasicV41"
 )
@@ -12,17 +13,29 @@ defaults <- list(
 # fill cascading genome > annotations, chromosomes
 #----------------------------------------------------------------------
 # genome
-genomes <- reactiveVal( listUcscGenomes() )
-observeEvent(input$getUcscGenomes, {
-    genomes( listUcscGenomes(force = TRUE) )
+ucscGenomes   <- reactiveVal( listUcscGenomes() )
+customGenomes <- reactiveVal( listCustomGenomes() )
+genomeMetadata <- reactiveVal(list())
+observeEvent(input$reloadGenomes, {
+    ucscGenomes(  listUcscGenomes(  force = TRUE))
+    customGenomes(listCustomGenomes(force = TRUE))
 })
-genomeI <- reactiveVal(NULL)
-genomesTable <- bufferedTableServer(
-    "genomes",
+ucscGenomeI   <- reactiveVal(NULL)
+customGenomeI <- reactiveVal(NULL)
+ucscGenomesTable <- bufferedTableServer(
+    "ucscGenomes",
     id,
     input,
-    tableData = genomes,
-    select = genomeI,
+    tableData = ucscGenomes, # don't change this, needs to retain source
+    select = ucscGenomeI,
+    options = list( searchDelay = 0 )
+)
+customGenomesTable <- bufferedTableServer(
+    "customGenomes",
+    id,
+    input,
+    tableData = customGenomes,
+    select = customGenomeI,
     options = list( searchDelay = 0 )
 )
 genome <- reactive({
@@ -33,30 +46,60 @@ genomeInput <- popupInputServer(
     "genome", 
     "Set Working Genome", 
     callback = function(...){
-        rowI <- genomesTable$selectionObserver()
-        if(is.na(rowI)) {
-            genomeI(NULL)
-            data.table()
+        source <- input$genomeInputTabPanel
+        if(source == "UCSC"){
+            rowI <- ucscGenomesTable$selectionObserver()
+            if(is.na(rowI)) {
+                ucscGenomeI(NULL)
+                customGenomeI(NULL)
+                genomeMetadata(list())
+                data.table()
+            } else {
+                ucscGenomeI(rowI)
+                customGenomeI(NULL)
+                genomeMetadata(list())
+                ucscGenomes()[rowI] # the popup's return value, one genome row
+            }
         } else {
-            genomeI(rowI)
-            genomes()[rowI] # the popup's return value, one genome row
+            rowI <- customGenomesTable$selectionObserver()
+            if(is.na(rowI)) {
+                ucscGenomeI(NULL)
+                customGenomeI(NULL)
+                genomeMetadata(list())
+                data.table()
+            } else {
+                ucscGenomeI(NULL)
+                customGenomeI(rowI)
+                genome <- customGenomes()[rowI]
+                genomeMetadata(loadCustomGenomeMetadata(genome$genome))
+                genome # the row carries a source column telling whether it is UCSC or Custom
+            }
         }
     },
     labelCol = "genome",
     tags$p(tags$strong({
         x <- genome()
-        if(!objectHasData(x)) "" else paste("current selection = ", x$genome)
+        if(!objectHasData(x)) "" else paste0("current selection = ", x$genome, " (", x$source, ")")
     })),
-    bufferedTableUI(session$ns("genomes")),
-    actionLink(session$ns("getUcscGenomes"), "Reload from UCSC")
+    tabsetPanel(
+        id = session$ns("genomeInputTabPanel"),
+        tabPanel("UCSC",   bufferedTableUI(session$ns("ucscGenomes"))),
+        tabPanel("Custom", bufferedTableUI(session$ns("customGenomes")))
+    ),
+    actionLink(session$ns("reloadGenomes"), "Reload Genomes")
 )
 #----------------------------------------------------------------------
 # annotation
 annotations <- reactiveVal( data.table() )
-observeEvent(input$getUcscAnnotations, {
-    genome <- genome()
-    req(genome)
-    genomes( listUcscAnnotations(genome = genome$genome, force = TRUE) )
+setAnnotationsFromGenome <- function(genome, force = FALSE){
+    req(genome, nrow(genome) > 0)
+    annotations( 
+        if(genome$source == "UCSC") listUcscAnnotations(  genome = genome$genome, force = force)
+                               else listCustomAnnotations(genome = genome$genome, force = force)
+    )
+}
+observeEvent(input$reloadAnnotations, {
+    setAnnotationsFromGenome(genome(), force = TRUE)
 })
 annotationI <- reactiveVal(NULL)
 annotationsTable <- bufferedTableServer(
@@ -90,18 +133,28 @@ annotationInput <- popupInputServer(
         if(!objectHasData(x)) "" else paste("current selection = ", x$track)
     })),
     bufferedTableUI(session$ns("annotations")),
-    actionLink(session$ns("getUcscAnnotations"), "Reload from UCSC"),
-    active = reactive({ nrow(genome()) > 0 })    
+    actionLink(session$ns("reloadAnnotations"), "Reload Annotations"),
+    active = reactive({ 
+        genome <- genome()
+        isTruthy(genome) && nrow(genome) > 0 
+    })
 )
 #----------------------------------------------------------------------
 # chromosomes
 chromosomes <- reactiveVal(NULL)
-observeEvent(genome(), {
+observeEvent({
+    genome()
+    genomeMetadata()
+}, {
+    annotationInput(data.table())
     genome <- genome()
-    req(nrow(genome()) > 0)
-    annotations(listUcscAnnotations(genome$genome))
-    annotationInput(data.table())            
-    chromosomes(c(listCanonicalChromosomes(genome$genome), "all"))     
+    req(genome, nrow(genome) > 0)
+    setAnnotationsFromGenome(genome)
+    chromosomes(c(
+        listCanonicalChromosomes(genome), 
+        listCompositeGenomes(reference = list(genome = genome, metadata = genomeMetadata())),
+        "all"
+    ))
 })
 
 #----------------------------------------------------------------------
@@ -109,27 +162,42 @@ observeEvent(genome(), {
 #----------------------------------------------------------------------
 genomeSize <- reactive({
     genome <- genome()
-    req(nrow(genome()) > 0)
-    getGenomeSize(genome$genome)  
+    req(genome, nrow(genome) > 0)
+    getGenomeSize(genome)
 })
 chromosomeSizes <- reactive({ # size of the currently active chromosome (not the one we may be switching to...)
     genome <- genome()
-    req(nrow(genome()) > 0)
-    getChromosomeSizes(genome$genome)
+    req(genome, nrow(genome) > 0)
+    getChromosomeSizes(genome, genomeMetadata())
 })
+getChromosomeStart <- function(chrom_){
+    req(chrom_)
+    if(isProperChromosome(chrom_) || chrom_ == "all") 1
+    else chromosomeSizes()[genome == chrom_, min(chromStart)]
+}
+getChromosomeEnd <- function(chrom_){
+    req(chrom_)
+    if(isProperChromosome(chrom_) || chrom_ == "all") getChromosomeSize(chrom_)
+    else chromosomeSizes()[genome == chrom_, max(chromEnd)]
+}
 getChromosomeSize <- function(chrom_){
     req(chrom_)
-    if(chrom_ == "all") genomeSize()
-    else chromosomeSizes()[name == chrom_, size]    
+    if(isProperChromosome(chrom_)) chromosomeSizes()[name == chrom_, size] 
+    else if(chrom_ == "all") genomeSize()
+    else chromosomeSizes()[genome == chrom_, sum(size)]
 }
 
 #----------------------------------------------------------------------
 # initialization
 #----------------------------------------------------------------------
 initializeGenome <- function(jobId, loadData, loadSequence){
-    if(is.null(loadData$outcomes$genome)) loadData$outcomes$genome <- genomes()[genome == defaults$genome]
-    annotations(listUcscAnnotations(loadData$outcomes$genome$genome))
+    if(is.null(loadData$outcomes$genome)) loadData$outcomes$genome <- ucscGenomes()[genome == defaults$genome]
+    setAnnotationsFromGenome(loadData$outcomes$genome)
     genomeInput(loadData$outcomes$genome)
+    genomeMetadata(
+        if(loadData$outcomes$genome$source == "UCSC") list()
+        else loadCustomGenomeMetadata(loadData$outcomes$genome$genome)
+    )
     doNextLoadSequenceItem(loadData, loadSequence)
 }
 initializeAnnotation <- function(jobId, loadData, loadSequence){
@@ -140,6 +208,7 @@ initializeAnnotation <- function(jobId, loadData, loadSequence){
 #----------------------------------------------------------------------
 # module return value
 list(
+    genomeMetadata = genomeMetadata,
     genomeInput = genomeInput,
     genome = genome,
     annotationInput = annotationInput,
@@ -147,6 +216,8 @@ list(
     chromosomes = chromosomes,
     genomeSize = genomeSize,
     chromosomeSizes = chromosomeSizes,
+    getChromosomeStart = getChromosomeStart,
+    getChromosomeEnd = getChromosomeEnd,
     getChromosomeSize = getChromosomeSize,
     initializeGenome = initializeGenome,
     initializeAnnotation = initializeAnnotation
