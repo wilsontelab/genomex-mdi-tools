@@ -58,7 +58,7 @@ build.binned_XY_track <- function(track, reference, coord, layout, dataFn,
 
     # make and return the plot
     buildXYTrackImage(
-        track, coord, layout,
+        track, reference, coord, layout,
         itemsList, itemNames, itemData,
         stranded = stranded, allowNeg = allowNeg, ylab = ylab,
         dataFamily = dataFamily, yAxisFamily = yAxisFamily, 

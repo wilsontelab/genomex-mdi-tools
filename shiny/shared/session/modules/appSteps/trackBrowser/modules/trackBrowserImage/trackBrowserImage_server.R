@@ -50,11 +50,7 @@ browserWidth <- reactive({
 # genome region to plot
 coordinates <- browser$coordinates[[regionI]]
 reference <- reactive({ # parse the target genome region
-    reference <- list(
-        genome = browser$reference$genome(),
-        annotation = browser$reference$annotation(),
-        metadata = browser$reference$genomeMetadata()
-    )
+    reference <- browser$reference$reference()
     req(reference$genome)
     reference
 })

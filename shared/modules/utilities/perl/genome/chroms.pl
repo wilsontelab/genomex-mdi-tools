@@ -10,10 +10,11 @@ our (@canonicalChroms, %chromIndex, %revChromIndex);
 
 # parsers for restricting work to properly ordered canonical chromosomes
 sub setCanonicalChroms { 
-    my %canonicalChroms = map { $_ => 1 } split(/\s+/, $ENV{GENOME_CHROMS});
+    my @chroms = split(/\s+/, $ENV{GENOME_CHROMS});
     if($ENV{USE_ALL_CHROMS}){
-        @canonicalChroms = keys %canonicalChroms;
+        @canonicalChroms = @chroms; # chroms used in fai indexed order
     } else {
+        my %canonicalChroms = map { $_ => 1 } @chroms;
         sub getPushValue{
             my ($chr, $canonicalChroms) = @_;
             my $chrom = "chr$chr";

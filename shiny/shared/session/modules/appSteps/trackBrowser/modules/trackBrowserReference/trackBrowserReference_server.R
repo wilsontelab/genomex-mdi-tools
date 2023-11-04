@@ -152,7 +152,7 @@ observeEvent({
     setAnnotationsFromGenome(genome)
     chromosomes(c(
         listCanonicalChromosomes(genome), 
-        listCompositeGenomes(reference = list(genome = genome, metadata = genomeMetadata())),
+        listCompositeGenomeNames(reference = list(genome = genome, metadata = genomeMetadata())),
         "all"
     ))
 })
@@ -208,6 +208,11 @@ initializeAnnotation <- function(jobId, loadData, loadSequence){
 #----------------------------------------------------------------------
 # module return value
 list(
+    reference = reactive(list(
+        genome = genome(),
+        annotation = annotation(),
+        metadata = genomeMetadata()
+    )),
     genomeMetadata = genomeMetadata,
     genomeInput = genomeInput,
     genome = genome,

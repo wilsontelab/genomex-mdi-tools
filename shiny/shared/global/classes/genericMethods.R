@@ -93,6 +93,12 @@ zeroLine <- function(x, ...) {
 hLines <- function(x, ...) {
     UseMethod("hLines", x)
 }
+vLines <- function(x, ...) {
+    UseMethod("vLines", x)
+}
+chromLines <- function(x, ...) {
+    UseMethod("chromLines", x)
+}
 getItemsData <- function(x, ...) {
     UseMethod("getItemsData", x)
 }

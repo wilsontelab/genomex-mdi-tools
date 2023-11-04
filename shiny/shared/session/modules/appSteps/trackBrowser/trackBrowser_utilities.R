@@ -259,7 +259,7 @@ col.browserTrack <- function(track, default = CONSTANTS$plotlyColors$blue, famil
 zeroLine.browserTrack <- function(track, color = CONSTANTS$plotlyColors$black, lwd = 1){
     abline(h = 0, col = color, lwd = lwd)
 }
-hLines.browserTrack <- function(track, ylim, color = CONSTANTS$plotlyColors$grey, lwd = 0.25){
+hLines.browserTrack <- function(track, ylim, color = CONSTANTS$plotlyColors$grey, lwd = 0.5){
     doLines <- getTrackSetting(track, "Track", "Horizontal_Lines", TRUE)
     if(!doLines) return()
     unit <- 10 ** floor(log10(max(abs(ylim))))
@@ -277,6 +277,15 @@ hLines.browserTrack <- function(track, ylim, color = CONSTANTS$plotlyColors$grey
         y <- getY()
     }
     abline(h = y, col = color, lwd = lwd)
+}
+vLines.browserTrack <- function(track, x, color = CONSTANTS$plotlyColors$grey, lwd = 0.5){
+    abline(v = x, col = color, lwd = lwd)
+}
+chromLines <- function(track, reference, coord, color = CONSTANTS$plotlyColors$grey, lwd = 0.5){
+    if(!isProperChromosome(coord$chromosome)) {
+        x <- getChromosomeSizes(reference$genome, reference$metadata)$size
+        vLines(track, cumsum(as.double(x)), color, lwd)
+    }
 }
 trackLegend.browserTrack <- function(track, coord, ylim, bty = "n", ...){
     par(xpd = TRUE)

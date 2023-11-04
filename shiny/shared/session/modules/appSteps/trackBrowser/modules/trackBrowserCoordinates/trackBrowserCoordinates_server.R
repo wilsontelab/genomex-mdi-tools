@@ -52,7 +52,6 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         start <- as.integer64(start - padding)
         end   <- as.integer64(end   + padding)
     }
-    genome <- browser$reference$genome()
     minChromosomePosition <- browser$reference$getChromosomeStart(chromosome) 
     maxChromosomePosition <- browser$reference$getChromosomeEnd(chromosome) 
     if(start < minChromosomePosition) start <- minChromosomePosition
@@ -145,17 +144,35 @@ checkJumpEnd <- function(chrom, start, end_){
     end
 }
 checkJumpGene <- function(gene){
-    genome <- browser$reference$genome()
-    annotation <- browser$reference$annotation()
-    req(gene, objectHasData(genome), objectHasData(annotation))
-    gene <- getGene(genome, annotation, gene) %>% setUcscFeatureEndpoints(annotation)
-    req(nrow(gene) == 1)
-    list(
-        chromosome = gene$chrom, 
-        start      = gene$start, 
-        end        = gene$end,
-        strict = FALSE
-    )
+    reference <- browser$reference$reference()
+    req(gene, reference)
+    compositeSources <- listCompositeGenomes(reference)
+    if(objectHasData(compositeSources)) for(genome in names(compositeSources)){
+        delimiter <- getCustomCompositeDelimiter(reference$metadata)
+        reference <- fillCompositeAnnotation_(reference, compositeSources[[genome]], genome, "all")
+        if(objectHasData(reference$genome) && objectHasData(reference$annotation)){
+            gene_ <- getGene(reference, gene) %>% setUcscFeatureEndpoints(reference)
+            if(nrow(gene_) == 1){
+                return(list(
+                    chromosome = paste(gene_$chrom, genome, sep = delimiter), 
+                    start      = gene_$start, 
+                    end        = gene_$end,
+                    strict = FALSE
+                ))
+            }
+        }
+    } else {
+        req(objectHasData(reference$genome), objectHasData(reference$annotation))
+        gene_ <- getGene(reference, gene) %>% setUcscFeatureEndpoints(reference)
+        req(nrow(gene_) == 1)
+        return(list(
+            chromosome = gene_$chrom, 
+            start      = gene_$start, 
+            end        = gene_$end,
+            strict = FALSE
+        ))
+    }
+    req(FALSE)
 }
 executeJumpTo <- function(action = NULL){
     req(action)
@@ -163,8 +180,8 @@ executeJumpTo <- function(action = NULL){
     updateTextInput(session, "end", value = "")
     do.call(jumpToCoordinates, action)
 }
-observers$jumpTo <- observeEvent(input$jumpTo,  { 
-    req(input$jumpTo)    
+observers$jumpTo <- observeEvent(input$jumpTo, { 
+    req(input$jumpTo)
     jumpTo <- trimws(input$jumpTo)
     req(jumpTo)
     parts <- strsplit(jumpTo, '(:|,|-|\\s+)')[[1]]
@@ -203,10 +220,9 @@ observers$jumpTo <- observeEvent(input$jumpTo,  {
 # gene search popup navigation
 #----------------------------------------------------------------------
 genes <- reactive({
-    genome <- browser$reference$genome()
-    annotation <- browser$reference$annotation()
-    req(nrow(genome) > 0, nrow(annotation) > 0)
-    getGenomeGenes(genome, annotation) %>% setUcscFeatureEndpoints(annotation) 
+    reference <- browser$reference$reference()
+    req(nrow(reference$genome) > 0, nrow(reference$genome) > 0)
+    getGenomeGenes(reference) %>% setUcscFeatureEndpoints(reference) 
 })
 geneI <- reactiveVal(NULL)
 genesTable <- bufferedTableServer(

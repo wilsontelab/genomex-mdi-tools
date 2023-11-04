@@ -38,8 +38,7 @@ getCustomCompositeType <- function(reference){
     isComposite <- reference$genome$source == "Custom" &&
                    isTruthy(reference$metadata$composite) && 
                    isTruthy(reference$metadata$compositeType)
-    if(isComposite) reference$metadata$compositeType
-    else NA
+    if(isComposite) reference$metadata$compositeType else NA
 }
 getCustomCompositeDelimiter <- function(metadata){
     x <- metadata$compositeDelimiter
@@ -68,18 +67,47 @@ listCustomGenomes <- function(...){
         as.data.table(metadata[customGenomeCols])
     }))
 }
-listCustomAnnotations <- function(genome, ...){
+listCustomAnnotations <- function(genome, ...){ # this is used to populate the annotation popupInput
     nullCustomAnnotation # at present, only support is for composite UCSC genomes
 }                        # in future, could allow custom genomes to define their own annotations in their source folder
-listCompositeGenomes <- function(reference){
+listCompositeGenomes <- function(reference){ # the set of individual genomes that comprise the composite ...
     isComposite <- reference$genome$source == "Custom" &&
                    isTruthy(reference$metadata$composite) && 
                    isTruthy(reference$metadata$compositeSources)
-    if(isComposite) names(reference$metadata$compositeSources) else character()
+    if(isComposite) reference$metadata$compositeSources else list() # ... here as a named list of genome-specific annotations
 }
+listCompositeGenomeNames <- function(reference) names(listCompositeGenomes(reference)) # ... here as just a vector of genome names
 listCustomChromosomes <- function(reference){
-    fai <- getCustomGenomeFile(reference$genome$genome, "fa.fai")
+    fai <- getCustomGenomeFile(reference$genome$genome, "fa.fai") # read custom chromosomes from the requisite fai index
     fai <- fread(fai)[, 1:2]
     setnames(fai, c("chromosome","size"))
     fai
+}
+fillCompositeAnnotation_ <- function(reference, compositeSource, genome, chromosome){
+    if(compositeSource$source == "UCSC"){
+        reference$genome <- getUscsGenome(genome)
+        reference$annotation <- as.data.table(compositeSource)
+        reference$metadata <- list()
+        reference$chromosome <- chromosome
+    } # TODO: implement user-built custom annotations
+    reference
+}
+fillCompositeAnnotation <- function(reference, chromosome){ # when user select one custom genome as chromosome, retrieve its dedicated annotation
+    compositeSources <- listCompositeGenomes(reference)
+    if(objectHasData(compositeSources)) {
+        compositeSource <- compositeSources[[chromosome]]
+        if(objectHasData(compositeSource)) {
+            reference <- fillCompositeAnnotation_(reference, compositeSource, genome = chromosome, chromosome = "all")
+        } else {
+            delimiter <- getCustomCompositeDelimiter(reference$metadata)
+            chrom <- strsplit(chromosome, delimiter)[[1]]
+            if(isTruthy(chrom[2])){
+                compositeSource <- compositeSources[[chrom[2]]]
+                if(objectHasData(compositeSource)) {
+                    reference <- fillCompositeAnnotation_(reference, compositeSource, genome = chrom[2], chromosome = chrom[1])
+                }
+            }
+        }
+    }
+    reference
 }

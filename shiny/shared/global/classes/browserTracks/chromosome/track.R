@@ -38,7 +38,7 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
     genome <- reference$genome$genome
     req(coord$chromosome)
     featuresTrack <- getBrowserTrackSetting(track, "Plot_Options", "Feature_Track", "cytoBand") # i.e., a UCSC track
-    compositeGenomes <- listCompositeGenomes(reference)
+    compositeGenomes <- listCompositeGenomeNames(reference)
     isAll <- coord$chromosome == "all"
     isCompositeGenome <- coord$chromosome %in% compositeGenomes
     features <- if(isAll) getChromosomeSizes(reference$genome, reference$metadata)

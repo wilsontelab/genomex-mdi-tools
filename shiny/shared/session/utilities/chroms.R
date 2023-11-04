@@ -94,3 +94,9 @@ getGenomeSize <- function(genome){
 isProperChromosome <- function(chrom_){
     startsWith(toupper(chrom_), "CHR")
 }
+
+# for plots that aggregate chromosome bins, mask the last bins that may have partial data
+maskLastChromBins <- function(x, chromCol = "chrom"){
+    I <- x[, .I[length(.I)], by = chromCol][[2]]
+    x[I, y := NA]
+}
