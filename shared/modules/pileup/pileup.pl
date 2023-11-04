@@ -32,7 +32,7 @@ use constant {
 
 # environment variables
 fillEnvVar(\our $N_CPU,                 'N_CPU'); 
-fillEnvVar(\our $BWA_GENOME_FASTA,      'BWA_GENOME_FASTA');
+fillEnvVar(\our $GENOME_FASTA,          'GENOME_FASTA');
 fillEnvVar(\our $COORDINATE_BAM_FILE,   'COORDINATE_BAM_FILE');
 fillEnvVar(\our $SHM_DIR_WRK,           'SHM_DIR_WRK');
 fillEnvVar(\our $MIN_MAPQ,              'MIN_MAPQ');
@@ -40,7 +40,7 @@ fillEnvVar(\our $MIN_MAPQ,              'MIN_MAPQ');
 # initialize the genome
 use vars qw(@canonicalChroms %chromIndex);
 setCanonicalChroms();
-loadFaidx($BWA_GENOME_FASTA);
+loadFaidx($GENOME_FASTA);
 
 # process data by chromosome over multiple parallel threads
 launchChildThreads(\&parseChromosome);
@@ -56,7 +56,7 @@ finishChildThreads();
 sub parseChromosome {
     my ($childN) = @_;
     my $readH = $readH[$childN];    
-    open our $faH, "<", $BWA_GENOME_FASTA or die "$error: could not find genome: $!\n";
+    open our $faH, "<", $GENOME_FASTA or die "$error: could not find genome: $!\n";
     while(my $chrom = <$readH>){
 
         # initialize the chromosome

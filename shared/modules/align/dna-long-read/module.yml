@@ -6,7 +6,7 @@ action: # required
         - minimap2
     optionFamilies:
         - fastq-dir
-        - alignment        
+        - alignment
         - genome
         - minimap2
     resources:

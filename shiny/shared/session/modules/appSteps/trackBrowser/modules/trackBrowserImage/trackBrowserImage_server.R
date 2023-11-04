@@ -50,10 +50,7 @@ browserWidth <- reactive({
 # genome region to plot
 coordinates <- browser$coordinates[[regionI]]
 reference <- reactive({ # parse the target genome region
-    reference <- list(
-        genome = browser$reference$genome(),
-        annotation = browser$reference$annotation()
-    )
+    reference <- browser$reference$reference()
     req(reference$genome)
     reference
 })
@@ -285,8 +282,8 @@ yPixelToTrack <- function(x, y){
 #----------------------------------------------------------------------
 # transmit the click and hover actions to the track
 doTrackClick <- function(click){
-    req(interactingTrack$click)     
-    click(interactingTrack, click, regionI)    
+    req(interactingTrack$click)
+    click(interactingTrack, click, regionI)
 }
 observers$click <- observeEvent(browserPlot$click(), {
     click <- browserPlot$click()

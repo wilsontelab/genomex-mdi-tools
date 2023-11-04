@@ -26,22 +26,32 @@ chromBandColors <- list(
     gpos75  = 'grey25',
     gpos100 = 'grey5',
     gvar    = 'grey5',
-    even    = 'grey50',
-    odd     = 'grey80'
+    odd     = 'grey40',
+    even    = 'grey80',
+    odd1    = "#4444dd",
+    even1   = "#bbbbee",
+    odd2    = "#dd4444",
+    even2   = "#eebbbb"
 ) 
 build.chromosomeTrack <- function(track, reference, coord, layout){
     req(objectHasData(reference$genome))
     genome <- reference$genome$genome
     req(coord$chromosome)
     featuresTrack <- getBrowserTrackSetting(track, "Plot_Options", "Feature_Track", "cytoBand") # i.e., a UCSC track
-    features <- if(coord$chromosome == "all") getChromosomeSizes(genome)
+    compositeGenomes <- listCompositeGenomeNames(reference)
+    isAll <- coord$chromosome == "all"
+    isCompositeGenome <- coord$chromosome %in% compositeGenomes
+    features <- if(isAll) getChromosomeSizes(reference$genome, reference$metadata)
+                else if(isCompositeGenome) getChromosomeSizes(reference$genome, reference$metadata)[genome == coord$chromosome]
                 else if(featuresTrack == "none") NULL 
-                else getChromosomeFeatures(genome, featuresTrack)
-    if(coord$chromosome == "all"){
-        chromSize <- features[, max(chromEnd)]
+                else getUcscChromosomeFeatures(reference, coord$chromosome, featuresTrack)
+    if(isAll || isCompositeGenome){
+        chromSize <- features[, sum(chromEnd - chromStart + 1)]
+        chromStart_ <- features[, min(chromStart)] # since 2nd composite genome doesn't start at 1
     } else {
-        chroms <- listUcscChromosomes(genome)
-        chromSize <- chroms[chromosome == coord$chromosome, size]        
+        chroms <- listSourceChromosomes(reference$genome, metadata = reference$metadata)
+        chromSize <- chroms[chromosome == coord$chromosome, size]
+        chromStart_ <- 1
     }
     padding <- padding(track, layout)
     height <- height(track, 0.25) + padding$total
@@ -54,16 +64,17 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
             xlim = coord$range, xlab = "", xaxt = "n",
             ylim = ylim,  ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i") 
-        getX <- function(pos){ pos / chromSize * as.numeric(coord$width) + as.numeric(coord$start) }
+        getX <- function(pos){
+            (pos - chromStart_ + 1)  / chromSize * as.numeric(coord$width) + as.numeric(coord$start)
+        }
 
-        # whole chromosome
+        # whole chromosome (or genome)
         y1 <- 0.25
         y2 <- 0.75
         rect(coord$start, y1, coord$end, y2, col="grey", border=NA)
 
         # major features
         if(!is.null(features)){
-            features <- features[chrom == coord$chromosome]
             if(nrow(features) > 0) rect(
                 getX(features$chromStart), 
                 y1, 
@@ -94,6 +105,7 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
         par(xpd = tmp, cex = 1)
     })
     chromosomeTrackData <<- list(
+        chromStart = chromStart_,
         chromSize = chromSize,
         coord = coord
     )
@@ -109,12 +121,12 @@ build.chromosomeTrack <- function(track, reference, coord, layout){
 click.chromosomeTrack <- function(track, click, regionI){
     d <- chromosomeTrackData
     req(d$coord)
-    app$browser$center(regionI, (click$coord$x - d$coord$start) / d$coord$width * d$chromSize)  
+    app$browser$center(regionI, d$chromStart + (click$coord$x - d$coord$start) / d$coord$width * d$chromSize)  
 }
 brush.chromosomeTrack <- function(track, brush, regionI){
     d <- chromosomeTrackData
     req(d$coord)
-    getX <- function(x) (x - d$coord$start) / d$coord$width * d$chromSize
+    getX <- function(x) d$chromStart + (x - d$coord$start) / d$coord$width * d$chromSize
     app$browser$jumpToCoordinates(
         regionI,
         d$coord$chromosome, 

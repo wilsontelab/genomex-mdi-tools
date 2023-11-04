@@ -114,6 +114,12 @@ settings:
                 - stacked 
                 - side_by_side
             value:  stacked 
+        Genomes_Source:
+            type:   radioButtons
+            choices:
+                - UCSC 
+                - custom
+            value:  UCSC   
         Strict_Coordinates:
             type: checkboxInput
             value: FALSE

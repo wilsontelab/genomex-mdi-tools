@@ -17,3 +17,10 @@ options:
         required: false
         default: hg38
         description: "name of the UCSC-format reference genome to use (e.g., hg38)"
+    use-all-chroms: 
+        order: 3
+        short: null
+        type: boolean
+        required: false
+        default: false
+        description: "set this flag to use all chromosomes as they are found in genome.fa without filtering"

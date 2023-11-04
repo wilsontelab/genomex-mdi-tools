@@ -52,7 +52,7 @@ getDynamicYLim <- function(track, yAxisFamily, itemsList, stranded, allowNeg){
 }
 
 # parse standardized input to create consistently formatted XY plots of various types
-buildXYTrackImage <- function(track, coord, layout,
+buildXYTrackImage <- function(track, reference, coord, layout,
                                itemsList, itemNames, itemData,
                                stranded = TRUE, allowNeg = FALSE, ylab = NULL,
                                dataFamily = "Data", yAxisFamily = "Y_Axis", 
@@ -82,9 +82,10 @@ buildXYTrackImage <- function(track, coord, layout,
             ylim = ylim,  ylab = ylab, # yaxt = "n",
             xaxs = "i", yaxs = "i") # always set `xaxs` and `yaxs` to "i"
 
-        # add horizontal rules if requested  
+        # add rules if requested/required
         zeroLine(track)  
         hLines(track, ylim)   
+        chromLines(track, reference, coord)
 
         # randomize point order to avoid overplotting
         I <- 1:nItems

@@ -138,14 +138,19 @@ listUcscGenomes <- function(force = FALSE){
             dt[, genome := names(ucsc)]
             cols <- c("organism", "genome", "scientificName", "description", "orderKey")
             dt <- dt[, .SD, .SDcols = cols][, lapply(.SD, unlist, recursive = FALSE)] 
+            dt[, source := "UCSC"]
             saveRDS(
-                dt[order(organism, orderKey), .(genome, organism, scientificName, description)], 
+                dt[order(organism, orderKey), .(source, genome, organism, scientificName, description)], 
                 file = file
             )
             stopSpinner(session)
         }
     )
     persistentCache[[file]]$data
+}
+getUscsGenome <- function(genome_){
+    genomes <- listUcscGenomes()
+    genomes[genome == genome_]
 }
 listUcscTracks <- function(genome, force = FALSE){
     file <- getUcscRdsFile(file.path("genomes", genome), "tracks")
@@ -170,7 +175,7 @@ listUcscTracks <- function(genome, force = FALSE){
                 dt[, .SD, .SDcols = c("track", cols)], 
                 file = file
             )   
-            stopSpinner(session)           
+            stopSpinner(session)
         }
     )
     persistentCache[[file]]$data
@@ -200,51 +205,6 @@ listUcscChromosomes <- function(genome, force = FALSE){
     )
     persistentCache[[file]]$data
 }
-listCanonicalChromosomes <- function(genome, force = FALSE){
-    chromosomes <- listUcscChromosomes(genome, force)
-    req(chromosomes)
-    chroms <- chromosomes$chromosome
-    arabic <- c(1:100, "X", "Y", "M")
-    roman <- c(as.character(as.roman(1:100)), "Y", "M")
-    isUpper  <- any(startsWith("CHR", chroms))
-    isArabic <- any(grepl("^CHR\\d", toupper(chroms)))
-    allowed <- if(!isUpper &&  isArabic) paste0("chr", arabic)
-          else if( isUpper &&  isArabic) paste0("CHR", arabic)
-          else if(!isUpper && !isArabic) paste0("chr", roman)
-          else if( isUpper && !isArabic) paste0("CHR", roman)
-          else chroms
-    standardized <- allowed[allowed %in% chroms]
-    required <- sort(chroms[!grepl('_', chroms)])
-    unique(c(required[!(required %in% standardized)], standardized))
-}
-getChromosomeSizes <- function(genome){
-    chroms <- listCanonicalChromosomes(genome)
-    sizes <- listUcscChromosomes(genome)[, .(chromosome, size)]
-    sizes <- sapply(chroms, function(chrom) sizes[chromosome == chrom, size])
-    ends <- cumsum(as.numeric(sizes))
-    starts <- c(1, ends - 1)[1:length(ends)]
-    data.table(
-        chrom = "all",
-        chromStart = starts,
-        chromEnd = ends,
-        size = sizes,
-        name = chroms,
-        gieStain = rep(c("odd", "even"), 50)[1:length(chroms)]
-    )   
-}
-getChromosomeSize <- function(genome, chrom_){
-    req(genome, chrom_)
-    if(chrom_ == "all") return(getGenomeSize(genome))
-    chroms <- getChromosomeSizes(genome)
-    chrom <- chroms[name == chrom_]
-    req(nrow(chrom) == 1)
-    chrom[, size]
-}
-getGenomeSize <- function(genome){
-    chroms <- listCanonicalChromosomes(genome)
-    listUcscChromosomes(genome)[chromosome %in% chroms, sum(as.integer64(size))]
-}
-
 #----------------------------------------------------------------------
 # generic track get function; caller decides whether to work by chromosome or whole genome
 # 'genome' and 'track' arguments take a single character entity name
@@ -317,14 +277,26 @@ getUcscTrackTable <- function(genome, track, chromosome = NULL,
 
 #----------------------------------------------------------------------
 # retrieve low-resolution chromosomeone metadata, for chromosome track
-# 'genome' and 'chrom' arguments take a single character entity name
 #----------------------------------------------------------------------
-getChromosomeFeatures <- function(genome, track){
+getUcscChromosomeFeatures <- function(reference, chromosome, track){
+    genome <- if(reference$genome$source == "UCSC"){
+        reference$genome$genome
+    } else if({
+        x <- getCustomCompositeType(reference)
+        isTruthy(x) && x == "UCSC"
+    }) {
+        delimiter <- getCustomCompositeDelimiter(reference$metadata)
+        x <- strsplit(chromosome, delimiter)[[1]] # expects composite chromosome names in form ChromDelimiterGenome, e.g., chr3_hg38
+        chromosome <- x[1]
+        x[2]
+    } else {
+        return(NULL)
+    }
     availableTracks <- listUcscTracks(genome)
     req(availableTracks)
     if(!(track %in% availableTracks$track)) return(NULL)
     tryCatch({
-        getUcscTrackTable(
+        dt <- getUcscTrackTable(
             genome, 
             track,
             col.names = switch(
@@ -340,6 +312,7 @@ getChromosomeFeatures <- function(genome, track){
                 gap          = c("character", "integer", "integer", "character", "integer")
             )
         )
+        dt[chrom == chromosome]
     }, error = function(e) NULL)
 }
 
@@ -381,9 +354,9 @@ isBigGenePred <- function(annotation) annotation$type == "bigGenePred"
 # 'chromosome' and 'gene' take a single character entity name
 #----------------------------------------------------------------------
 # annotation metadata for a genome, chromosome, region or gene
-getChromTranscripts <- function(genome, annotation, chromosome = "all", force = FALSE){
+getUcscChromTranscripts <- function(genome, annotation, chromosome = "all", force = FALSE){
     fileName <- paste("transcripts", chromosome, sep = ".")
-    file <- getUcscRdsFile(file.path("genomes", genome$genome, "annotations", annotation$track), fileName)
+    file <- getUcscRdsFile(file.path("genomes", genome, "annotations", annotation$track), fileName)
     file <- loadPersistentFile(
         file = file,
         force = force,
@@ -391,29 +364,30 @@ getChromTranscripts <- function(genome, annotation, chromosome = "all", force = 
         ttl = CONSTANTS$ttl$year,
         create = function(file){
             startSpinner(session, message = paste("tabulating transcripts"))
-            dt <- getUcscTrackTable(genome$genome, annotation$track, col.names = ucscGenePredTypes[[annotation$type]], force = FALSE)
+            dmsg("tabulating transcripts")
+            dt <- getUcscTrackTable(genome, annotation$track, col.names = ucscGenePredTypes[[annotation$type]], force = FALSE)
             saveRDS(if(chromosome == "all") dt else dt[chrom == chromosome], file = file)   
             stopSpinner(session)           
         }
     )
     persistentCache[[file]]$data 
 }
-getGenomeTranscripts <- function(genome, annotation, force = FALSE){
-    getChromTranscripts(genome, annotation, chromosome = "all", force = force)
+getUcscGenomeTranscripts <- function(genome, annotation, force = FALSE){
+    getUcscChromTranscripts(genome, annotation, chromosome = "all", force = force)
 }
-getRegionTranscripts <- function(genome, annotation, coord, force = FALSE){
-    transcripts <- getChromTranscripts(genome, annotation, chromosome = coord$chromosome, force = force)
+getUcscRegionTranscripts <- function(genome, annotation, coord, force = FALSE){
+    transcripts <- getUcscChromTranscripts(genome, annotation, chromosome = coord$chromosome, force = force)
     if(isBigGenePred(annotation)){
         transcripts[chromStart <= coord$end & coord$start <= chromEnd]
     } else {
         transcripts[txStart    <= coord$end & coord$start <= txEnd]
     }
 }
-getGeneTranscripts <- function(genome, annotation, gene, coord = NULL){
-    transcripts <- getGenomeTranscripts(genome, annotation, force = force)
+getUcscGeneTranscripts <- function(genome, annotation, gene, coord = NULL){
+    transcripts <- getUcscGenomeTranscripts(genome, annotation, force = force)
     transcripts[toupper(name2) == toupper(gene)]
 }
-aggregateTranscriptsToGenes <- function(annotation, transcripts){
+aggregateUcscTranscriptsToGenes <- function(annotation, transcripts){
     sizeLimit <- 5e6 # size limit correct for naming problems in annotation where name2 applies to widely disparte chromosome regions
     x <- if(isBigGenePred(annotation)) transcripts[, {
         blocks <- unique(data.table(
@@ -448,44 +422,12 @@ aggregateTranscriptsToGenes <- function(annotation, transcripts){
     }, by = .(name2)][txEnd - txStart < sizeLimit]
     x[order(name2)]
 }
-getChromGenes <- function(genome, annotation, chromosome = "all", force = FALSE){
-    fileName <- paste("genes", chromosome, sep = ".")
-    file <- getUcscRdsFile(file.path("genomes", genome$genome, "annotations", annotation$track), fileName)
-    file <- loadPersistentFile(
-        file = file,
-        force = force,
-        unlink = force,
-        ttl = CONSTANTS$ttl$year,
-        create = function(file){
-            transcripts <- getChromTranscripts(genome, annotation, chromosome = chromosome, force = force)            
-            startSpinner(session, message = paste("tabulating genes"))
-            saveRDS(aggregateTranscriptsToGenes(annotation, transcripts), file = file)   
-            stopSpinner(session)           
-        }
-    )
-    persistentCache[[file]]$data 
-}
-getGenomeGenes <- function(genome, annotation, force = FALSE){
-    getChromGenes(genome, annotation, chromosome = "all", force = force)
-}
-getRegionGenes <- function(genome, annotation, coord, force = FALSE){
-    genes <- getChromGenes(genome, annotation, chromosome = coord$chromosome, force = force)
-    if(isBigGenePred(annotation)){
-        genes[chromStart <= coord$end & coord$start <= chromEnd]
-    } else {
-        genes[txStart    <= coord$end & coord$start <= txEnd]
-    }
-}
-getGene <- function(genome, annotation, gene, force = FALSE){
-    genes <- getGenomeGenes(genome, annotation, force = force)
-    genes[toupper(name2) == toupper(gene)]
-}
 
 #----------------------------------------------------------------------
 # perform post-processing on genes and transcripts
 #----------------------------------------------------------------------
-setUcscFeatureEndpoints <- function(features, annotation){ # convert endpoints to standardized names
-    if(isBigGenePred(annotation)){
+setUcscFeatureEndpoints <- function(features, reference){ # convert endpoints to standardized names
+    if(isBigGenePred(reference$annotation)){
         features[, ":="(
             start = chromStart,
             end   = chromEnd

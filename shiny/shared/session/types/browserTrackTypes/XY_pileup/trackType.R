@@ -23,6 +23,8 @@
 build.XY_pileup_track <- function(track, reference, coord, layout, 
                                   dataFn, allValues, colorPalette){
 
+    # TODO: allow for rescaling of large windows
+
     # check for a valid plot window
     Max_Width <- getTrackSetting(track, "Pileup", "Max_Width", 1000)
     if(!isTruthy(coord$width <= Max_Width)) return(trackInfo(track, coord, layout, "window too wide to plot pileup"))

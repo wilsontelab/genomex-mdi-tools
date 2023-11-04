@@ -19,7 +19,13 @@ new_genesTrack <- function(trackId) {
 # build method for the S3 class; REQUIRED
 genesTrackBuffer <- list()
 build.genesTrack <- function(track, reference, coord, layout){
-    req(objectHasData(reference$annotation))
+    reference <- fillCompositeAnnotation(reference, coord$chromosome) # does nothing for a standard genome
+    if(!is.null(reference$chromosome)) coord$chromosome <- reference$chromosome
+    req(objectHasData(reference$annotation), coord$chromosome != "all")
+    genes <- getRegionGenes(reference, coord, force = FALSE) %>%
+             setUcscFeatureEndpoints(reference)
+    genesTrackBuffer[[track$id]] <<- list(reference = reference, genes = genes)
+
     padding <- padding(track, layout)
     lwd <- getBrowserTrackSetting(track, "Plot_Options", "Line_Weight", 2)
     Max_Genes_BP <- getBrowserTrackSetting(track, "Plot_Options", "Max_Genes_BP", 50000000)
@@ -36,9 +42,6 @@ build.genesTrack <- function(track, reference, coord, layout){
     height <- getBrowserTrackSetting(track, "Track", "Height", 0.8)
     height <- height + padding$total # or set a known, fixed height in inches
     ylim <- c(0, 4)
-    genes <- getRegionGenes(reference$genome, reference$annotation, coord, force = FALSE) %>%
-             setUcscFeatureEndpoints(reference$annotation)
-    genesTrackBuffer[[track$id]] <<- list(reference = reference, genes = genes)
 
     # use the mdiTrackImage helper function to create the track image
     mai <- NULL
@@ -145,8 +148,8 @@ click.genesTrack <- function(track, click, regionI){
             style = "width: 100%; height: 1000px; margin-top: 5px;"
         ))  
 
-    # execute simple click navigation to gene limits                   
+    # execute simple click navigation to gene limits
     } else {
-        app$browser$jumpToCoordinates(regionI, genes[1, chrom], genes[, min(start)], genes[, max(end)])
+        app$browser$jumpToCoordinates(regionI, NA, genes[, min(start)], genes[, max(end)])
     }
 }

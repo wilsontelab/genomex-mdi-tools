@@ -111,7 +111,6 @@ buildSpanTrackImage <- function(track, coord, layout,
         for(i in I){ 
             dd <- itemData[source == itemNames[i]]
             if(nrow(dd) == 0) next
-            dstr(dd)
             if(stranded) for(strand_ in c("+", "-")){
                 ddd <- dd[strand == strand_]
                 if(nrow(ddd) == 0) next

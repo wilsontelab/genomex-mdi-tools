@@ -112,7 +112,7 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
         itemData <- mergeXYTrackItems(itemsList, itemNames)
         if(!is.null(trackBuffer)) trackBuffer[[track$id]] <- itemData
         buildXYTrackImage(
-            track, coord, layout,
+            track, reference, coord, layout,
             itemsList, itemNames, itemData,
             stranded = Stranded, allowNeg = TRUE, ylab = NULL,
             dataFamily = scoresFamily, yAxisFamily = yAxisFamily
