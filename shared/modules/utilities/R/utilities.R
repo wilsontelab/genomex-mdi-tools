@@ -31,3 +31,18 @@ ucFirst <- function(y) {
 # remove the first element of an vector
 # return the altered vector (NOT the shifted value)
 shift <- function(v) if(length(v) <= 1) c() else v[2:length(v)]
+
+#----------------------------------------------------------------
+# generic numeric and distribution support functions
+#----------------------------------------------------------------
+peakValue <- function(x){ # find the peak, i.e., mode of a set of values
+    x <- x[!is.na(x)]
+    if(length(x) == 0) return(NA)
+    d <- density(x)
+    d$x[which.max(d$y)]
+}
+excludeOutliers <- function(v, low = 0.025, high = 0.975, min = -Inf){ # could be more sophisticated, but these are heuristics
+    v <- v[!is.na(v)]
+    q <- quantile(v, c(low, high))
+    v[v >= q[1] & v <= q[2] & v >= min]
+}
