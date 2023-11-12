@@ -17,7 +17,7 @@
 
 # this following evironment variables are required and must be set or errors will occur:
 #   ONT_MODEL_DIR = a directory containing the required ONT model files, e.g. /path/to/dna_r10.4.1_e8.2_400bps_sup@v4.2.0
-#   EXPANDED_INPUT_DIR = fully expanded path to a directory containing input pod5 (or fast5) files
+#   EXPANDED_INPUT_DIR = fully expanded path(s) to one or more space-delimited directories containing input pod5 (or fast5) files
 #   BAM_DIR = a directory where output bam files will be written; will be created; existing batch files in BAM_DIR will not be re-created
 
 # the following evironment variables are required but have default values:
@@ -103,17 +103,8 @@ echo "  duplex:         "${IS_DUPLEX}
 echo "  emit moves:     "${EMITTING_MOVES} 
 echo "  reads file:     "${READ_IDS_FILE_NAME}  
 echo "  pod5 buffer:    "${POD5_BUFFER_DIR}
-echo "  input:          "${EXPANDED_INPUT_DIR}
+echo "  input(s):       "${EXPANDED_INPUT_DIR}
 echo "  output folder:  "${BAM_DIR}
-
-# initialize pod5 sources
-cd ${EXPANDED_INPUT_DIR}
-CHECK_COUNT=`ls -1 *.pod5 2>/dev/null | wc -l`
-if [ "$CHECK_COUNT" == "0" ]; then
-    POD5_FILES=(*.fast5) # support implicit fallback to fast5 instead of the preferred pod5
-else
-    POD5_FILES=(*.pod5)
-fi
 
 # prepare the cache and output directories
 mkdir -p ${POD5_BUFFER_DIR}
@@ -126,24 +117,24 @@ rm -f ${TMP_DIR_WRK}/*.bam
 do_batch_copy () {
     if [ "$COPY_IN_I" != "" ]; then
         if [ "$IS_ALIGNING" != "" ]; then
-            BATCH_OUTPUT_FILE1=$BAM_DIR/batch_$COPY_IN_I.bam
+            BATCH_OUTPUT_FILE1=$BAM_DIR/${BATCH_PREFIX}_$COPY_IN_I.bam
         else 
-            BATCH_OUTPUT_FILE1=$BAM_DIR/batch_$COPY_IN_I.unaligned.bam
+            BATCH_OUTPUT_FILE1=$BAM_DIR/${BATCH_PREFIX}_$COPY_IN_I.unaligned.bam
         fi
         if [[ ! -f $BATCH_OUTPUT_FILE1 || "$FORCE_BASECALLING" == "true" ]]; then
             BATCH_FILES=${POD5_FILES[@]:COPY_IN_I:POD5_BATCH_SIZE}
-            COPY_DIR=$POD5_BUFFER_DIR/batch_$COPY_IN_I
+            COPY_DIR=$POD5_BUFFER_DIR/${BATCH_PREFIX}_$COPY_IN_I
             mkdir $COPY_DIR  
             cp $BATCH_FILES $COPY_DIR
         fi
     fi
     if [ "$COPY_OUT_I" != "" ]; then
         if [ "$IS_ALIGNING" != "" ]; then
-            BATCH_OUTPUT_FILE2=$BAM_DIR/batch_$COPY_OUT_I.bam
-            CALL_FILE=$TMP_DIR_WRK/batch_$COPY_OUT_I.bam
+            BATCH_OUTPUT_FILE2=$BAM_DIR/${BATCH_PREFIX}_$COPY_OUT_I.bam
+            CALL_FILE=$TMP_DIR_WRK/${BATCH_PREFIX}_$COPY_OUT_I.bam
         else 
-            BATCH_OUTPUT_FILE2=$BAM_DIR/batch_$COPY_OUT_I.unaligned.bam
-            CALL_FILE=$TMP_DIR_WRK/batch_$COPY_OUT_I.unaligned.bam
+            BATCH_OUTPUT_FILE2=$BAM_DIR/${BATCH_PREFIX}_$COPY_OUT_I.unaligned.bam
+            CALL_FILE=$TMP_DIR_WRK/${BATCH_PREFIX}_$COPY_OUT_I.unaligned.bam
         fi
         if [[ ! -f $BATCH_OUTPUT_FILE2 || "$FORCE_BASECALLING" == "true" ]]; then
             cp $CALL_FILE $BAM_DIR
@@ -153,13 +144,13 @@ do_batch_copy () {
 }
 RUN_DORADO="$DORADO_EXECUTABLE $DORADO_COMMAND $MODIFICATION_OPTIONS $EMIT_MOVES $READ_IDS_FILE $MINIMAP2_OPTIONS $ONT_MODEL_DIR"
 run_dorado () {
-    CALL_DIR=$POD5_BUFFER_DIR/batch_$CALL_I
+    CALL_DIR=$POD5_BUFFER_DIR/${BATCH_PREFIX}_$CALL_I
     if [ "$IS_ALIGNING" != "" ]; then 
-        BATCH_OUTPUT_FILE3=$BAM_DIR/batch_$CALL_I.bam
-        TMP_OUPUT_FILE=$TMP_DIR_WRK/batch_$CALL_I.bam
+        BATCH_OUTPUT_FILE3=$BAM_DIR/${BATCH_PREFIX}_$CALL_I.bam
+        TMP_OUPUT_FILE=$TMP_DIR_WRK/${BATCH_PREFIX}_$CALL_I.bam
     else 
-        BATCH_OUTPUT_FILE3=$BAM_DIR/batch_$CALL_I.unaligned.bam
-        TMP_OUPUT_FILE=$TMP_DIR_WRK/batch_$CALL_I.unaligned.bam
+        BATCH_OUTPUT_FILE3=$BAM_DIR/${BATCH_PREFIX}_$CALL_I.unaligned.bam
+        TMP_OUPUT_FILE=$TMP_DIR_WRK/${BATCH_PREFIX}_$CALL_I.unaligned.bam
     fi
     if [[ ! -f $BATCH_OUTPUT_FILE3 || "$FORCE_BASECALLING" == "true" ]]; then
         $RUN_DORADO $CALL_DIR > $TMP_OUPUT_FILE
@@ -167,10 +158,29 @@ run_dorado () {
     rm -fr $CALL_DIR
 }
 
+# process one pod5 input directory at a time; output is merged into a single output directory
+WORKING_I=0
+for WORKING_INPUT_DIR in ${EXPANDED_INPUT_DIR}; do
+
+echo
+echo "processing $WORKING_INPUT_DIR"
+WORKING_I=$((WORKING_I + 1))
+BATCH_PREFIX="batch_$WORKING_I"
+
+# initialize pod5 sources
+cd ${WORKING_INPUT_DIR}
+CHECK_COUNT=`ls -1 *.pod5 2>/dev/null | wc -l`
+if [ "$CHECK_COUNT" == "0" ]; then
+    POD5_FILES=(*.fast5) # support implicit fallback to fast5 instead of the preferred pod5
+else
+    POD5_FILES=(*.pod5)
+fi
+
 # run basecaller one pod5 file batch at a time, working from /dev/shm to a local write buffer
 # once the loop is running, one batch is copying while another batch is basecalling
 # see: https://github.com/nanoporetech/dorado/issues/223
 COPY_IN_I=0
+COPY_OUT_I=""
 echo "waiting for batch copy $COPY_IN_I"
 do_batch_copy
 CALL_I=$COPY_IN_I
@@ -191,6 +201,9 @@ echo "finishing final file copy"
 wait $COPY_PID
 COPY_OUT_I=$CALL_I
 do_batch_copy
+
+# end input directory loop
+done
 
 
 # VERSION 0.4.1

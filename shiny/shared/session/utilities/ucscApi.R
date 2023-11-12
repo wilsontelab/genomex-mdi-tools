@@ -364,7 +364,6 @@ getUcscChromTranscripts <- function(genome, annotation, chromosome = "all", forc
         ttl = CONSTANTS$ttl$year,
         create = function(file){
             startSpinner(session, message = paste("tabulating transcripts"))
-            dmsg("tabulating transcripts")
             dt <- getUcscTrackTable(genome, annotation$track, col.names = ucscGenePredTypes[[annotation$type]], force = FALSE)
             saveRDS(if(chromosome == "all") dt else dt[chrom == chromosome], file = file)   
             stopSpinner(session)           

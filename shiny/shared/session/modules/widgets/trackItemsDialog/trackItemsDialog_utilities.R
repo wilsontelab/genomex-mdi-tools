@@ -95,7 +95,7 @@ getSourcesFromTrackSamples <- function(selectedSamples){ # selectedSamples is a 
 
 # assign a unique color to each unique selected sample
 getColorsBySelectedSample <- function(selectedTargets, isMultiSample = TRUE, dt = NULL){ # selected sources as returned by getSourcesFromTrackSamples
-    allSamples <- if(isMultiSample) unique(unlist(lapply(selectedSources, function(x) x$Sample_ID)))
+    allSamples <- if(isMultiSample) unique(unlist(lapply(selectedTargets, function(x) x$Sample_ID)))
                   else unique(dt[, unlist(strsplit(samples, ","))])
     allSamples <- allSamples[allSamples != ""]
     sampleCols <- as.list(1:length(allSamples))
@@ -103,13 +103,15 @@ getColorsBySelectedSample <- function(selectedTargets, isMultiSample = TRUE, dt 
     sampleCols   
 }
 dt_colorBySelectedSample <- function(dt, selectedTargets, isMultiSample = TRUE){ # dt expected to have samples columns, and usually nSamples, columns
+    if(nrow(dt) == 0){
+        dt$color <- character()
+        return(dt)
+    }
     sampleCols <- getColorsBySelectedSample(selectedTargets, isMultiSample, dt)
     if("nSamples" %in% names(dt)){
-        dt[, color := ifelse(
-            nSamples > 1,
-            "black", 
-            unlist(CONSTANTS$plotlyColors[unlist(sampleCols[samples])])
-        )]        
+        dt[, color := sapply(1:.N, function(i){
+            if(nSamples[i] > 1) "black" else CONSTANTS$plotlyColors[[sampleCols[[samples[i]]]]]
+        })]      
     } else {
         dt[, color := unlist(CONSTANTS$plotlyColors[unlist(sampleCols[samples])])]   
     }
