@@ -322,9 +322,13 @@ getBgzFilesFromItems <- function(track, reference, type){ # return a set of typi
         bgzFiles[file.exists(bgzFiles)]
     }))
 }
-getItemsData.browserTrack <- function(track, reference, coord, dataFn, parseXY = TRUE){
+getItemsData.browserTrack <- function(track, reference, coord, dataFn, parseXY = TRUE, optional = FALSE){
     items <- track$settings$items()
-    req(items, length(items) > 0)
+    if(optional){
+        if(!isTruthy(items) || length(items) == 0) return(NULL)
+    } else {
+        req(items, length(items) > 0)
+    }
     itemKeys <- names(items) # derived from keyColumn
     ymin <- NA
     ymax <- NA

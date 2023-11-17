@@ -4,7 +4,7 @@ options:
     bin-size: 
         order: 1
         short: z
-        type: integer
+        type: character # must be character since some pipelines support composite genomes with different bin sizes
         required: false
         default: 1000000
         description: "initial (smallest possible) bin size in bp, before any later bin merging"

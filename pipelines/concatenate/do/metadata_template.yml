@@ -1,0 +1,22 @@
+genome: __GENOME__
+organism: Mixed
+scientificName: NA
+description: __GENOME1__ plus __GENOME2__
+composite: true
+compositeType: UCSC # a clean conatenation of chromosomes from two UCSC genomes
+compositeDelimiter: "_" # such that custom chromosome names are, e.g., chr3_mm10
+compositeSources: # key = genome, value = gene annotation metadata
+  __GENOME1__: 
+    source: UCSC # alternative is "Custom" (not implemented yet)
+    track: __ANNOTATION1__ # must pick one dedicated UCSC annotation per composite genome
+    type: genePred
+    group: NA
+    shortLabel: __ANNOTATION1__
+    longLabel: __ANNOTATION1__
+  __GENOME2__:
+    source: UCSC
+    track: __ANNOTATION2__
+    type: genePred
+    group: NA
+    shortLabel: __ANNOTATION2__
+    longLabel: __ANNOTATION2__

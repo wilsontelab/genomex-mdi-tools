@@ -12,7 +12,8 @@ actions:
             - snakemake
             - genome       
         optionFamilies: 
-            - snakemake        
+            - snakemake   
+            - genome     
             - fixed-width-bins
         resources:
             required:

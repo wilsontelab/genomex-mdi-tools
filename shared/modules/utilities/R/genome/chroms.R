@@ -17,7 +17,7 @@ setCanonicalChroms <- function(){
         if(is.null(env$SUPPRESS_CHR_Y)) addChrom('Y') # chrY included unless specifically excluded
         if(!is.null(env$USE_CHR_M))     addChrom('M') # chrM excluded unless specifically included
     } else {
-        canonicalChroms <- GENOME_CHROMS
+        canonicalChroms <<- GENOME_CHROMS
     }
     maxI <- length(canonicalChroms)
     for(i in 1:maxI){

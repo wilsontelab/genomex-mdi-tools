@@ -24,6 +24,9 @@ my $nSplit = $chromCol + 2;
 
 # working variables
 my @useChroms = map { "chr$_" } (1..22, "X", "Y", $useChrM ? "M" : ());
+if($ENV{ORDERED_CHROMS} and $ENV{ORDERED_CHROMS} ne "NA"){
+    @useChroms = split(",", $ENV{ORDERED_CHROMS});
+}
 my %useChroms = map { $_ => 1 } @useChroms;
 
 # filter the stream, collect all lines in memory

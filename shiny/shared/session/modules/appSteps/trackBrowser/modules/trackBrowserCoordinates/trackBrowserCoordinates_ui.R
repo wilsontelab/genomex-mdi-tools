@@ -10,7 +10,11 @@ trackBrowserCoordinatesUI <- function(id, regionI) {
         id = id,
         tags$div(
             class = "trackBrowserInput",
-            selectInput(ns('chromosome'), getLabel("Chromosome"), choices = c()),
+            selectInput(ns('chromosome'), HTML(getLabel(paste(
+                "Chrom", 
+                tags$span(style = "margin-left: 5px;", actionLink(ns("prevChrom"), label = "", icon = icon("arrow-left"))), 
+                tags$span(style = "margin-left: 5px;", actionLink(ns("nextChrom"), label = "", icon = icon("arrow-right")))
+            ))), choices = c()),
         ),
         tags$div(
             class = "trackBrowserInput coordinateInput",

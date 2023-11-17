@@ -20,7 +20,7 @@ checkPipe
 # report our results
 TARGET_FILE=$BINS_DIR/$TARGET_FILE
 echo
-ls -l $BINS_DIR
+ls -lh $BINS_DIR
 echo
 echo $TARGET_FILE
 zcat $TARGET_FILE | head
