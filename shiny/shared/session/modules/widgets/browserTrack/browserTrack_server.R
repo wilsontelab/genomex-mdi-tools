@@ -100,8 +100,8 @@ if(isTruthy(track$navigation)){
             if(isTruthy(track$expand)) "expand" else NULL,
             if(isTruthy(track$expand)) "navigate_and_expand" else NULL            
         ),
-        selected = "hide"
-    )        
+        value = if(is.logical(track$navigation)) "hide" else track$navigation
+    ) 
 }
 presets <- if(is.null(request$presets)) presets       # presets were defined by app in config.yml
            else if(is.null(presets)) request$presets  # request$presets were defined by track in settings.yml
