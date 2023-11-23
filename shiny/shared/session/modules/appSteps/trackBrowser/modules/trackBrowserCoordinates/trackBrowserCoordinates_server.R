@@ -34,7 +34,7 @@ observers$back <- observeEvent(input$back,  {
 # browser navigation support functions
 #----------------------------------------------------------------------
 isStrict <- function(){
-    x <- browser$setting$Browser_Options()$Strict_Coordinates$value
+    x <- browser$settings$Browser_Options()$Strict_Coordinates$value
     if(is.null(x)) FALSE else x
 }
 jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = TRUE, then = NULL){ # arguments are strict coordinates
@@ -48,7 +48,7 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         end <- tmp
     }
     if(!isStrict() && !strict){
-        padding <- (end - start + 1) * 0.05
+        padding <- (end - start + 1) * browser$settings$get("Browser_Options", "Feature_Padding", 0.5)
         start <- as.integer64(start - padding)
         end   <- as.integer64(end   + padding)
     }

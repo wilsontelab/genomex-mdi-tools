@@ -2,7 +2,7 @@
 pipeline:
     name: download
     description: "download data files from common public data repositories"
-    version: v0.0.1
+    version: v0.1.0
 #--------------------------------------------------------------------
 actions:  
     _global:       

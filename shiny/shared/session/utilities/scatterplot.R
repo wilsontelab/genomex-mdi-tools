@@ -89,7 +89,6 @@ buildXYTrackImage <- function(track, reference, coord, layout,
         chromLines(track, reference, coord)
 
         # add any region highlights underneath the plot points
-        dstr(highlights)
         if(!is.null(highlights)) for(sample in names(highlights$d)){
             d <- highlights$d[[sample]]
             if(nrow(d) == 0) next
