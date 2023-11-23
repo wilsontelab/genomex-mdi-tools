@@ -34,11 +34,14 @@ loadCustomGenomeMetadata <- function(genome){
 #----------------------------------------------------------------------
 # custom genome metadata
 #----------------------------------------------------------------------
+isCompositeGenome <- function(reference){
+    reference$genome$source == "Custom" &&
+    isTruthy(reference$metadata$composite) && 
+    isTruthy(reference$metadata$compositeType)
+}
 getCustomCompositeType <- function(reference){
-    isComposite <- reference$genome$source == "Custom" &&
-                   isTruthy(reference$metadata$composite) && 
-                   isTruthy(reference$metadata$compositeType)
-    if(isComposite) reference$metadata$compositeType else NA
+    if(isCompositeGenome(reference)) reference$metadata$compositeType 
+    else NA
 }
 getCustomCompositeDelimiter <- function(metadata){
     x <- metadata$compositeDelimiter

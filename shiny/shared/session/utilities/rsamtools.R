@@ -171,9 +171,11 @@ aggregateTabixBins <- function(bins, track, coord, plotBinSize, aggFn = mean,
                                asFractionOfMax = FALSE, maxY = NULL, limitToOne = TRUE){
     if(nrow(bins) == 0) return(data.table(strand = character(), x = integer(), y = double()))
     bins[, x := floor(x / plotBinSize) * plotBinSize + 1] # thus, x is the leftmost coordinate of the plot bin
+    hasZ <- "z" %in% names(bins)
     bins <- bins[, 
         .(
-            y = aggFn(as.double(y), na.rm = FALSE)
+            y = aggFn(as.double(y), na.rm = FALSE),
+            z = if(hasZ) aggFn(as.double(z), na.rm = FALSE) else NA_real_
         ), 
         by = .(strand, x)
     ] 

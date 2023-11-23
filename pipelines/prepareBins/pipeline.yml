@@ -2,7 +2,7 @@
 pipeline:
     name: prepareBins
     description: "create a set of fixed-width bins with metadata for use by other pipelines"
-    version: v0.0.1
+    version: v0.1.0
 actions: 
     do:
         order: 1
@@ -12,7 +12,8 @@ actions:
             - snakemake
             - genome       
         optionFamilies: 
-            - snakemake        
+            - snakemake   
+            - genome     
             - fixed-width-bins
         resources:
             required:

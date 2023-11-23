@@ -21,7 +21,8 @@
 build.binned_XY_track <- function(track, reference, coord, layout, dataFn, 
                                   stranded = TRUE, allowNeg = FALSE, ylab = NULL,
                                   center = FALSE, binSize = NULL,
-                                  dataFamily = "Data", yAxisFamily = "Y_Axis"){
+                                  dataFamily = "Data", yAxisFamily = "Y_Axis",
+                                  highlightsFn = NULL, highlightsStyle = "backgroundShading"){
 
     # collect all individual items
     itemsList <- getItemsData(track, reference, coord, dataFn) 
@@ -56,12 +57,18 @@ build.binned_XY_track <- function(track, reference, coord, layout, dataFn,
     # if requested, center the plot point in their bins
     if(center) itemData[, x := x + binSize / 2]
 
+    # collect any highlight regions
+    highlights <- if(is.null(highlightsFn)) NULL 
+                  else getItemsData(track, reference, coord, highlightsFn, 
+                                    parseXY = FALSE, optional = TRUE) 
+
     # make and return the plot
     buildXYTrackImage(
         track, reference, coord, layout,
         itemsList, itemNames, itemData,
         stranded = stranded, allowNeg = allowNeg, ylab = ylab,
         dataFamily = dataFamily, yAxisFamily = yAxisFamily, 
-        Aggregate = Aggregate, originalItemNames = originalItemNames
+        Aggregate = Aggregate, originalItemNames = originalItemNames,
+        highlights = highlights, highlightsStyle = highlightsStyle
     )
 }

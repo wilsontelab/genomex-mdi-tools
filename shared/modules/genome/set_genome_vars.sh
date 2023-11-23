@@ -17,12 +17,14 @@ if [ "$ALIGNMENT_MODE" = "NA" ]; then
     export ALIGNMENT_MODE=$DEFAULT_ALIGNMENT_MODE
 fi
 if [ -e $IGENOME_DIR ]; then # use iGenomes download, if available
+    export BASE_GENOMES_DIR=$GENOMES_DIR
     export SPECIES=`echo $IGENOME_DIR | awk 'BEGIN{FS="/"}{print $(NF-2)}'`
     export GENOME_FASTA=$IGENOME_DIR/Sequence/WholeGenomeFasta/genome.fa
     export BWA_GENOME_FASTA=$IGENOME_DIR/Sequence/BWAIndex/genome.fa
     export CHROM_FASTA_DIR=$IGENOME_DIR/Sequence/Chromosomes
     export MINIMAP2_INDEX=$IGENOME_DIR/Sequence/minimap2/$GENOME.$ALIGNMENT_MODE.mmi # built by us, not iGenomes
 else # otherwise, expect to find a custom genome installation in GENOMES_DIR/GENOME
+    export BASE_GENOMES_DIR=$GENOMES_DIR/.. # since custom genomes_dir is base_genomes_dir/custom
     export CUSTOM_GENOME_DIR=$GENOMES_DIR/$GENOME
     export SPECIES=$GENOME
     export GENOME_FASTA=$CUSTOM_GENOME_DIR/$GENOME.fa
@@ -32,8 +34,8 @@ else # otherwise, expect to find a custom genome installation in GENOMES_DIR/GEN
 fi
 
 # metadata directories
-export GENOME_BINS_DIR=$GENOMES_DIR/bins/$GENOME
-export GENOME_METADATA_DIR=$GENOMES_DIR/metadata/$GENOME
+export GENOME_BINS_DIR=$BASE_GENOMES_DIR/bins/$GENOME
+export GENOME_METADATA_DIR=$BASE_GENOMES_DIR/metadata/$GENOME
 export GENOME_ENCODE_DIR=$GENOME_METADATA_DIR/ENCODE
 export GENOME_UCSC_DIR=$GENOME_METADATA_DIR/UCSC
 export GENOME_UMAP_DIR=$GENOME_METADATA_DIR/umap

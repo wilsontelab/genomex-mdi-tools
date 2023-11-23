@@ -22,6 +22,7 @@ if [[ "$USE_CRAM" = "" || "$USE_CRAM" = "0" || "$USE_CRAM" = "null" ]]; then
     export COORDINATE_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.realigned.bam
     export CRAM_OUTPUT_OPTIONS=""
     export SAMTOOLS_VIEW_COMRESSION_OPTIONS="--output-fmt BAM"
+    export SAMTOOLS_VIEW_REFERENCE=""
 else
     export NAME_BAM_FILE=$DATA_GENOME_PREFIX.name.cram
     export COORDINATE_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.cram
@@ -30,6 +31,7 @@ else
     export COORDINATE_REALIGNED_BAM_FILE=$DATA_GENOME_PREFIX.coordinate.realigned.cram
     export CRAM_OUTPUT_OPTIONS="--output-fmt CRAM --reference $GENOME_FASTA"
     export SAMTOOLS_VIEW_COMRESSION_OPTIONS=$CRAM_OUTPUT_OPTIONS
+    export SAMTOOLS_VIEW_REFERENCE="--reference $GENOME_FASTA"
 fi
 
 # set the product PAF file, for minimap2 long reads

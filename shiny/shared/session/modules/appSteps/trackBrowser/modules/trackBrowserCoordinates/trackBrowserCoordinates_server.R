@@ -34,7 +34,7 @@ observers$back <- observeEvent(input$back,  {
 # browser navigation support functions
 #----------------------------------------------------------------------
 isStrict <- function(){
-    x <- browser$setting$Browser_Options()$Strict_Coordinates$value
+    x <- browser$settings$Browser_Options()$Strict_Coordinates$value
     if(is.null(x)) FALSE else x
 }
 jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = TRUE, then = NULL){ # arguments are strict coordinates
@@ -48,7 +48,7 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         end <- tmp
     }
     if(!isStrict() && !strict){
-        padding <- (end - start + 1) * 0.05
+        padding <- (end - start + 1) * browser$settings$get("Browser_Options", "Feature_Padding", 0.5)
         start <- as.integer64(start - padding)
         end   <- as.integer64(end   + padding)
     }
@@ -65,6 +65,14 @@ jumpToCoordinates <- function(chromosome, start, end, strict = FALSE, history = 
         setTimeout(then, delay = 50) # sequence the expansion image to load after the main image
         thenObserver$destroy()
     }, ignoreInit = TRUE)
+}
+jumpToChromosome <- function(chromosome){
+    jumpToCoordinates(
+        chromosome, 
+        browser$reference$getChromosomeStart(chromosome), 
+        browser$reference$getChromosomeEnd(chromosome), 
+        strict = TRUE
+    )
 }
 doZoom <- function(exp){
     start  <- as.integer64(input$start)
@@ -99,12 +107,7 @@ observers$nudgeLeft  <- observeEvent(input$nudgeLeft,  { doMove(0.05, -1) }, ign
 observers$nudgeRight <- observeEvent(input$nudgeRight, { doMove(0.05,  1) }, ignoreInit = TRUE)
 observers$moveRight  <- observeEvent(input$moveRight,  { doMove(1,     1) }, ignoreInit = TRUE)
 observers$all <- observeEvent(input$all, { 
-    jumpToCoordinates(
-        input$chromosome, 
-        browser$reference$getChromosomeStart(input$chromosome), 
-        browser$reference$getChromosomeEnd(input$chromosome), 
-        strict = TRUE
-    )
+    jumpToChromosome(input$chromosome)
 }, ignoreInit = TRUE)
 center <- function(x){
     coord <- coordinates(input)
@@ -116,6 +119,17 @@ center <- function(x){
         strict = TRUE
     )
 }
+prevNextChromosome <- function(increment){
+    chroms <- browser$reference$chromosomes()
+    current <- input$chromosome
+    I <- which(chroms == current)
+    if(length(I) == 0) return(NULL) # already on "all" or other
+    if(I == 1              && increment == -1) return(NULL)
+    if(I == length(chroms) && increment ==  1) return(NULL)
+    jumpToChromosome(chroms[I + increment])
+}
+observers$prevChrom <- observeEvent(input$prevChrom, { prevNextChromosome(-1) }, ignoreInit = TRUE)
+observers$nextChrom <- observeEvent(input$nextChrom, { prevNextChromosome( 1) }, ignoreInit = TRUE)
 
 #----------------------------------------------------------------------
 # jumpTo coordinates

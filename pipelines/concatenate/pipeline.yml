@@ -1,0 +1,65 @@
+---
+pipeline:
+    name: concatenate
+    description: "create a new, custom, composite genome from two pre-existing UCSC genomes"
+    version: v0.0.1
+#--------------------------------------------------------------------
+actions:  
+    _global:       
+        condaFamilies:
+            - base
+            - r-4.2 # not all are required, but avoids a new conda environment since shared with pemap     
+            - bwa
+            - genome                  
+    do:
+        order: 1
+        thread: do
+        optionFamilies:
+            - genome
+            - composite
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 2
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 8:00:00
+        description: "create the new composite genome"  
+#--------------------------------------------------------------------
+optionFamilies:
+    genome:
+        options:
+            ordered-chroms:
+                required: TRUE
+                default:  null
+    composite:
+        options:
+            genomes: 
+                order: 1
+                short: s
+                type: string
+                required: true
+                default: null
+                description: "colon-delimited list of two UCSC-format genomes to concatenate (e.g., hg38,mm10)"
+            annotations: 
+                order: 2
+                short: a
+                type: string
+                required: false
+                default: ncbiRefSeqCurated:ncbiRefSeqCurated
+                description: "colon-delimited list of two UCSC annotations to use as defaults for --genomes"
+            force-create:
+                order: 3
+                short: F
+                type: boolean
+                required: false
+                default: false
+                description: "set --force-create to re-make all output files even if they already exist" 
+#--------------------------------------------------------------------
+container:
+    supported: false        # set to true if you maintain a container registry for this pipeline [false]
+    registry:  ghcr.io     # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+    owner:     wilsontelab # REQUIRED: the name of the owner, e.g., user or organization, at 'registry'
+    installer: apt-get     # the installer program used by the container OS, typically apt-get or yum [apt-get]

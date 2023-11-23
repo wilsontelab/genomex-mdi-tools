@@ -24,3 +24,10 @@ options:
         required: false
         default: false
         description: "set this flag to use all chromosomes as they are found in genome.fa without filtering"
+    ordered-chroms:
+        order: 4
+        short: null
+        type: string
+        required: false
+        default: NA
+        description: "comma-delimited, ordered list of chromosomes to include in output"

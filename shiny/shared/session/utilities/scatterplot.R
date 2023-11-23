@@ -56,7 +56,8 @@ buildXYTrackImage <- function(track, reference, coord, layout,
                                itemsList, itemNames, itemData,
                                stranded = TRUE, allowNeg = FALSE, ylab = NULL,
                                dataFamily = "Data", yAxisFamily = "Y_Axis", 
-                               Aggregate = "none", originalItemNames = NULL){
+                               Aggregate = "none", originalItemNames = NULL,
+                               highlights = NULL, highlightsStyle = "backgroundShading"){
     nItems <- length(itemNames)
 
     # set the plot frame
@@ -86,6 +87,31 @@ buildXYTrackImage <- function(track, reference, coord, layout,
         zeroLine(track)  
         hLines(track, ylim)   
         chromLines(track, reference, coord)
+
+        # add any region highlights underneath the plot points
+        if(!is.null(highlights)) for(sample in names(highlights$d)){
+            d <- highlights$d[[sample]]
+            if(nrow(d) == 0) next
+            rect(d$x1, ylim[1], d$x2, ylim[2], 
+                 col = if("color" %in% names(d)) d$color else "grey50", border = NA)
+        }
+
+# List of 4
+#  $ d      :List of 2
+#   ..$ NA12878:Classes ‘data.table’ and 'data.frame':    0 obs. of  3 variables:
+#   .. ..$ x1   : int(0)
+#   .. ..$ x2   : int(0)
+#   .. ..$ color: logi(0)
+#   .. ..- attr(*, ".internal.selfref")=<externalptr>
+#   ..$ HCT116 :Classes ‘data.table’ and 'data.frame':    2 obs. of  3 variables: 
+#   .. ..$ x1   : int [1:2] 69810000 70510000
+#   .. ..$ x2   : int [1:2] 70410000 81910000
+#   .. ..$ color: chr [1:2] "blue" NA
+#   .. ..- attr(*, ".internal.selfref")=<externalptr>
+#  $ ymin   : logi NA
+#  $ ymax   : logi NA
+#  $ hasData: logi TRUE
+
 
         # randomize point order to avoid overplotting
         I <- 1:nItems

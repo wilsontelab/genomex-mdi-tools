@@ -11,6 +11,8 @@ rule index:
     input:
         expand("../../iGenomes/{species}/UCSC/{genome}/Sequence/WholeGenomeFasta/genome.fa",
                species = os.environ["SPECIES"], genome=os.environ["GENOME"])
+    # input:
+    #     expand("../../custom/{genome}/{genome}.fa", genome=os.environ["GENOME"])      
     output:
         "index/index.ids.concat" 
     shell:
