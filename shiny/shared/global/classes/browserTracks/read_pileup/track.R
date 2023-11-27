@@ -32,8 +32,6 @@ items.read_pileupTrack <- function(...) showTrackSamplesDialog(...)
 # build method for the S3 class; REQUIRED
 build.read_pileupTrack <- function(track, reference, coord, layout){
 
-    # TODO: allow for rescaling of large windows
-
     build.XY_pileup_track(
         track, reference, coord, layout,
         allValues = c("A","C","G","T","-","+","M"), # places M on top of alt bases
@@ -60,7 +58,8 @@ build.read_pileupTrack <- function(track, reference, coord, layout){
                 sample <- strsplit(basename(bgzFile), "\\.")[[1]][1]
                 pileup <- getCachedTabix(bgzFile) %>% # start is 1-referenced
                           getTabixRangeData(coordShort, col.names = c("chrom","start","length","bases"), 
-                                                        colClasses = c("character","integer","integer","character"))
+                                                        colClasses = c("character","integer","integer","character"),
+                                                        skipChromCheck = TRUE) # since the bgz files have stripped chr prefixes away
                 pileup <- if(is.null(pileup) || nrow(pileup) == 0) data.table(
                     start = integer(),
                     end = integer(),
