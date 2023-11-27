@@ -56,8 +56,8 @@ getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, index = FAL
 # pass in an object from getCachedTabix
 # always use standardized column names when provided: chrom, start, end, name, score, strand
 # otherwise, caller is responsible for parsing columns of the returned data.table
-getTabixRangeData <- function(tabix, coord, col.names = NULL, colClasses = NULL){
-    req(coord$chromosome, startsWith(toupper(coord$chromosome), "CHR"))
+getTabixRangeData <- function(tabix, coord, col.names = NULL, colClasses = NULL, skipChromCheck = FALSE){
+    req(coord$chromosome, skipChromCheck || startsWith(toupper(coord$chromosome), "CHR"))
     gRange <- GenomicRanges::GRanges(
         seqnames = coord$chromosome, 
         ranges = IRanges::IRanges(start = as.integer(coord$start), end = as.integer(coord$end))
