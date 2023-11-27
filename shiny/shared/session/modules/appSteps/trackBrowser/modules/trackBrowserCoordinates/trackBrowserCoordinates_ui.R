@@ -2,7 +2,10 @@
 # there may be one or multiple distinct sets of coordinates, i.e., regions, plotted by a single browser instance
 trackBrowserCoordinatesUI <- function(id, regionI) {
     ns <- NS(id) 
-    getLabel <- function(label) if(regionI == 1) label else NULL
+    getLabel <- function(label, html = FALSE) {
+        x <- if(regionI == 1) label else NULL
+        if(html && !is.null(x)) HTML(x) else x
+    }
     buttonClass <- if(regionI == 1) "trackBrowserInput" else "trackBrowserInput2"
     linkTopMargin <- if(regionI == 1) "32px" else "7px"
     popupInputTopMargin <- if(regionI == 1) "12px" else "0px"
@@ -10,11 +13,11 @@ trackBrowserCoordinatesUI <- function(id, regionI) {
         id = id,
         tags$div(
             class = "trackBrowserInput",
-            selectInput(ns('chromosome'), HTML(getLabel(paste(
+            selectInput(ns('chromosome'), getLabel(paste(
                 "Chrom", 
                 tags$span(style = "margin-left: 5px;", actionLink(ns("prevChrom"), label = "", icon = icon("arrow-left"))), 
                 tags$span(style = "margin-left: 5px;", actionLink(ns("nextChrom"), label = "", icon = icon("arrow-right")))
-            ))), choices = c()),
+            ), html = TRUE), choices = c()),
         ),
         tags$div(
             class = "trackBrowserInput coordinateInput",

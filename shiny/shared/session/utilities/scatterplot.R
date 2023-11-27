@@ -48,7 +48,7 @@ getDynamicYLim <- function(track, yAxisFamily, itemsList, stranded, allowNeg){
             if(Min_Y == "") itemsList$ymin else as.numeric(Min_Y), 
             if(Max_Y == "") itemsList$ymax else as.numeric(Max_Y)
         )  
-    }   
+    } * 1.05
 }
 
 # parse standardized input to create consistently formatted XY plots of various types
