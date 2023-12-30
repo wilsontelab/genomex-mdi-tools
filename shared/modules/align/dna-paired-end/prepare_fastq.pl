@@ -83,16 +83,26 @@ if($FASTQ_FILE1){
         # fasterq-dump inexplicably processes the entire data set to uncompressed temp files before passing on to stdout
         # open my $inH, "-|", 
         #     "fasterq-dump --stdout --split-spot --threads $N_CPU --temp $TMP_DIR_WRK $sraFile" or 
-        #     throwError("could not open $sraFile: $!");        
-        # open my $inH, "-|", "fastq-dump --stdout --split-files $sraFile" or throwError("could not open $sraFile: $!");        
-        my $sraName = basename($sraFile); # pre-copy SRA file to /dev/shm to speed up fastq-dump
+        #     throwError("could not open $sraFile: $!");
+        # open my $inH, "-|", "fastq-dump --stdout --split-files $sraFile" or throwError("could not open $sraFile: $!");
+        my $sraName = basename($sraFile);
         my $tmpFile = "$SHM_DIR_WRK/$sraName";
         unlink $tmpFile; # in case some partial file pre-exists
-        copy($sraFile, $tmpFile) or die "copy failed: $!";
-        open my $inH, "-|", "fastq-dump --stdout --split-files $tmpFile" or throwError("could not open $tmpFile: $!");
+        my $wrkFile;
+        print STDERR "copying file $sraName to /dev/shm\n";
+        eval {
+            copy($sraFile, $tmpFile) or die "copy failed: $!"; # pre-copy SRA file to /dev/shm to speed up fastq-dump
+            $wrkFile = $tmpFile;
+            1;
+        } or do {
+            print STDERR "copy failed: $!\nproceeding from source disk, without using /dev/shm\n"; # fallback in case insufficent memory in /dev/shm
+            unlink $tmpFile;
+            $wrkFile = $sraFile;
+        };
+        open my $inH, "-|", "fastq-dump --stdout --split-files $wrkFile" or throwError("could not open $wrkFile: $!");
         runReadPairs($inH, $inH);
         close $inH;
-        unlink $tmpFile;
+        unlink $tmpFile; # not $wrkFile!
     }
 }
 
