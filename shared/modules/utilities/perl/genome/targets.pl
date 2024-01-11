@@ -45,10 +45,10 @@ sub loadTargetRegions_ {
     open my $inH, "<", $TARGETS_BED or die "could not open $TARGETS_BED: $!\n";
     my $regId = 0;
     while(my $line = <$inH>){
-        $regId++;
+        $regId++; # 1-referenced
         chomp $line;
-        $line =~ s/\r//g;        
-        my ($chr, $start, $end) = split("\t", $line);    
+        $line =~ s/\r//g;
+        my ($chr, $start, $end) = split("\t", $line);
         for(my $pos =  int(($start - $regPad) / $TARGET_SCALAR);
                $pos <= int(($end   + $regPad) / $TARGET_SCALAR);
                $pos++){    
@@ -59,6 +59,26 @@ sub loadTargetRegions_ {
     }
     close $inH;
     return $regId;
+}
+sub getTargetRegions {
+    ($TARGETS_BED and $TARGETS_BED ne "null") or return [];
+    my @regions;
+    open my $inH, "<", $TARGETS_BED or die "could not open $TARGETS_BED: $!\n";
+    while(my $line = <$inH>){
+        chomp $line;
+        $line =~ s/\r//g;
+        my ($chr, $start, $end, $name) = split("\t", $line);
+        push @regions, {
+            name  => $name,
+            chr   => $chr,
+            start => $start,
+            end   => $end,
+            paddedStart => $start - $REGION_PADDING, # all still half-open like the source BED
+            paddedEnd   => $end   + $REGION_PADDING
+        };
+    }
+    close $inH;
+    return \@regions;
 }
 
 # codified form of the relationship of two coordinate pairs with respect to target regions
