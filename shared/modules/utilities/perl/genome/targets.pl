@@ -73,8 +73,9 @@ sub getTargetRegions {
             chr   => $chr,
             start => $start,
             end   => $end,
-            paddedStart => $start - $REGION_PADDING, # all still half-open like the source BED
-            paddedEnd   => $end   + $REGION_PADDING
+            paddedStart  => $start - $REGION_PADDING, # all still half-open like the source BED
+            paddedEnd    => $end   + $REGION_PADDING,
+            paddedStart1 => $start - $REGION_PADDING + 1 # 1-referenced start, unlike above
         };
     }
     close $inH;
