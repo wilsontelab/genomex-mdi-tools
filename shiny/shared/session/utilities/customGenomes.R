@@ -39,6 +39,10 @@ isCompositeGenome <- function(reference){
     isTruthy(reference$metadata$composite) && 
     isTruthy(reference$metadata$compositeType)
 }
+isCompositeGenome2 <- function(metadata){
+    isTruthy(metadata$composite) && 
+    isTruthy(metadata$compositeType)
+}
 getCustomCompositeType <- function(reference){
     if(isCompositeGenome(reference)) reference$metadata$compositeType 
     else NA
