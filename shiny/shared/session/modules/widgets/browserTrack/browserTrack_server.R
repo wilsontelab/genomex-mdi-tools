@@ -46,12 +46,16 @@ loadTrackSettings <- function(settings){
     } 
 }
 if(!is.null(request$shared)) for(sharedFile in request$shared){
-    file <- file.path(gitStatusData$suite$dir, "shiny", sharedBrowserTrackTypesDir, sharedFile) # really, should now use update trackType handling via trackType
-    if(!file.exists(file)){
+    file <- file.path(gitStatusData$suite$dir, "shiny", sharedBrowserTrackTypesDir, sharedFile) # first check this suite's shared trackType settings
+    if(!file.exists(file)){ # next, check for files relative to the settings.yml file being processed
         dir <- dirname(settingsFile)
-        file <- file.path(dir, sharedFile)        
+        file <- file.path(dir, sharedFile)
     }
-    loadTrackSettings(read_yaml(file))
+    if(!file.exists(file)) for(suiteDir in app$browser$externalTrackSuites) { # finally check for shared settings files in external track suites
+        file <- file.path(suiteDir, "shiny", sharedBrowserTrackTypesDir, sharedFile)
+        if(file.exists(file)) break
+    }
+    if(file.exists(file)) loadTrackSettings(read_yaml(file))
 }
 if(!is.null(request$trackType)) for(trackType_ in request$trackType){ # allows multiple track types for a given track
     # look for the requested trackType settings ...

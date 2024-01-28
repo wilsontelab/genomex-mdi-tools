@@ -30,9 +30,17 @@ orderedTrackIds <- reactive({ # the current track ids, in plotting order
 #----------------------------------------------------------------------
 # assemble the track types available to this app
 parentAppTrackTypes <- character()
-addTrackType <- function(trackType, tracksFolder){
-    path <- file.path(tracksFolder, trackType, "settings.yml")
-    if(file.exists(path)) trackTypes[[trackType]] <<- path
+externalTrackSuites <- list()
+addTrackType <- function(trackType, tracksFolder, checkSubDirs = FALSE){
+    trackTypeFolder <- file.path(tracksFolder, trackType)
+    settingsPath  <- file.path(trackTypeFolder, "settings.yml")
+    trackFilePath <- file.path(trackTypeFolder, "track.R")
+    if(file.exists(settingsPath) && file.exists(trackFilePath)) { # the request is itself a track folder
+        trackTypes[[trackType]] <<- settingsPath
+    } else if (checkSubDirs) { # check if the request is a parent of multiple track folders in a family
+        subDirs <- list.dirs(path = trackTypeFolder, full.names = FALSE, recursive = FALSE)
+        for(subDir in subDirs) addTrackType(subDir, trackTypeFolder)
+    }
 }
 addTrackTypes <- function(dir, classPath, isParentApp = FALSE){
     tracksFolder <- file.path(dir, classPath)
@@ -52,9 +60,12 @@ if(!is.null(browser$options$tracks)) for(trackType in browser$options$tracks){ #
         if(
             isTruthy(gitStatusData$dependencies[[x[1]]]$loaded) &&
             !is.null(trackSuiteDirs)
-        )  addTrackType(x[2], file.path(trackSuiteDirs$suiteDir, globalClassPath)) 
+        ){
+            externalTrackSuites[[x[1]]] <- trackSuiteDirs$suiteDir
+            addTrackType(x[2], file.path(trackSuiteDirs$suiteDir, globalClassPath), checkSubDirs = TRUE) # allow easy loading of families of shared tracks
+        }
     } else { # ... or in the parent suite of the app
-        addTrackType(trackType, file.path(gitStatusData$suite$dir, globalClassPath))
+        addTrackType(trackType, file.path(gitStatusData$suite$dir, globalClassPath), checkSubDirs = TRUE)
     }
 }
 #----------------------------------------------------------------------
@@ -250,7 +261,8 @@ list(
         x
     }),
     getTrackNames = getTrackNames,
-    initialize = initialize    
+    initialize = initialize,
+    externalTrackSuites = externalTrackSuites
 )
 #----------------------------------------------------------------------
 })}
