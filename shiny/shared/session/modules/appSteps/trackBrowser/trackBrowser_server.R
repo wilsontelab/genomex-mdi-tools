@@ -172,6 +172,7 @@ output$trackNavs <- renderUI({
 # ----------------------------------------------------------------------
 # create a single object description table - any click that sets objectTableData() replaces the table contents
 # ----------------------------------------------------------------------
+expandedObjectData <- reactiveVal(NULL)
 objectTableData <- reactiveVal(NULL)
 objectTable <- bufferedTableServer(
     "objectTable",
@@ -305,10 +306,12 @@ list(
         expandingTrack(trackData)
         browser$images[[regionI]]$expandingTrack(trackData)
     },
+    expandedObjectData = expandedObjectData,   # a potentially larger version of the expanded object than objectTableData
     objectTableData = objectTableData,         # to populate the object description table (e.g., a gene)
     expansionTableData = expansionTableData,   # to populate the object expansion table   (e.g., a gene's transripts)
     expansionUI = expansionUI,                 # arbitrary expansion UI content passed to renderUI
     clearObjectExpansions = clearObjectExpansions,
+    externalTrackSuites = browser$tracks$externalTrackSuites,
     isReady = reactive({ getStepReadiness(options$source) })
 )
 
