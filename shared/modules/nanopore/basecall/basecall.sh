@@ -16,12 +16,12 @@
 #     partition: spgpu
 
 # this following evironment variables are required and must be set or errors will occur:
-#   ONT_MODEL_DIR = a directory containing the required ONT model files, e.g. /path/to/dna_r10.4.1_e8.2_400bps_sup@v4.2.0
+#   ONT_MODEL_DIR = a directory containing the required ONT model files, e.g., /path/to/dna_r10.4.1_e8.2_400bps_sup@v4.3.0
 #   EXPANDED_INPUT_DIR = fully expanded path(s) to one or more space-delimited directories containing input pod5 (or fast5) files
 #   BAM_DIR = a directory where output bam files will be written; will be created; existing batch files in BAM_DIR will not be re-created
 
 # the following evironment variables are required but have default values:
-#   DORADO_EXECUTABLE = path to a Dorado executable, e.g., /path/to/dorado-0.4.1-linux-x64/bin/dorado, defaults to dorado (assumes dorado in $PATH)
+#   DORADO_EXECUTABLE = path to a Dorado executable, e.g., /path/to/dorado-0.5.3-linux-x64/bin/dorado, defaults to dorado (i.e., assumes dorado in $PATH)
 #   POD5_BUFFER_DIR = a directory on the worker node to use as a temporary POD5 cache, will be created, defaults to /dev/shm/dorado
 #   TMP_DIR_WRK = temporary files directory, will be created, defaults to /tmp/dorado
 #   POD5_BATCH_SIZE = the number of pod5 files to copy and process in one batch, defaults to 20
@@ -35,6 +35,7 @@
 #   ALIGN_READS = set to any string other than "0" to have Dorado also align reads using minimap2, with options --secondary=no -Y
 #   GENOME_FASTA = path to the required genome fasta file if ALIGN_READS is set
 #   BANDWIDTH = setting for the minimap2 --bandwidth (-r) option; uses minimap2 default otherwise
+#   DORADO_OPTIONS = additional options passed directly to the dorado basecaller or duplex command, e.g., "--no-trim", etc.
 
 # advantages of using batch processing on a compute node include:
 #   simultaneous file copying and base calling, especially important if IO into/out of a node is slow
@@ -92,6 +93,7 @@ if [ "$IS_ALIGNING" != "" ]; then
     fi
     MINIMAP2_OPTIONS="--reference ${GENOME_FASTA} --secondary=no -Y $BANDWIDTH" 
 fi
+if [ "$DORADO_OPTIONS" == "NA" ]; then DORADO_OPTIONS=""; fi
 if [[ "$FORCE_BASECALLING" != "" && "$FORCE_BASECALLING" != "0" ]]; then FORCE_BASECALLING="true"; fi
 
 # begin log report
@@ -102,6 +104,7 @@ echo "  modification:   "${MODIFIED_BASE_MODEL}
 echo "  duplex:         "${IS_DUPLEX}
 echo "  emit moves:     "${EMITTING_MOVES} 
 echo "  reads file:     "${READ_IDS_FILE_NAME}  
+echo "  with options:   "${DORADO_OPTIONS}
 echo "  pod5 buffer:    "${POD5_BUFFER_DIR}
 echo "  input(s):       "${EXPANDED_INPUT_DIR}
 echo "  output folder:  "${BAM_DIR}
@@ -142,7 +145,7 @@ do_batch_copy () {
         rm -f $CALL_FILE
     fi
 }
-RUN_DORADO="$DORADO_EXECUTABLE $DORADO_COMMAND $MODIFICATION_OPTIONS $EMIT_MOVES $READ_IDS_FILE $MINIMAP2_OPTIONS $ONT_MODEL_DIR"
+RUN_DORADO="$DORADO_EXECUTABLE $DORADO_COMMAND $DORADO_OPTIONS $MODIFICATION_OPTIONS $EMIT_MOVES $READ_IDS_FILE $MINIMAP2_OPTIONS $ONT_MODEL_DIR"
 run_dorado () {
     CALL_DIR=$POD5_BUFFER_DIR/${BATCH_PREFIX}_$CALL_I
     if [ "$IS_ALIGNING" != "" ]; then 
@@ -206,9 +209,20 @@ do_batch_copy
 done
 
 
-# VERSION 0.4.1
+# VERSION 0.5.3
+# important changes: 
 
-# $ dorado  --help
+# added --trim/--no-trim options to basecaller only (not duplex)
+# however, duplex reads will have the adapters trimmed off anyway per:
+#   https://github.com/nanoporetech/dorado/issues/509
+#   https://github.com/nanoporetech/dorado/issues/510
+# also note that: chimeric read splitting is enabled for both duplex and simplex basecalling by default
+
+# automated model selection, although in general we don't intend to use this feature:
+#    model {fast,hac,sup}@v{version} for automatic model selection including modbases, or path to existing model directory
+#    (fast|hac|sup)[@(version|latest)][,modification[@(version|latest)]][,...]
+
+#  ./dorado --help
 # Usage: dorado [options] subcommand
 
 # Positional arguments:
@@ -218,6 +232,7 @@ done
 # download
 # duplex
 # summary
+# trim
 
 # Optional arguments:
 # -h --help               shows help message and exits
@@ -225,11 +240,11 @@ done
 # -vv                     prints verbose version information and exits
 
 
-# $ dorado  basecaller --help
-# Usage: dorado [-h] [--device VAR] [--read-ids VAR] [--resume-from VAR] [--max-reads VAR] [--min-qscore VAR] [--batchsize VAR] [--chunksize VAR] [--overlap VAR] [--recursive] [--modified-bases VAR...] [--modified-bases-models VAR] [--modified-bases-threshold VAR] [--emit-fastq] [--emit-sam] [--emit-moves] [--reference VAR] [--kit-name VAR] [--barcode-both-ends] [--no-trim] [-k VAR] [-w VAR] [-I VAR] [--secondary VAR] [-N VAR] [-Y] [--bandwidth VAR] model data
+# $ ./dorado basecaller --help
+# Usage: dorado [-h] [--device VAR] [--read-ids VAR] [--resume-from VAR] [--max-reads VAR] [--min-qscore VAR] [--batchsize VAR] [--chunksize VAR] [--overlap VAR] [--recursive] [--modified-bases VAR...] [--modified-bases-models VAR] [--modified-bases-threshold VAR] [--emit-fastq] [--emit-sam] [--emit-moves] [--reference VAR] [--kit-name VAR] [--barcode-both-ends] [--no-trim] [--trim VAR] [--sample-sheet VAR] [--barcode-arrangement VAR] [--barcode-sequences VAR] [--estimate-poly-a] [-k VAR] [-w VAR] [-I VAR] [--secondary VAR] [-N VAR] [-Y] [--bandwidth VAR] model data
 
 # Positional arguments:
-#   model                         the basecaller model to run. 
+#   model                         model selection {fast,hac,sup}@v{version} for automatic model selection including modbases, or path to existing model directory 
 #   data                          the data directory or file (POD5/FAST5 format). 
 
 # Optional arguments:
@@ -251,9 +266,14 @@ done
 #   --emit-sam                    Output in SAM format. 
 #   --emit-moves              
 #   --reference                   Path to reference for alignment. [default: ""]
-#   --kit-name                    Enable barcoding with the provided kit name. Choose from: SQK-RPB114-24 VSK-VPS001 VSK-PTC001 SQK-RBK004 SQK-RPB004 SQK-RBK114-24 SQK-RBK111-24 SQK-RBK114-96 SQK-RBK111-96 SQK-RBK001 SQK-RBK110-96 SQK-RAB201 EXP-PBC001 SQK-MLK114-96-XL SQK-NBD114-96 SQK-NBD111-96 SQK-RLB001 EXP-NBD196 SQK-NBD111-24 EXP-NBD114 SQK-NBD114-24 EXP-NBD104 VSK-VMK001 EXP-NBD103 EXP-PBC096 SQK-PCB114-24 VSK-VMK004 SQK-PCB111-24 SQK-RAB204 SQK-PCB110 SQK-PCB109 SQK-MLK111-96-XL SQK-LWB001 SQK-PBK004 SQK-16S114-24 SQK-16S024. 
+#   --kit-name                    Enable barcoding with the provided kit name. Choose from: EXP-NBD103 EXP-NBD104 EXP-NBD114 EXP-NBD196 EXP-PBC001 EXP-PBC096 SQK-16S024 SQK-16S114-24 SQK-LWB001 SQK-MLK111-96-XL SQK-MLK114-96-XL SQK-NBD111-24 SQK-NBD111-96 SQK-NBD114-24 SQK-NBD114-96 SQK-PBK004 SQK-PCB109 SQK-PCB110 SQK-PCB111-24 SQK-PCB114-24 SQK-RAB201 SQK-RAB204 SQK-RBK001 SQK-RBK004 SQK-RBK110-96 SQK-RBK111-24 SQK-RBK111-96 SQK-RBK114-24 SQK-RBK114-96 SQK-RLB001 SQK-RPB004 SQK-RPB114-24 VSK-PTC001 VSK-VMK001 VSK-VMK004 VSK-VPS001. 
 #   --barcode-both-ends           Require both ends of a read to be barcoded for a double ended barcode. 
-#   --no-trim                     Skip barcode trimming. If option is not chosen, trimming is enabled. 
+#   --no-trim                     Skip trimming of barcodes, adapters, and primers. If option is not chosen, trimming of all three is enabled. 
+#   --trim                        Specify what to trim. Options are 'none', 'all', 'adapters', and 'primers'. Default behavior is to trim all detected adapters, primers, or barcodes. Choose 'adapters' to just trim adapters. The 'primers' choice will trim adapters and primers, but not barcodes. The 'none' choice is equivelent to using --no-trim. Note that this only applies to DNA. RNA adapters are always trimmed. [default: ""]
+#   --sample-sheet                Path to the sample sheet to use. [default: ""]
+#   --barcode-arrangement         Path to file with custom barcode arrangement. [default: <not representable>]
+#   --barcode-sequences           Path to file with custom barcode sequences. [default: <not representable>]
+#   --estimate-poly-a             Estimate poly-A/T tail lengths (beta feature). Primarily meant for cDNA and dRNA use cases. Note that if this flag is set, then adapter/primer detection will be disabled. 
 #   -k                            minimap2 k-mer size for alignment (maximum 28). [default: 15]
 #   -w                            minimap2 minimizer window size for alignment. [default: 10]
 #   -I                            minimap2 index batch size. [default: "16G"]
@@ -263,32 +283,35 @@ done
 #   --bandwidth                   minimap2 chaining/alignment bandwidth and optionally long-join bandwidth specified as NUM,[NUM] [default: "500,20K"]
 
 
-# $ $DORADO duplex --help
-# Usage: dorado [-h] [--pairs VAR] [--emit-fastq] [--emit-sam] [--threads VAR] [--device VAR] [--batchsize VAR] [--chunksize VAR] [--overlap VAR] [--recursive] [--read-ids VAR] [--min-qscore VAR] [--reference VAR] [-k VAR] [-w VAR] [-I VAR] [--secondary VAR] [-N VAR] [-Y] [--bandwidth VAR] model reads
+# $ ./dorado duplex --help
+# Usage: dorado [-h] [--pairs VAR] [--emit-fastq] [--emit-sam] [--threads VAR] [--device VAR] [--batchsize VAR] [--chunksize VAR] [--overlap VAR] [--recursive] [--read-ids VAR] [--min-qscore VAR] [--reference VAR] [--modified-bases VAR...] [--modified-bases-models VAR] [--modified-bases-threshold VAR] [-k VAR] [-w VAR] [-I VAR] [--secondary VAR] [-N VAR] [-Y] [--bandwidth VAR] model reads
 
 # Positional arguments:
-#   model                 Model 
-#   reads                 Reads in POD5 format or BAM/SAM format for basespace. 
+#   model                         model selection {fast,hac,sup}@v{version} for automatic model selection including modbases, or path to existing model directory 
+#   reads                         Reads in POD5 format or BAM/SAM format for basespace. 
 
 # Optional arguments:
-#   -h, --help            shows help message and exits 
-#   --pairs               Space-delimited csv containing read ID pairs. If not provided, pairing will be performed automatically [default: ""]
-#   --emit-fastq   
-#   --emit-sam            Output in SAM format. 
-#   -t, --threads         [default: 0]
-#   -x, --device          device string in format "cuda:0,...,N", "cuda:all", "metal" etc.. [default: "cuda:all"]
-#   -b, --batchsize       if 0 an optimal batchsize will be selected. batchsizes are rounded to the closest multiple of 64. [default: 0]
-#   -c, --chunksize       [default: 10000]
-#   -o, --overlap         [default: 500]
-#   -r, --recursive       Recursively scan through directories to load FAST5 and POD5 files 
-#   -l, --read-ids        A file with a newline-delimited list of reads to basecall. If not provided, all reads will be basecalled [default: ""]
-#   --min-qscore          Discard reads with mean Q-score below this threshold. [default: 0]
-#   --reference           Path to reference for alignment. [default: ""]
-#   -v, --verbose  
-#   -k                    minimap2 k-mer size for alignment (maximum 28). [default: 15]
-#   -w                    minimap2 minimizer window size for alignment. [default: 10]
-#   -I                    minimap2 index batch size. [default: "16G"]
-#   --secondary           minimap2 outputs secondary alignments [default: "yes"]
-#   -N                    minimap2 retains at most INT secondary alignments [default: 5]
-#   -Y                    minimap2 uses soft clipping for supplementary alignments 
-#   --bandwidth           minimap2 chaining/alignment bandwidth and optionally long-join bandwidth specified as NUM,[NUM] [default: "500,20K"]
+#   -h, --help                    shows help message and exits 
+#   --pairs                       Space-delimited csv containing read ID pairs. If not provided, pairing will be performed automatically [default: ""]
+#   --emit-fastq              
+#   --emit-sam                    Output in SAM format. 
+#   -t, --threads                 [default: 0]
+#   -x, --device                  device string in format "cuda:0,...,N", "cuda:all", "metal" etc.. [default: "cuda:all"]
+#   -b, --batchsize               if 0 an optimal batchsize will be selected. batchsizes are rounded to the closest multiple of 64. [default: 0]
+#   -c, --chunksize               [default: 10000]
+#   -o, --overlap                 [default: 500]
+#   -r, --recursive               Recursively scan through directories to load FAST5 and POD5 files 
+#   -l, --read-ids                A file with a newline-delimited list of reads to basecall. If not provided, all reads will be basecalled [default: ""]
+#   --min-qscore                  Discard reads with mean Q-score below this threshold. [default: 0]
+#   --reference                   Path to reference for alignment. [default: ""]
+#   -v, --verbose             
+#   --modified-bases              [nargs: 1 or more] 
+#   --modified-bases-models       a comma separated list of modified base models [default: ""]
+#   --modified-bases-threshold    the minimum predicted methylation probability for a modified base to be emitted in an all-context model, [0, 1] [default: 0.05]
+#   -k                            minimap2 k-mer size for alignment (maximum 28). [default: 15]
+#   -w                            minimap2 minimizer window size for alignment. [default: 10]
+#   -I                            minimap2 index batch size. [default: "16G"]
+#   --secondary                   minimap2 outputs secondary alignments [default: "yes"]
+#   -N                            minimap2 retains at most INT secondary alignments [default: 5]
+#   -Y                            minimap2 uses soft clipping for supplementary alignments 
+#   --bandwidth                   minimap2 chaining/alignment bandwidth and optionally long-join bandwidth specified as NUM,[NUM] [default: "500,20K"]
