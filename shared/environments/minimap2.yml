@@ -1,9 +1,6 @@
 ---
-# programs used to clean reads and align them to the genome using BWA
-# versions current as of January 2022
+# programs used to align (long) reads to the genome using minimap2
+# versions current as of February 2024
 dependencies:
-    # - sra-tools=3.0.0
-    # - fastp=0.23.2
-    - minimap2=2.24
-    - samtools=1.16.1
-    - porechop_abi=0.5.0
+    - minimap2=2.26
+    - samtools=1.19
