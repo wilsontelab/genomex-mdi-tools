@@ -64,6 +64,27 @@ showTrackSamplesDialog <- function(track, session, ...){
     )
 }
 
+# common form of a track items dialog that shows and returns entire data package sources (not their sub-samples)
+showTrackSourcesDialog <- function(track, session, ...){
+    showTrackItemsDialog(
+        track$settings,
+        session,
+        title = "Select Data Sources",
+        itemTypePlural = "Sources",
+        tableData = reactive({
+            uploadName <- appStepNamesByType$upload
+            sourceIds <- names(app[[uploadName]]$outcomes$sources())
+            data.table(
+                Source_ID = sourceIds,
+                Data_Package = sapply(sourceIds, getSourceFilePackageName)
+            )
+        }),
+        keyColumn = "Source_ID",
+        extraColumns = c("Data_Package"),
+        size = "l"
+    )
+}
+
 # common form of a track items dialog that allows users to select one or more system files
 showTrackFilesDialog <- function(track, session, extensions = character(), ...){
     ext <- if(length(extensions > 0)) paste0("(", paste(extensions, collapse = ", "), ")") else ""

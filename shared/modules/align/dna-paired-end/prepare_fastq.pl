@@ -41,6 +41,7 @@ fillEnvVar(\my $N_TERMINAL_BASES,   'N_TERMINAL_BASES', 1, 30);
 fillEnvVar(\my $MAX_HOMOPOLYMER,    'MAX_HOMOPOLYMER', 1, 0);
 fillEnvVar(\my $CREATE_FASTQ_INDEX, 'CREATE_FASTQ_INDEX', 1, 0);
 fillEnvVar(\my $DATA_FILE_PREFIX,   'DATA_FILE_PREFIX');
+fillEnvVar(\my $SUPPRESS_SRA_SHM,   'SUPPRESS_SRA_SHM', 1, 0);
 
 # constants
 use constant {
@@ -89,16 +90,20 @@ if($FASTQ_FILE1){
         my $tmpFile = "$SHM_DIR_WRK/$sraName";
         unlink $tmpFile; # in case some partial file pre-exists
         my $wrkFile;
-        print STDERR "copying file $sraName to /dev/shm\n";
-        eval {
-            copy($sraFile, $tmpFile) or die "copy failed: $!"; # pre-copy SRA file to /dev/shm to speed up fastq-dump
-            $wrkFile = $tmpFile;
-            1;
-        } or do {
-            print STDERR "copy failed: $!\nproceeding from source disk, without using /dev/shm\n"; # fallback in case insufficent memory in /dev/shm
-            unlink $tmpFile;
+        if($SUPPRESS_SRA_SHM){
             $wrkFile = $sraFile;
-        };
+        } else {
+            print STDERR "copying file $sraName to /dev/shm\n";
+            eval {
+                copy($sraFile, $tmpFile) or die "copy failed: $!"; # pre-copy SRA file to /dev/shm to speed up fastq-dump
+                $wrkFile = $tmpFile;
+                1;
+            } or do {
+                print STDERR "copy failed: $!\nproceeding from source disk, without using /dev/shm\n"; # fallback in case insufficent memory in /dev/shm
+                unlink $tmpFile;
+                $wrkFile = $sraFile;
+            };
+        }
         open my $inH, "-|", "fastq-dump --stdout --split-files $wrkFile" or throwError("could not open $wrkFile: $!");
         runReadPairs($inH, $inH);
         close $inH;

@@ -17,3 +17,10 @@ options:
         required: false
         default: null
         description: "see --input-dir for details; defaults to --data-name if null" 
+    suppress-sra-shm:
+        order: 3
+        short: null
+        type: boolean
+        required: false
+        default: false
+        description: "do not copy SRA files to shared memory (set this for large SRA files)" 

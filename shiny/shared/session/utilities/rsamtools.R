@@ -68,12 +68,14 @@ getTabixRangeData <- function(tabix, coord, col.names = NULL, colClasses = NULL,
     if(is.null(col.names)) fread( # fread does not seem to offer any acceptable NA/NULL value for col.names
         text = lines,
         colClasses = colClasses,
-        header = FALSE
+        header = FALSE,
+        sep = "\t"
     ) else fread(
         text = lines,
         col.names = col.names,
         colClasses = colClasses,
-        header = FALSE
+        header = FALSE,
+        sep = "\t"
     )
 }
 
