@@ -89,7 +89,7 @@ initTrackTypes <- function(){
 # add, delete and reorder tracks
 #----------------------------------------------------------------------
 # track identifiers
-getTrackId <- function() gsub("( |:|-)", "_", paste(as.character(Sys.time()), sample.int(1e8, 1)))
+getTrackId <- function() paste(format(Sys.time(), "%Y_%m_%d_%H_%M"), sample.int(1e6, 1), sep = "_")
 getTrackNames <- function(trackIds){
     tracks <- tracks()
     sapply(trackIds, function(trackId) getTrackDisplayName(tracks[[trackId]]$track))
