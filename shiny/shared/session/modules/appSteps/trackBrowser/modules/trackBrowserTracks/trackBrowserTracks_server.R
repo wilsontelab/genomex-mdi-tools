@@ -262,7 +262,8 @@ list(
     }),
     getTrackNames = getTrackNames,
     initialize = initialize,
-    externalTrackSuites = externalTrackSuites
+    externalTrackSuites = externalTrackSuites,
+    getTrackIdsByType = function(trackType) sapply(tracks(), function(track) if(track$type == trackType) track$id else NULL) %>% unlist
 )
 #----------------------------------------------------------------------
 })}

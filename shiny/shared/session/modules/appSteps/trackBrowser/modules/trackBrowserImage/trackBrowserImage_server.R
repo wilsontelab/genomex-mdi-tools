@@ -68,6 +68,7 @@ trackCache <- list( # cache for track images to prevent slow replotting of uncha
     browser   = list(), # names = trackIds, values = list(trackHash, contents)
     expansion = list()
 )
+forceTrackRefresh <- reactiveValues() # force a track to refresh
 buildAllTracks <- function(trackIds, fnName, type, layout){
     reference <- reference()
     coord <- coord()
@@ -81,7 +82,8 @@ buildAllTracks <- function(trackIds, fnName, type, layout){
                 track$settings$all_(), 
                 if(is.null(track$settings$items)) NA else track$settings$items(),
                 if(type == "expansion") expandingTrack() else NA,
-                sharedHash
+                sharedHash,
+                forceTrackRefresh[[trackId]]
             ))
             if(is.null(trackCache[[type]][[trackId]]) || 
                trackCache[[type]][[trackId]]$trackHash != trackHash) {
@@ -334,6 +336,10 @@ list(
     destroy = function(){
         for(observer in observers) observer$destroy()
         observers <<- list()
+    },
+    forceTrackRefresh = function(trackId){
+        if(is.null(forceTrackRefresh[[trackId]])) forceTrackRefresh[[trackId]] <- 1
+        else forceTrackRefresh[[trackId]] <- forceTrackRefresh[[trackId]] + 1
     }
 )
 #----------------------------------------------------------------------
