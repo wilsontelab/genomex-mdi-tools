@@ -95,6 +95,9 @@ trackBrowserUI <- function(id, options) {
         # a place for arbitrary, track-defined UI content based on expand2 or other click actions
         fluidRow(
             uiOutput(ns("expansionUI"))
+        ),
+        fluidRow(
+            uiOutput(ns("fixedContentUI"))
         )
     )
 }

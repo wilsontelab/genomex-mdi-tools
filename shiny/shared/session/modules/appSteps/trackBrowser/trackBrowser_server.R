@@ -233,6 +233,12 @@ output$expansionUI <- renderUI({
     req(ui)
     ui
 })
+fixedContentUI <- reactiveVal(NULL)
+output$fixedContentUI <- renderUI({
+    ui <- fixedContentUI()
+    req(ui)
+    ui
+})
 
 #----------------------------------------------------------------------
 # construct a composite print quality image for download
@@ -288,6 +294,7 @@ bookmarkObserver <- observe({
 #----------------------------------------------------------------------
 list(
     loadSourceFile = function(...) NULL,  # enable the trackBrowser for use as the one and only app step
+    session = browser$session,
     input = browser$input,
     settings = browser$settings$all_,
     # TODO: add trackOutcomes functionality to allow tracks to send information to downstream app steps
@@ -310,8 +317,16 @@ list(
     objectTableData = objectTableData,         # to populate the object description table (e.g., a gene)
     expansionTableData = expansionTableData,   # to populate the object expansion table   (e.g., a gene's transripts)
     expansionUI = expansionUI,                 # arbitrary expansion UI content passed to renderUI
+    fixedContentUI = fixedContentUI,           # like expansionUI, but not subject to auto-clear on navigation
     clearObjectExpansions = clearObjectExpansions,
     externalTrackSuites = browser$tracks$externalTrackSuites,
+    forceTrackTypeRefresh = function(trackType, regionI = 1){
+        for(trackId in browser$tracks$getTrackIdsByType(trackType)){
+            browser$images[[regionI]]$forceTrackRefresh(trackId)
+        }
+    },
+    forceTrackRefresh = function(trackId, regionI = 1) browser$images[[regionI]]$forceTrackRefresh(trackId),
+    getTrackSettings = function(trackId) browser$tracks$tracks()[[trackId]]$track$settings,
     isReady = reactive({ getStepReadiness(options$source) })
 )
 
