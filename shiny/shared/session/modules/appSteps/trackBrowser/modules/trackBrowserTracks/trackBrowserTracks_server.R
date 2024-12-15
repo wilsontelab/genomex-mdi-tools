@@ -27,6 +27,7 @@ orderedTrackIds <- reactive({ # the current track ids, in plotting order
     trackOrder <- trackOrder()
     if(nrow(trackOrder) > 0) trackOrder[order(order), trackId] else character()
 })
+
 #----------------------------------------------------------------------
 # assemble the track types available to this app
 parentAppTrackTypes <- character()
@@ -96,6 +97,7 @@ getTrackNames <- function(trackIds){
 }
 #----------------------------------------------------------------------
 # handle track addition from select input or bookmark
+tracksAreInitialized <- FALSE
 addTrack <- function(trackType, trackId = NULL, ns){
     if(is.null(trackId)) trackId <- getTrackId()
     cssId <- paste("track", trackId, sep = "_")
@@ -176,28 +178,30 @@ observeEvent({
     input$trackRankList
     input$deleteRankList
 }, {
-    if(isRankListInit) {
+    if(tracksAreInitialized) { if(isRankListInit) {
 
         # declare the new track order
         currentTrackIds <- trackOrder()[, trackId] 
         newTrackIds <- sapply(strsplit(input$trackRankList, '\\s+'), function(x) x[length(x)])
         nTracks <- length(newTrackIds)
-        trackOrder(if(nTracks > 0){
-            data.table(trackId = newTrackIds, order = 1:nTracks)
-        } else nullTrackOrder)
 
-        # delete tracks as needed
-        tracks_ <- tracks()
-        for(trackId in currentTrackIds) {
-            if(!(trackId %in% newTrackIds)) {
-                tracks_[[trackId]] <- NULL
-                trackSettingsObservers[[trackId]] <<- NULL
-                if(!is.null(trackSettingsUndoId) && trackSettingsUndoId == trackId) trackSettingsUndoId <<- NULL
+        # abort if there would be zero tracks, catches an occasional load race condition
+        if(nTracks > 0){ 
+            trackOrder(data.table(trackId = newTrackIds, order = 1:nTracks))
+
+            # delete tracks as needed
+            tracks_ <- tracks()
+            for(trackId in currentTrackIds) {
+                if(!(trackId %in% newTrackIds)) {
+                    tracks_[[trackId]] <- NULL
+                    trackSettingsObservers[[trackId]] <<- NULL
+                    if(!is.null(trackSettingsUndoId) && trackSettingsUndoId == trackId) trackSettingsUndoId <<- NULL
+                }
             }
+            tracks(tracks_)
+            removeUI(".trackDeleteTarget .browserTrack")            
         }
-        tracks(tracks_)
-        removeUI(".trackDeleteTarget .browserTrack")
-    } else isRankListInit <<- TRUE
+    } else isRankListInit <<- TRUE}
 }, ignoreInit = TRUE)
 
 #----------------------------------------------------------------------
@@ -236,6 +240,7 @@ initialize <- function(jobId, loadData, loadSequence){
             if(!is.null(track$items)) tracks()[[trackId]]$track$settings$items(track$items)
         })
     }
+    tracksAreInitialized <<- TRUE
     doNextLoadSequenceItem(loadData, loadSequence)
 }
 
