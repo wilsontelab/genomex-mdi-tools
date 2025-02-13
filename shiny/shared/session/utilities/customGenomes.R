@@ -1,7 +1,10 @@
 #----------------------------------------------------------------------
 # pahts and support functions for reading genome data from the user-defined custom genomes
 #----------------------------------------------------------------------
-customGenomesDir <- file.path(serverEnv$RESOURCES_DIR, "genomes/custom")
+customGenomesDirs <- c(
+    file.path(serverEnv$RESOURCES_DIR, "genomes"),
+    file.path(serverEnv$RESOURCES_DIR, "genomes/custom")
+)
 nullCustomGenome <- data.table(
     source = character(), 
     genome = character(), 
@@ -19,7 +22,9 @@ nullCustomAnnotation <- data.table(
 customGenomeCols <- names(nullCustomGenome)
 getCustomGenomeFile <- function(genome, extension){
     filename <- paste(genome, extension, sep = ".")
-    file.path(customGenomesDir, genome, filename)
+    file <- file.path(customGenomesDirs[1], genome, filename)
+    if(!file.exists(file)) file <- file.path(customGenomesDirs[2], genome, filename)
+    file
 }
 
 #----------------------------------------------------------------------
@@ -56,12 +61,16 @@ getCustomCompositeDelimiter <- function(metadata){
 # retrieve genome-level metadata from user-defined custom genomes
 #----------------------------------------------------------------------
 listCustomGenomes <- function(...){
-    if(!dir.exists(customGenomesDir)) return(nullCustomGenome)
     candidateGenomes <- list.dirs(
-        path = customGenomesDir, 
+        path = customGenomesDirs[1], 
         full.names = FALSE, 
         recursive = FALSE
     )
+    if(dir.exists(customGenomesDirs[2])) candidateGenomes <- c(candidateGenomes, list.dirs(
+        path = customGenomesDirs[2], 
+        full.names = FALSE, 
+        recursive = FALSE
+    ))
     if(length(candidateGenomes) == 0) return(nullCustomGenome)
     do.call(rbind, lapply(candidateGenomes, function(genome){
         fai <- getCustomGenomeFile(genome, "fa.fai")
