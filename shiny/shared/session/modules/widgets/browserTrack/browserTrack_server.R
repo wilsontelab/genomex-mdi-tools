@@ -15,6 +15,7 @@ browserTrackServer <- function(
     annotation,
     size = "m",
     presets = NULL, # passed from an app's config.yml to supplement the presets specified by the track itself
+    trackSuiteName = NULL, # the tool suite that hosts the track definitions
     ... # additional arguments passed to settingsServer
 ) { 
     moduleServer(cssId, function(input, output, session) {    
@@ -63,6 +64,7 @@ if(!is.null(request$trackType)) for(trackType_ in request$trackType){ # allows m
     trackTypeRequest <- loadExternalYml(gitStatusData$suite$name, file.path(appBrowserTrackTypesDir, ttFileName)) # ... in app ...
     if(is.null(trackTypeRequest)) trackTypeRequest <- loadExternalYml(gitStatusData$suite$name, file.path(sharedBrowserTrackTypesDir, ttFileName)) # ... in the parent suite ...
     if(is.null(trackTypeRequest)) trackTypeRequest <- loadExternalYml("genomex-mdi-tools", file.path(sharedBrowserTrackTypesDir, ttFileName)) # ... in genomex-mdi-tools ...
+    if(is.null(trackTypeRequest) && !is.null(trackSuiteName)) trackTypeRequest <- loadExternalYml(trackSuiteName, file.path(sharedBrowserTrackTypesDir, ttFileName)) # ... in the track's host suite ...
     if(!is.null(trackTypeRequest)) {
         if(!is.null(trackTypeRequest$include)) for(include in trackTypeRequest$include){
             include <- library[[include]]

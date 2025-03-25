@@ -20,6 +20,7 @@ module <- 'trackBrowser'
 # manage browser track types available and in use
 #----------------------------------------------------------------------
 trackTypes <- list()          # key = trackType, value = settings template file path
+trackSuiteNames <- list()     # key = trackType, value = host suite name if an external track
 tracks <- reactiveVal(list()) # key = trackId,   value = browserTrackServer()
 nullTrackOrder <- data.table(trackId = character(), order = integer())
 trackOrder <- reactiveVal(nullTrackOrder)
@@ -32,15 +33,16 @@ orderedTrackIds <- reactive({ # the current track ids, in plotting order
 # assemble the track types available to this app
 parentAppTrackTypes <- character()
 externalTrackSuites <- list()
-addTrackType <- function(trackType, tracksFolder, checkSubDirs = FALSE){
+addTrackType <- function(trackType, tracksFolder, checkSubDirs = FALSE, trackSuiteName = NULL){
     trackTypeFolder <- file.path(tracksFolder, trackType)
     settingsPath  <- file.path(trackTypeFolder, "settings.yml")
     trackFilePath <- file.path(trackTypeFolder, "track.R")
     if(file.exists(settingsPath) && file.exists(trackFilePath)) { # the request is itself a track folder
         trackTypes[[trackType]] <<- settingsPath
+        if(!is.null(trackSuiteName)) trackSuiteNames[[trackType]] <<- trackSuiteName
     } else if (checkSubDirs) { # check if the request is a parent of multiple track folders in a family
         subDirs <- list.dirs(path = trackTypeFolder, full.names = FALSE, recursive = FALSE)
-        for(subDir in subDirs) addTrackType(subDir, trackTypeFolder)
+        for(subDir in subDirs) addTrackType(subDir, trackTypeFolder, trackSuiteName = trackSuiteName)
     }
 }
 addTrackTypes <- function(dir, classPath, isParentApp = FALSE){
@@ -63,7 +65,7 @@ if(!is.null(browser$options$tracks)) for(trackType in browser$options$tracks){ #
             !is.null(trackSuiteDirs)
         ){
             externalTrackSuites[[x[1]]] <- trackSuiteDirs$suiteDir
-            addTrackType(x[2], file.path(trackSuiteDirs$suiteDir, globalClassPath), checkSubDirs = TRUE) # allow easy loading of families of shared tracks
+            addTrackType(x[2], file.path(trackSuiteDirs$suiteDir, globalClassPath), checkSubDirs = TRUE, trackSuiteName = x[1]) # allow easy loading of families of shared tracks
         }
     } else { # ... or in the parent suite of the app
         addTrackType(trackType, file.path(gitStatusData$suite$dir, globalClassPath), checkSubDirs = TRUE)
@@ -110,6 +112,7 @@ addTrack <- function(trackType, trackId = NULL, ns){
         browserInput = input, 
         genome = browser$reference$genome,
         annotation = browser$reference$annotation,
+        trackSuiteName = trackSuiteNames[[trackType]],
         # size = NULL,
         # cacheKey = NULL, # a reactive/reactiveVal that returns an id for the current settings state
         # fade = FALSE,
