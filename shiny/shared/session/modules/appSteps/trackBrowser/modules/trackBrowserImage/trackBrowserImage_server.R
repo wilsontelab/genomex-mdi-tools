@@ -245,10 +245,10 @@ expansionPlot <- mdiInteractivePlotServer(
     contents = reactive({
         expandingTrack <- expandingTrack()
         if(is.list(expandingTrack)) {
-            show(selector = ".expansionImageWrapper")
-            createExpansionPlot(expandingTrack$trackId)         
+            shinyjs::show(selector = ".expansionImageWrapper")
+            createExpansionPlot(expandingTrack$trackId)
         } else {
-            hide(selector = ".expansionImageWrapper")
+            shinyjs::hide(selector = ".expansionImageWrapper")
             NULL 
         }
     })
