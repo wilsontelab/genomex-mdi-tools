@@ -216,7 +216,7 @@ observeEvent(expansionTableData(), {
     toggle(selector = ".expansionTableWrapper", condition = isTruthy(expansionTableData()))
 }, ignoreNULL = FALSE)
 clearObjectExpansions <- function(){
-    hide(selector = ".browserExpansionWrapper")
+    shinyjs::hide(selector = ".browserExpansionWrapper")
     expandingTrack(NULL)
     for(regionI in 1:browser$nRegions()) browser$images[[regionI]]$expandingTrack(NULL)
     objectTableData(NULL)
