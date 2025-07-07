@@ -306,7 +306,8 @@ list(
         trackOrder  = browser$tracks$trackOrder,
         tracks      = browser$tracks$bookmarkTracks
     ),
-    browserIsDoneReactive = function(regionI) reactive({ browser$images[[regionI]]$browserIsDone() }),
+    createBrowserPlot = function(regionI, ...) browser$images[[regionI]]$createBrowserPlot(...),
+    browserIsDoneReactive = function(regionI)  reactive({ browser$images[[regionI]]$browserIsDone() }),
     jumpToCoordinates = function(regionI, ...) browser$coordinates[[regionI]]$jumpToCoordinates(...),
     center = function(regionI, ...) browser$coordinates[[regionI]]$center(...),
     expandingTrack = function(regionI, trackData){ # to describe the source of the expansion image/table as expandingTrack(list(trackId = trackId, object = xxx))

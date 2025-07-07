@@ -436,6 +436,7 @@ initTrackNav.browserTrack <- function(track, session, inputName, actionFn = NULL
     })
     navName
 }
+# track navs using a user-defined Shiny input function
 trackNavInput.browserTrack <- function(track, session, navName, shinyInputFn, 
                           value = NULL, selected = NULL, ...){
     default <- if(is.null(value)) selected else value
@@ -454,6 +455,7 @@ trackNavInput.browserTrack <- function(track, session, navName, shinyInputFn,
         )
     )
 }
+# track navs based on MDI BufferedTable
 trackNavTable.browserTrack <- function(track, session, browserId, navName, 
                                        actionFn, options = list(), ...){
     # x <- isolate( session$input[[navName]] ) # get rows already selected?
@@ -479,6 +481,24 @@ trackNavTable.browserTrack <- function(track, session, browserId, navName,
         style = "display: block;",
         collapsible = TRUE
     )      
+}
+# track navs based on MDI Interactive Plot
+trackNavPlot.browserTrack <- function(track, session, navName, contents, actionFn){
+    setTimeout( function(...){ # need to wait for the plot to be rendered and appear in the DOM
+        plot <- mdiInteractivePlotServer(
+            navName, 
+            contents = contents,
+            click = TRUE,
+            hover = FALSE,
+            brush = FALSE
+        )
+        observeEvent(plot$click(), {
+            actionFn(plot$click()$coord)
+        })
+    })
+    mdiInteractivePlotUI(
+        session$ns(navName)
+    )
 }
 trackNavCanNavigate.browserTrack <- function(track){
     getBrowserTrackSetting(track, "Track", "Show_Navigation", "hide") %in% c("navigate", "navigate_and_expand")
@@ -526,3 +546,4 @@ handleTrackNavTableClick <- function(regionI, track, chrom, start, end, expandFn
         expandFn()
     }
 }
+handleTrackNavPlotClick <- handleTrackNavTableClick
