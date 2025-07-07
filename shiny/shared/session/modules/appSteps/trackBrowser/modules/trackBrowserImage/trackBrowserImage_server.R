@@ -69,9 +69,9 @@ trackCache <- list( # cache for track images to prevent slow replotting of uncha
     expansion = list()
 )
 forceTrackRefresh <- reactiveValues() # force a track to refresh
-buildAllTracks <- function(trackIds, fnName, type, layout){
+buildAllTracks <- function(trackIds, fnName, type, layout, externalCoord = NULL){
     reference <- reference()
-    coord <- coord()
+    coord <- if(is.null(externalCoord)) coord() else externalCoord  
     sharedHash <- digest(list(reference, coord, layout))
     nImages <- 0 # may be less than or equal to nTracks, depending on build successes
     tracks <- browser$tracks$tracks()
@@ -132,18 +132,18 @@ adjustLayoutForIP <- function(layout, builds){ # adjust layout for mdiInteractiv
 # render the composite browser plot image using base graphics
 #----------------------------------------------------------------------
 browserLayout <- list()
-createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for both screen and image file download
-    isPrint <- !is.null(pngFile)
+createBrowserPlot <- function(pngFile = NULL, externalCoord = NULL){ # called to generate plot for both screen and image file download
+    isPrint <- !is.null(pngFile) && is.null(externalCoord)
 
     # collect the track list
     trackIds <- browser$tracks$orderedTrackIds()
-    nTracks <- length(trackIds)    
+    nTracks <- length(trackIds)
     req(nTracks > 0)
     tracks <- browser$tracks$tracks()
 
     # inherit plot targets from the browser inputs
     reference <- reference()
-    coord <- coord()
+    coord <- if(is.null(externalCoord)) coord() else externalCoord
 
     # parse the plot layout based on plots alone
     browserOptions <- browserOptions()
@@ -200,7 +200,7 @@ createBrowserPlot <- function(pngFile = NULL){ # called to generate plot for bot
     }
 
     # build all tracks using reactives
-    builds <- buildAllTracks(trackIds, "buildTrack", "browser", layout)
+    builds <- buildAllTracks(trackIds, "buildTrack", "browser", layout, externalCoord)
     if(is.null(builds)) return(NULL)
 
     # assemble and return the composite browser image

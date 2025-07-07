@@ -123,6 +123,9 @@ trackNavInput <- function(x, ...) {
 trackNavTable <- function(x, ...) {
     UseMethod("trackNavTable", x)
 }
+trackNavPlot <- function(x, ...) {
+    UseMethod("trackNavPlot", x)
+}
 trackNavCanNavigate <- function(x, ...) {
     UseMethod("trackNavCanNavigate", x)
 }
@@ -131,4 +134,7 @@ trackNavCanExpand <- function(x, ...) {
 }
 handleTrackNavTableClick <- function(x, ...) {
     UseMethod("handleTrackNavTableClick", x)
+}
+handleTrackNavPlotClick <- function(x, ...) {
+    UseMethod("handleTrackNavPlotClick", x)
 }
