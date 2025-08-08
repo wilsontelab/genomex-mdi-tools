@@ -73,7 +73,8 @@ getPackedSpans
 buildSpanTrackImage <- function(track, coord, layout,
                                itemsList, itemNames, itemData,
                                stranded = TRUE, allowNeg = FALSE, ylab = NULL, ylim = NULL, yaxt = "s",
-                               dataFamily = "Data", yAxisFamily = "Y_Axis", hLines = FALSE){
+                               dataFamily = "Data", yAxisFamily = "Y_Axis", hLines = FALSE,
+                               overplotFn = NULL){
     nItems <- length(itemNames)
 
     # set the plot frame
@@ -116,10 +117,12 @@ buildSpanTrackImage <- function(track, coord, layout,
                 if(nrow(ddd) == 0) next
                 if(strand_ == "-" && ddd[1, y] > 0) ddd[, y := -y]
                 plotSpans(track, ddd, color = palette[[i]], family = dataFamily)
+                if(!is.null(overplotFn)) overplotFn(ddd)
             } else {
                 plotSpans(track, dd, color = palette[[i]], family = dataFamily)
+                if(!is.null(overplotFn)) overplotFn(dd)
             }
-        }            
+        }
 
         # add a legend
         trackLegend(track, coord, ylim, legend = itemNames, pch = 19, cex = 1, col = unlist(palette[I]))

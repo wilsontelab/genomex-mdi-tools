@@ -41,7 +41,8 @@ getUnpackedSpans <- function(itemsList, itemData){
 
 # track build function
 build.genome_spans_track <- function(track, reference, coord, layout, dataFn, trackBuffer = NULL,
-                                     spansFamily = "Spans", scoresFamily = "Scores", yAxisFamily = "Y_Axis"){
+                                     spansFamily = "Spans", scoresFamily = "Scores", yAxisFamily = "Y_Axis",
+                                     scoreLabel = NULL, overplotSpansFn = NULL){
 
     # collect all individual bed tracks
     itemsList <- getItemsData(track, reference, coord, dataFn, parseXY = FALSE)
@@ -91,7 +92,7 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
         itemsList$d <- lapply(itemsList$d, function(dt){
             if(!("score" %in% names(dt))) return(NA) else {
                 x <- data.table(
-                    strand = if("strand" %in% names(dt)) dt$strand else nullStrand,                
+                    strand = if("strand" %in% names(dt)) dt$strand else nullStrand,
                     x = switch(
                         Score_Position,
                         start   = dt$start + 1,
@@ -114,7 +115,7 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
         buildXYTrackImage(
             track, reference, coord, layout,
             itemsList, itemNames, itemData,
-            stranded = Stranded, allowNeg = TRUE, ylab = NULL,
+            stranded = Stranded, allowNeg = TRUE, ylab = scoreLabel,
             dataFamily = scoresFamily, yAxisFamily = yAxisFamily
         )            
 
@@ -127,11 +128,12 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
             hasScore <- "score" %in% names(dt)
             x <- data.table(
                 source = itemNames[i],
-                strand = if("strand" %in% names(dt)) dt$strand else nullStrand,                
+                strand = if("strand" %in% names(dt)) dt$strand else nullStrand,
                 x1 = dt$start + 1,
                 x2 = dt$end,
                 y = if(!hasScore) NA else dt$score
-            )    
+            )
+            if(!is.null(overplotSpansFn)) x <- cbind(x, dt[, .SD, .SDcols = names(dt)[!(names(dt) %in% names(x))]])
             itemsList$ymin <<- min(itemsList$ymin, x$y, na.rm = TRUE)
             itemsList$ymax <<- max(itemsList$ymax, x$y, na.rm = TRUE)   
             itemsList$hasScore <<- c(itemsList$hasScore, hasScore)
@@ -158,8 +160,12 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
         buildSpanTrackImage (
             track, coord, layout,
             itemsList, itemNames, itemData,
-            stranded = Stranded, allowNeg = TRUE, ylab = NULL, ylim = c(itemsList$ymin, itemsList$ymax), yaxt = yaxt,
-            dataFamily = spansFamily, yAxisFamily = yAxisFamily, hLines = Plot_Spans_As == "scored_spans"
+            stranded = Stranded, allowNeg = TRUE, 
+            ylab = if(Plot_Spans_As == "scored_spans") scoreLabel else NULL,
+            ylim = c(itemsList$ymin, itemsList$ymax), yaxt = yaxt,
+            dataFamily = spansFamily, yAxisFamily = yAxisFamily, 
+            hLines = Plot_Spans_As == "scored_spans",
+            overplotFn = overplotSpansFn
         )
     }
 }
