@@ -42,10 +42,10 @@ getUnpackedSpans <- function(itemsList, itemData){
 # track build function
 build.genome_spans_track <- function(track, reference, coord, layout, dataFn, trackBuffer = NULL,
                                      spansFamily = "Spans", scoresFamily = "Scores", yAxisFamily = "Y_Axis",
-                                     scoreLabel = NULL, overplotSpansFn = NULL){
+                                     scoreLabel = NULL, overplotSpansFn = NULL, defaultItems = NULL){
 
     # collect all individual bed tracks
-    itemsList <- getItemsData(track, reference, coord, dataFn, parseXY = FALSE)
+    itemsList <- getItemsData(track, reference, coord, dataFn, parseXY = FALSE, defaultItems = defaultItems)
     if(!itemsList$hasData) return(trackInfo(track, coord, layout, "no spans in region"))
     itemNames <- sub(".bed.bgz", "", sapply(names(itemsList$d), basename))
     nItems <- length(itemNames)

@@ -22,10 +22,11 @@ build.binned_XY_track <- function(track, reference, coord, layout, dataFn,
                                   stranded = TRUE, allowNeg = FALSE, ylab = NULL,
                                   center = FALSE, binSize = NULL,
                                   dataFamily = "Data", yAxisFamily = "Y_Axis",
-                                  highlightsFn = NULL, highlightsStyle = "backgroundShading"){
+                                  highlightsFn = NULL, highlightsStyle = "backgroundShading", 
+                                  defaultItems = NULL){
 
     # collect all individual items
-    itemsList <- getItemsData(track, reference, coord, dataFn) 
+    itemsList <- getItemsData(track, reference, coord, dataFn, defaultItems = defaultItems) 
     if(!itemsList$hasData) return(trackInfo(track, coord, layout, "no usable data to plot"))
     itemNames <- names(itemsList$d)
     nItems <- length(itemNames)
