@@ -20,11 +20,14 @@ nullCustomAnnotation <- data.table(
     longLabel = character()
 )
 customGenomeCols <- names(nullCustomGenome)
-getCustomGenomeFile <- function(genome, extension){
-    filename <- paste(genome, extension, sep = ".")
+getCustomGenomeFileByName <- function(genome, filename){
     file <- file.path(customGenomesDirs[1], genome, filename)
     if(!file.exists(file)) file <- file.path(customGenomesDirs[2], genome, filename)
     file
+}
+getCustomGenomeFile <- function(genome, extension){
+    filename <- paste(genome, extension, sep = ".")
+    getCustomGenomeFileByName(genome, filename)
 }
 
 #----------------------------------------------------------------------
@@ -84,8 +87,12 @@ listCustomGenomes <- function(...){
     }))
 }
 listCustomAnnotations <- function(genome, ...){ # this is used to populate the annotation popupInput
-    nullCustomAnnotation # at present, only support is for composite UCSC genomes
-}                        # in future, could allow custom genomes to define their own annotations in their source folder
+    metadata <- loadCustomGenomeMetadata(genome)
+    if(!is.null(metadata$annotations)) return(
+        do.call(rbind, lapply(metadata$annotations, function(x) as.data.table(x)))
+    )
+    nullCustomAnnotation
+}
 listCompositeGenomes <- function(reference){ # the set of individual genomes that comprise the composite ...
     isComposite <- reference$genome$source == "Custom" &&
                    isTruthy(reference$metadata$composite) && 

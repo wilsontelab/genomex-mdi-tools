@@ -8,11 +8,8 @@ getChromGenes <- function(reference, chromosome = "all", force = FALSE){
         unlink = force,
         ttl = CONSTANTS$ttl$year,
         create = function(file){
-            transcripts <- if(!is.null(reference$annotation$source) && reference$annotation$source == "Custom"){
-                NULL # not implemented yet; when it is, custom annotations must conform the UCSC annotation table formats
-            } else {
-                getUcscChromTranscripts(reference$genome$genome, reference$annotation, chromosome = chromosome, force = force)
-            }
+            # Custom annotations are handled by getUcscChromTranscripts
+            transcripts <- getUcscChromTranscripts(reference$genome$genome, reference$annotation, chromosome = chromosome, force = force)
             startSpinner(session, message = paste("tabulating genes"))
             saveRDS(aggregateUcscTranscriptsToGenes(reference$annotation, transcripts), file = file)
             stopSpinner(session)
