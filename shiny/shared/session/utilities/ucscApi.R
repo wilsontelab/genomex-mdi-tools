@@ -331,7 +331,7 @@ ucscGenePredTypes <- list(
         "exonCount",
         "exonStarts",
         "exonEnds",
-        "exonFrames"           
+        "exonFrames"
     ),
     bigGenePred = c(
         "name", 
@@ -364,7 +364,21 @@ getUcscChromTranscripts <- function(genome, annotation, chromosome = "all", forc
         ttl = CONSTANTS$ttl$year,
         create = function(file){
             startSpinner(session, message = paste("tabulating transcripts"))
-            dt <- getUcscTrackTable(genome, annotation$track, col.names = ucscGenePredTypes[[annotation$type]], force = FALSE)
+            dt <- if(!is.null(annotation$source) && annotation$source == "Custom" && !is.null(annotation$genePredFile)){
+                # custom annotation files must conform to this extended genePred format (the same as downloaded from UCSC)
+                # it can be created by the gtfToGenePred utility with option --genePredExt
+                genePredExtCols <- c(
+                    "name", "chrom", "strand", "txStart", "txEnd", "cdsStart", "cdsEnd", 
+                    "exonCount", "exonStarts", "exonEnds", "score", "name2", 
+                    "cdsStartStat", "cdsEndStat", "exonFrames"
+                )
+                fread(
+                    getCustomGenomeFileByName(genome, annotation$genePredFile), 
+                    col.names = genePredExtCols
+                )[, .SD, .SDcols = ucscGenePredTypes[[annotation$type]]]
+            } else {
+                getUcscTrackTable(genome, annotation$track, col.names = ucscGenePredTypes[[annotation$type]], force = FALSE)
+            }
             saveRDS(if(chromosome == "all") dt else dt[chrom == chromosome], file = file)   
             stopSpinner(session)           
         }
