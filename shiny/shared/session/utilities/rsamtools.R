@@ -48,7 +48,7 @@ getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, index = FAL
         }
         rdsFile <- loadPersistentFile(
             file = rdsFile,
-            force = create || force,
+            force = newRdsNeeded || force,
             ttl = ttl
         )
         persistentCache[[rdsFile]]$data
