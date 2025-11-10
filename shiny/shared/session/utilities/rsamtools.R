@@ -23,10 +23,17 @@ getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, index = FAL
         startSpinner(session, message = "loading tabix")
         fileName <- basename(bgzFile)
         if(is.null(cacheDir)) cacheDir <- dirname(bgzFile)
+        indexFile <- paste(bgzFile, "tbi", sep = ".")
         rdsFile <- file.path(cacheDir, paste(fileName, "rds", sep = "."))
-        if(!file.exists(rdsFile) || create){
-            indexFile <- paste(bgzFile, "tbi", sep = ".")
-            if(!file.exists(indexFile) || index) {
+        indexExists <- file.exists(indexFile)
+        rdsExists   <- file.exists(rdsFile)
+        indexNewerThanRds <- indexExists && rdsExists && (file.info(indexFile)$mtime > file.info(rdsFile)$mtime)
+        bgzNewerThanIndex <- indexExists && file.info(bgzFile)$mtime > file.info(indexFile)$mtime
+        newIndexNeeded <- !indexExists || index  || bgzNewerThanIndex
+        newRdsNeeded   <- !rdsExists   || create || indexNewerThanRds || newIndexNeeded
+        if(newIndexNeeded || newRdsNeeded){
+            if(newIndexNeeded){
+                unlink(indexFile)
                 startSpinner(session, message = "indexing bgz...")
                 Rsamtools::indexTabix(
                     bgzFile, 
