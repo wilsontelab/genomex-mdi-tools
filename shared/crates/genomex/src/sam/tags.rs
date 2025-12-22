@@ -18,6 +18,28 @@ impl SamTags {
         SamTags { tags }
     }
     /* -------------------------------------------------------------------------
+    tag addition or update methods
+    ------------------------------------------------------------------------- */
+    /// Add or update a tag in the SamTags Vec<String> using a prefix with
+    /// its data type, e.g., either "AS:i" or "AS:i:".
+    pub fn set_tag_value(&mut self, prefix: &str, value: &dyn fmt::Display) {
+        let mut prefix = prefix.to_string();
+        if !prefix.ends_with(':') && !prefix.ends_with(',') {
+            prefix = format!("{}:", prefix);
+        }
+        let mut found = false;
+        for i in 0..self.tags.len() {
+            if self.tags[i].starts_with(&prefix) {
+                self.tags[i] = format!("{}{}", prefix, value);
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            self.tags.push(format!("{}{}", prefix, value)); 
+        }
+    }
+    /* -------------------------------------------------------------------------
     tag retrieval methods
     ------------------------------------------------------------------------- */
     /// Extract a parsed tag value from a SamTags Vec<String> as Some(T),
@@ -60,7 +82,19 @@ impl SamTags {
     /// e.g., either `"AS:"` or `"AS:i:"`.
     /// 
     /// Tags on the retention list not found in the SamTags are simply ignored.
-    pub fn retain(&mut self, prefixes: &[&str]) {
-        self.tags.retain(|tag_str| prefixes.iter().any(|prefix| tag_str.starts_with(prefix)));
+    pub fn retain(&mut self, retain_prefixes: &[&str]) {
+        self.tags.retain(|tag_str| {
+            retain_prefixes.iter().any(|retain_prefix| tag_str.starts_with(retain_prefix))
+        });
+    }   
+    /// Drop tags whose prefix is in the provided &[&str],
+    /// using the two-letter tag ID with or without the data type prefix, 
+    /// e.g., either `"AS:"` or `"AS:i:"`.
+    /// 
+    /// Tags on the drop list not found in the SamTags are simply ignored.
+    pub fn drop(&mut self, drop_prefixes: &[&str]) {
+        self.tags.retain(|tag_str| {
+            !drop_prefixes.iter().any(|drop_prefix| tag_str.starts_with(drop_prefix))
+        });
     }   
 }

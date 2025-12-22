@@ -8,6 +8,7 @@ pub mod cigar;
 pub mod qual;
 pub mod tags;
 pub mod junction;
+pub mod nullable;
 
 // dependencies
 use std::str::FromStr;
@@ -17,22 +18,27 @@ use crate::sequence::rc_acgtn_str;
 use flag::SamFlag;
 use cigar::CigarString;
 pub use qual::SamQual;
-use tags::SamTags;
+pub use tags::SamTags;
 
 // structures
 #[derive(Serialize, Deserialize)]
 pub struct SamRecord { // a single SAM alignment record
+    // read-level field
     pub qname: String,
-    pub flag:  SamFlag,
+    // mixed read and alignment-level flag
+    pub flag:  SamFlag, 
+    // alignment-level fields
     pub rname: String,
     pub pos1:  usize, 
     pub mapq:  u8,
     pub cigar: CigarString,
     pub rnext: String,
     pub pnext: usize,
+    // read level fields (assuming no hard clipping)
     pub tlen:  i32,
-    pub seq:   String, // when streamed from STDIN, cannot used borrowed fields, must be DeserializeOwned
+    pub seq:   String, // when streamed from STDIN, cannot used borrowed fields &str/Cow, must be DeserializeOwned
     pub qual:  SamQual,
+    // mixed read and alignment-level fields
     pub tags:  SamTags,
 }
 impl SamRecord {
@@ -186,5 +192,10 @@ impl SamRecord {
     /// Tags on the retention list not found in the SamTags are simply ignored.
     pub fn retain_tags(&mut self, prefixes: &[&str]) {
         self.tags.retain(prefixes);
+    }
+    // /// Add or update a tag in the SamTags Vec<String> using a prefix with
+    // /// its data type, e.g., either "AS:i" or "AS:i:".
+    pub fn set_tag_value(&mut self, prefix: &str, value: &dyn fmt::Display) {
+        self.tags.set_tag_value(prefix, value);
     }
 }

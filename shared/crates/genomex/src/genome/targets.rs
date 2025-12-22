@@ -258,26 +258,20 @@ impl TargetRegions {
     /// of the read was on target
     pub fn set_aln_target_classes (
         &self,
-        alns: &mut Vec<&mut SamRecord>,
+        alns: &mut [SamRecord],
         w:    &mut Workflow,
-        class_prefix:     &'static str,
-        on_target_prefix: &'static str,
+        class_prefix:      &'static str,
+        off_target_prefix: &'static str,
     ) -> bool {
-        if !self.is_targeted {
-            for aln in alns {
-                aln.tags.tags.push(format!("{}{}", class_prefix,     0));
-                aln.tags.tags.push(format!("{}{}", on_target_prefix, true as u8)); // always on target if not targeted
-            }
-            return true;
-        }
+        if !self.is_targeted { return true; } // always on target if not targeted
         let (target_class_5, region_5, left_pos1_5, right_pos1_5, mut is_on_target) 
-            = self.get_aln_target(alns[0]);
-        if alns.len() > 1 {
+            = self.get_aln_target(&alns[0]);
+        let n_alns = alns.len();
+        if n_alns > 1 {
             let mut any_on_target = false;
-            let (target_class_3, _, _, _, _) = self.get_aln_target(alns[alns.len() - 1]);
             for aln in &mut *alns {
                 let (target_class, region, left_pos1, right_pos1, aln_on_target) = self.get_aln_target(aln);
-                let tag = region.target_i1 << 9 | target_class_5 << 6 | target_class_3 << 3 | target_class;
+                let tag = region.target_i1 << 3 | target_class;
                 aln.tags.tags.push(format!("{}{}", class_prefix, tag));
                 let count_class = self.count_classes[target_class];
                 w.ctrs.increment_keyed(N_ALNS_BY_TARGET_CLASS, count_class);
@@ -290,14 +284,16 @@ impl TargetRegions {
                 is_on_target = any_on_target;
             }
         } else {
-            let tag: usize = region_5.target_i1 << 9 | target_class_5 << 6 | target_class_5 << 3 | target_class_5;
+            let tag: usize = region_5.target_i1 << 3 | target_class_5;
             alns[0].tags.tags.push(format!("{}{}", class_prefix, tag));
             let count_class = self.count_classes[target_class_5];
             w.ctrs.increment_keyed(N_ALNS_BY_TARGET_CLASS, count_class);
             w.ctrs.add_to_keyed(N_BASES_BY_TARGET_CLASS, count_class, right_pos1_5 - left_pos1_5 + 1);
         }
-        for aln in alns {
-            aln.tags.tags.push(format!("{}{}", on_target_prefix, is_on_target as u8));
+        if !is_on_target {
+            for aln in alns {
+                aln.tags.tags.push(format!("{}{}", off_target_prefix, 1_u8));
+            }
         }
         is_on_target
     }

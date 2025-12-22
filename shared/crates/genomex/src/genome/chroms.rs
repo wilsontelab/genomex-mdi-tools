@@ -39,7 +39,7 @@ impl Chroms {
 
         // all placed chromosome sequences including chrM and chrEBV if present (but not chrXX_XX)
         // set by shared/modules/set_genome_vars.sh or similar script
-        let chroms: Vec<String> = cfg.get_string(GENOME_CHROMS).split(" ").map(|s| s.to_string()).collect();
+        let chroms: Vec<String> = cfg.get_string(GENOME_CHROMS).split_whitespace().map(|s| s.to_string()).collect();
 
         // parser for restricting work to properly ordered canonical chromosomes
         let canonical = if *cfg.get_bool(USE_ALL_CHROMS) || is_composite_genome {
