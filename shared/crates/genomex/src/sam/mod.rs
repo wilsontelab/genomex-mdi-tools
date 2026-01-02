@@ -193,8 +193,8 @@ impl SamRecord {
     pub fn retain_tags(&mut self, prefixes: &[&str]) {
         self.tags.retain(prefixes);
     }
-    // /// Add or update a tag in the SamTags Vec<String> using a prefix with
-    // /// its data type, e.g., either "AS:i" or "AS:i:".
+    /// Add or update a tag in the SamTags Vec<String> using a prefix with
+    /// its data type, e.g., either "AS:i" or "AS:i:".
     pub fn set_tag_value(&mut self, prefix: &str, value: &dyn fmt::Display) {
         self.tags.set_tag_value(prefix, value);
     }

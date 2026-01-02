@@ -120,14 +120,16 @@ impl Aligner {
     }
 
     /// Set the max_shift parameter to enable fast alignment mode when sequences are known to be in register.
-    pub fn max_shift(&mut self, max_shift: usize) {
+    pub fn max_shift(mut self, max_shift: usize) -> Self {
         self.param.max_shift = max_shift;
         self.fast = max_shift > 0;
+        self
     }
 
     /// Set whether to suppress generation of the detailed alignment map.
-    pub fn suppress_alignment_map(&mut self) {
+    pub fn suppress_alignment_map(mut self) -> Self {
         self.param.suppress_alignment_map = true;
+        self
     }
 
     // create the lookup table for match/mismatch score for all possible IUPAC code combinations
@@ -311,7 +313,7 @@ impl Aligner {
                     if qry_on_tgt.is_empty() { // in case it is the first time through
                         qry_on_tgt.push((q[i_q - 1] as char).to_string());
                     } else {
-                        qry_on_tgt.last_mut().map(|s| format!("{}{}", q[i_q - 1] as char, s));
+                        qry_on_tgt.last_mut().map(|s| format!("{}{}", s, q[i_q - 1] as char));
                     };
                 }
                 i_q -= 1;

@@ -62,7 +62,7 @@ impl CigarString {
     ------------------------------------------------------------------------- */
     /// Return a vector of CigarString operations as regex captures.
     /// Values are: `cap[1]` = length, `cap[2]` = operation.
-    pub fn get_operations(&self) -> Vec<Captures> {
+    pub fn get_operations(&self) -> Vec<Captures<'_>> {
         cigar_op_regex().captures_iter(&self.cigar).collect()
     }
     /* ---------------------------------------------------------------------- */
