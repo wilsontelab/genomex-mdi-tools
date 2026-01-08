@@ -96,7 +96,12 @@ impl Aligner {
         let pair_scores = Self::initalize_pair_scores(&param, Iupac::new());
         // score matrix of form matrix[target_index][query_index] = (score, pointer)
         // pre-allocate to max expected sizes of query and target sequences
-        let matrix = vec![vec![(0.0, 0); param.qry_capacity + 1]; param.tgt_capacity + 1];
+        let matrix = if fast {
+            let qry_capacity_wrk = param.max_shift * 2 + 1 + 1; // in fast mode, only need a limited number of query positions
+            vec![vec![(0.0, 0); qry_capacity_wrk + 1];   param.tgt_capacity + 1]
+        } else {
+            vec![vec![(0.0, 0); param.qry_capacity + 1]; param.tgt_capacity + 1]
+        };
         Aligner {
             param,
             fast,
@@ -119,11 +124,18 @@ impl Aligner {
         })
     }
 
-    /// Set the max_shift parameter to enable fast alignment mode when sequences are known to be in register.
-    pub fn max_shift(mut self, max_shift: usize) -> Self {
-        self.param.max_shift = max_shift;
-        self.fast = max_shift > 0;
-        self
+    /// Initialize a fast aligner with default AlignerParameters and a max_shift.
+    pub fn new_fast(qry_capacity: usize, tgt_capacity: usize, max_shift: usize) -> Self {
+        Self::with_param(AlignerParameters {
+            match_score:            1.0,
+            mismatch_penalty:      -1.5,
+            gap_open_penalty:      -2.501, // 0.001 ajustment gives slight preference to not opening a single-base terminal gap
+            gap_extension_penalty: -1.0,
+            max_shift:              max_shift, // enforce max shift in fast mode BEFORE allocating matrix
+            suppress_alignment_map: false, // generate detailed alignment map by default, i.e., don't suppress it
+            qry_capacity,
+            tgt_capacity,
+        })
     }
 
     /// Set whether to suppress generation of the detailed alignment map.
@@ -170,9 +182,9 @@ impl Aligner {
         local: bool
     ) -> Alignment {
 
-        // check input sequences
-        if qry.is_empty() { panic!("smith_waterman error: missing query/qry sequence"); }
-        if tgt.is_empty() { panic!("smith_waterman error: missing target/tgt sequence"); }
+        // // check input sequences
+        // if qry.is_empty() { panic!("smith_waterman error: missing query/qry sequence"); }
+        // if tgt.is_empty() { panic!("smith_waterman error: missing target/tgt sequence"); }
 
         // shortcut identical sequences
         let n_q = qry.len();
@@ -218,26 +230,37 @@ impl Aligner {
         let mut best_path: (usize, usize) = (0, 0);
 
         // fill score matrix based on matches and gaps
+        // X T T T T T T     X T T T T T T  fast mode matrix on right
+        // Q # @ . . . .     Q . @ @ @ @ @
+        // Q @ # @ . . .     Q # # # # # #
+        // Q . @ # @ . .     Q @ @ @ @ @ .
+        // Q . . @ # @ .
+        // Q . . . @ # @
+        // Q . . . . @ #
         let (mut min_i_q, mut max_i_q) = (1, n_q);
-        for i_t in 1..=n_t {
+        for i_t in 1..=n_t { // index into both the target sequence and the score matrix
             let is_last_t = i_t == n_t;
             if self.fast { // limit the possible query to target base matches
                 (min_i_q, max_i_q) = (
-                    max(1,   i_t - self.param.max_shift), 
-                    min(n_q, i_t + self.param.max_shift)
+                    max(1,   i_t.saturating_sub(self.param.max_shift)), 
+                    min(n_q, i_t + self.param.max_shift) // no danger of overflowing with real-world sequence lengths
                 )
             };
-            for i_q in min_i_q..=max_i_q {
-                let diag_score = self.matrix[i_t - 1][i_q - 1].0 + 
+            for i_q in min_i_q..=max_i_q { // index into the query sequence
+                let i_q_m    = self.i_q_m(i_t, i_q); // matrix indices, different for fast vs. normal mode
+                let i_q_diag = self.i_q_m(i_t - 1, i_q - 1);
+                let i_q_up   = self.i_q_m(i_t - 1, i_q);
+                let i_q_left = self.i_q_m(i_t, i_q - 1);
+                let diag_score = self.matrix[i_t - 1][i_q_diag].0 + 
                     self.pair_scores[&(t[i_t - 1], q[i_q - 1])];
-                let up_score = self.matrix[i_t - 1][i_q].0 +
-                    if self.matrix[i_t - 1][i_q].1 == UP { // gap penalties
+                let up_score = self.matrix[i_t - 1][i_q_up].0 +
+                    if self.matrix[i_t - 1][i_q_up].1 == UP { // gap penalties
                         self.param.gap_extension_penalty
                     } else {
                         self.param.gap_open_penalty
                     };
-                let left_score = self.matrix[i_t][i_q - 1].0 +
-                    if self.matrix[i_t][i_q - 1].1 == LEFT {
+                let left_score = self.matrix[i_t][i_q_left].0 +
+                    if self.matrix[i_t][i_q_left].1 == LEFT {
                         self.param.gap_extension_penalty
                     } else {
                         self.param.gap_open_penalty
@@ -250,7 +273,7 @@ impl Aligner {
                     (left_score, LEFT)
                 };
                 if local || is_forcing {
-                    self.matrix[i_t][i_q] = if score > 0.0 { (score, pointer) } else { (0.0, 0) }; // allow trimming of non forced query end
+                    self.matrix[i_t][i_q_m] = if score > 0.0 { (score, pointer) } else { (0.0, 0) }; // allow trimming of non forced query end
                     if local || i_q == n_q { // ensure that all reported alignments go to end of query, unless local
                         if score > best_score {
                             best_score = score;
@@ -260,7 +283,7 @@ impl Aligner {
                         }
                     }
                 } else { // general untrimmed alignment when requiring end-to-end alignment, e.g. in consensus building
-                    self.matrix[i_t][i_q] = (score, pointer); // best productive path to this residue pair
+                    self.matrix[i_t][i_q_m] = (score, pointer); // best productive path to this residue pair
                     if (is_last_t || i_q == n_q) && score > best_score {
                         best_score = score;
                         best_path = (i_t, i_q); // just keep the first encountered path with the best score
@@ -283,7 +306,7 @@ impl Aligner {
                     qry_on_tgt: if make_map { vec!['!'.to_string(); n_q] } else { vec![] },
                 }
             }
-            best_path = paths[0]; // randomly take the first best path
+            best_path = paths[paths.len() - 1]; // take the last best path, which gives the desired insertion behavior
         }
         if best_path.0 == 0 || best_path.1 == 0 {
             return Alignment{
@@ -302,22 +325,23 @@ impl Aligner {
         let mut qry_on_tgt: Vec<String> = vec![]; // will be built backwards, need to reverse below
         let (mut i_t, mut i_q) = (i_t_max, i_q_max);
         loop{
-            let pointer = self.matrix[i_t][i_q].1;  
+            let i_q_m = self.i_q_m(i_t, i_q);
+            let pointer = self.matrix[i_t][i_q_m].1;  
             if pointer == 0 { break; } // occurs either just after leftmost unaligned end or at beginning of a sequence
-            if pointer == DIAG { // M operation relative to reference (could be a mismatched base)
+            if pointer == DIAG { // M operation qry relative to tgt (could be a mismatched base)
                 if make_map { qry_on_tgt.push((q[i_q - 1] as char).to_string()); }
                 i_t -= 1;
                 i_q -= 1;
-            } else if pointer == LEFT { // I operation relative to reference, append to NEXT reference base
+            } else if pointer == LEFT { // I operation on qry relative to tgt, append to NEXT reference base
                 if make_map {
-                    if qry_on_tgt.is_empty() { // in case it is the first time through
+                    if let Some(carrier_base) = qry_on_tgt.last_mut() {
+                        carrier_base.insert(0, q[i_q - 1] as char);
+                    } else { // in case it is the first time through
                         qry_on_tgt.push((q[i_q - 1] as char).to_string());
-                    } else {
-                        qry_on_tgt.last_mut().map(|s| format!("{}{}", s, q[i_q - 1] as char));
-                    };
+                    }
                 }
                 i_q -= 1;
-            } else {  // D operation relative to reference, pad with a dummy character 
+            } else {  // D operation on qry relative to tgt, pad with a dummy character 
                 if make_map { qry_on_tgt.push("-".to_string()); }
                 i_t -= 1;
             }
@@ -356,14 +380,32 @@ impl Aligner {
             // re-allocate matrix to larger size
             let new_qry_capacity = max(n_q, self.param.qry_capacity);
             let new_tgt_capacity = max(n_t, self.param.tgt_capacity);
-            self.matrix = vec![vec![(0.0, 0); new_qry_capacity + 1]; new_tgt_capacity + 1];
+            self.matrix = if self.fast {
+                let qry_capacity_wrk = self.param.max_shift * 2 + 1 + 1; 
+                vec![vec![(0.0, 0); qry_capacity_wrk + 1]; new_tgt_capacity + 1]
+            } else {
+                vec![vec![(0.0, 0); new_qry_capacity + 1]; new_tgt_capacity + 1]
+            };
             self.param.qry_capacity = new_qry_capacity;
             self.param.tgt_capacity = new_tgt_capacity;
         } else {
             // zero out just the portions of the pre-allocated matrix to be used for this alignment
             for i_t in 0..=n_t {
-                self.matrix[i_t][0..=n_q].fill((0.0, 0));
+                if self.fast {
+                    let qry_capacity_wrk = self.param.max_shift * 2 + 1 + 1; 
+                    self.matrix[i_t][0..=qry_capacity_wrk].fill((0.0, 0));
+                } else {
+                    self.matrix[i_t][0..=n_q].fill((0.0, 0));
+                }
             }
+        }
+    }
+    // convert i_q (qry seq coordinates) to i_q_m (matrix coordinates) in fast mode
+    fn i_q_m(&self, i_t: usize, i_q: usize) -> usize {
+        if self.fast {
+            (i_q + self.param.max_shift + 1) - i_t
+        } else {
+            i_q
         }
     }
 }
