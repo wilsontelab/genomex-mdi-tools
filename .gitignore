@@ -2,3 +2,16 @@
 # within this suite's git repository, or suite-centric containers
 /mdi/
 /containers/
+
+# exclude Rust build artifacts
+**/crates/target
+**/crates/Cargo.lock
+**/crates/*/target
+**/crates/*/Cargo.lock
+
+# exclude development artifacts and temporary files
+unused/
+old/
+_unused/
+_old/
+test.*
