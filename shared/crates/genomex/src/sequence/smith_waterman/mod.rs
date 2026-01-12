@@ -1,6 +1,6 @@
 //!  smith_waterman() performs either Needleman-Wunsch or Smith-Waterman 
 //!  alignment of a query (qry) to a target (tgt) sequence, depending on the arguments
-//!  expects all upper case IUPAC codes
+//!  expects all upper case IUPAC codes, which is not checked by the aligner
 //!  returns just one best alignment as an array of query values
 //!    M operations carry the query base in the array slot (could be a base mismatch)
 //!    I operations carry the inserted base prepended to the NEXT target postion
@@ -173,7 +173,7 @@ impl Aligner {
     }
 
     /// Run a Smith-Waterman / Needleman-Wunsch alignment.
-    /// Expects all upper case IUPAC codes.
+    /// Expects all upper case IUPAC codes, which is not checked by the aligner.
     pub fn align(
         &mut self,
         qry: &str, 
