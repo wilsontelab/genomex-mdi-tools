@@ -10,6 +10,7 @@ mkdir -p UCSC
 mkdir -p ENCODE
 
 echo "attempting to download metadata files one at a time"
+echo "YES THIS IS IT"
 
 # download files
 # do NOT check for existence, some may fail for some genomes
@@ -22,7 +23,7 @@ function wgetFile {
     URL=$URL_BASE/$FILE
     echo
     echo $URL
-    wget --no-verbose -O $FOLDER/$FILE $URL $FLAG
+    wget --no-verbose --no-check-certificate -O $FOLDER/$FILE $URL $FLAG
 }
 
 # genomes gaps

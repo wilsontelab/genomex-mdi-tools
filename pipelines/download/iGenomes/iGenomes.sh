@@ -14,7 +14,7 @@ echo "downloading one genome at a time"
 for URL in $URLS; do
     echo
     echo $URL
-    wget --no-verbose $URL
+    wget --no-verbose --no-check-certificate $URL
     checkPipe
     tar xzf *.tar.gz
     checkPipe
