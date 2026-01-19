@@ -34,7 +34,7 @@
 //! ```
 
 // dependencies
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::cmp::{min, max};
 use super::iupac::*;
 
@@ -85,7 +85,7 @@ pub struct Alignment {
 pub struct Aligner {
     pub param:       AlignerParameters,
     pub fast:        bool,
-    pub pair_scores: HashMap<(u8, u8), f32>,
+    pub pair_scores: FxHashMap<(u8, u8), f32>,
     pub matrix:      Vec<Vec<(f32, u8)>>, // pre-allocated score matrix
 }
 impl Aligner {
@@ -145,8 +145,8 @@ impl Aligner {
     }
 
     // create the lookup table for match/mismatch score for all possible IUPAC code combinations
-    fn initalize_pair_scores(param: &AlignerParameters, iupac: Iupac) -> HashMap<(u8, u8), f32> {
-        let mut scores: HashMap<(u8, u8), f32> = HashMap::new();
+    fn initalize_pair_scores(param: &AlignerParameters, iupac: Iupac) -> FxHashMap<(u8, u8), f32> {
+        let mut scores: FxHashMap<(u8, u8), f32> = FxHashMap::default();
         iupac.base_matches.iter().for_each(|(&key, _)| {
             let chars: Vec<u8> = key.as_bytes().to_vec();
             scores.insert((chars[0], chars[1]), param.match_score);       // e.g. A:A, full match

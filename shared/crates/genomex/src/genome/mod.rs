@@ -2,6 +2,6 @@
 mod chroms;
 mod targets;
 
-// exports
+// re-exports
 pub use chroms::Chroms;
 pub use targets::*;

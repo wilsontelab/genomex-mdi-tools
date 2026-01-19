@@ -1,11 +1,12 @@
 //! Suport manipulations and assessment related to genome target regions.
 
 // dependencies
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::fs::read_to_string;
 use mdi::pub_key_constants;
 use mdi::workflow::Workflow;
 use crate::sam::SamRecord;
+use crate::genome::chroms::Chroms;
 
 // constants
 pub_key_constants!(
@@ -28,35 +29,35 @@ pub const OFF_OFF_TARGET: &str   = "--";
 // null target constants
 pub const NULL_TARGET_I: usize   = 0;
 pub const NULL_TARGET_NAME: &str = "*";
-pub const NULL_DISTANCE: isize   = 0;
+pub const NULL_DISTANCE: i32     = 0;
 
 /// TargetRegion structure to describe one target region.
 #[derive(Clone)]
 pub struct TargetRegion {
     pub chrom:       String,
-    pub start0:      usize, // 0-based inclusive
-    pub end1:        usize, // 1-based inclusive (BED convention)
+    pub start0:      u32,   // 0-based inclusive
+    pub end1:        u32,   // 1-based inclusive (BED convention)
     pub name:        String,
     pub target_i1:   usize, // 1-referenced index in source BED file
-    pub center:      usize,
+    pub center:      u32,
     pub padded:      bool,
 }
 
 /// TargetRegions structure for tracking multiple genome target regions.
 pub struct TargetRegions {
-    is_targeted:            bool,
-    targets_bed:            String,
-    region_padding:         usize,
-    n_regions:              usize,
-    sum_target_lens:        usize,
-    sum_padded_target_lens: usize,
-    region_centers:         Vec<usize>,
-    target_chroms:          Vec<String>,
-    regions:                HashMap<String, Vec<TargetRegion>>, // chromosome -> sorted regions
-    padded_regions:         HashMap<String, Vec<TargetRegion>>,
-    target_classes:         HashMap<String, usize>,
-    count_classes:          Vec<&'static str>,
-    null_target_region:     TargetRegion,   
+    pub is_targeted:            bool,
+    pub targets_bed:            String,
+    pub region_padding:         u32,
+    pub n_regions:              usize,
+    pub sum_target_lens:        usize,
+    pub sum_padded_target_lens: usize,
+    pub region_centers:         Vec<u32>,
+    pub target_chroms:          Vec<String>,
+    pub regions:                FxHashMap<String, Vec<TargetRegion>>, // chromosome -> sorted regions
+    pub padded_regions:         FxHashMap<String, Vec<TargetRegion>>,
+    pub target_classes:         FxHashMap<String, u8>,
+    pub count_classes:          Vec<&'static str>,
+    pub null_target_region:     TargetRegion,   
 }
 impl TargetRegions {
     /// Create a new TargetRegions instance.
@@ -65,16 +66,16 @@ impl TargetRegions {
         // load config variables
         w.cfg.set_bool_env(&[TARGETS_BED]);
         w.cfg.set_string_env(&[TARGETS_BED]);
-        w.cfg.set_usize_env(&[REGION_PADDING]);
+        w.cfg.set_u32_env(&[REGION_PADDING]);
         let is_targeted = *w.cfg.get_bool(TARGETS_BED);
-        let region_padding = *w.cfg.get_usize(REGION_PADDING);
-        let target_classes: HashMap<String, usize> = [
+        let region_padding = *w.cfg.get_u32(REGION_PADDING);
+        let target_classes: FxHashMap<String, u8> = [
             ("--".to_string(), 0),
             ("TT".to_string(), 1),
             ("TA".to_string(), 2),
             ("T-".to_string(), 3),
             ("AA".to_string(), 4),
-            ("A-".to_string(), 5)
+            ("A-".to_string(), 5) // max target_class is 5, fits in 3 bits
         ].into_iter().collect();
         let count_classes = vec![
             OFF_TARGET,
@@ -101,8 +102,8 @@ impl TargetRegions {
             sum_padded_target_lens: 0,
             region_centers: vec![],
             target_chroms: vec![],
-            regions: HashMap::new(),
-            padded_regions: HashMap::new(),
+            regions: FxHashMap::default(),
+            padded_regions: FxHashMap::default(),
             target_classes,
             count_classes,
             null_target_region: TargetRegion{
@@ -133,22 +134,22 @@ impl TargetRegions {
         targets
     }
     // load the target regions from the BED file
-    fn load_target_regions(&mut self, padding: usize) {
+    fn load_target_regions(&mut self, padding: u32) {
         let bed_content = read_to_string(&self.targets_bed).expect(
             &format!("could not open {}: ", self.targets_bed)
         );  
         let mut target_i1 = 0;
-        let mut sum_target_lens = 0;
+        let mut sum_target_lens: usize = 0;
         for line in bed_content.lines() {
             target_i1 += 1; // 1-referenced
             let line = line.replace("\r", "");
             let parts: Vec<&str> = line.split('\t').collect();
             let chrom = parts[0];
-            let mut start0: usize = parts[1].parse().unwrap_or(0);
-            let mut end1: usize = parts[2].parse().unwrap_or(0);
+            let mut start0: u32 = parts[1].parse().unwrap_or(0);
+            let mut end1: u32 = parts[2].parse().unwrap_or(0);
             let name = if parts.len() >= 4 { parts[3] } else { "unnamed" };
-            sum_target_lens += end1 - start0;
-            let center = ((start0 as f64 + 1.0 + end1 as f64) / 2.0) as usize;
+            sum_target_lens += (end1 - start0) as usize;
+            let center = ((start0 as f64 + 1.0 + end1 as f64) / 2.0) as u32;
             if padding == 0 {
                 self.region_centers.push(center);
                 self.n_regions += 1;
@@ -187,17 +188,21 @@ impl TargetRegions {
         }
     }
 
-
-//     /// Print a summary of the target region count and sizes to the log.
-//     pub fn print_targets_summary(&self, genome_size: usize) {
-// //         printCount($nRegions,            'nRegions',            'target regions');
-// //         printCount(commify($sumTargetLens),       'sumTargetLens',       'total bp covered by target regions');
-// //         $REGION_PADDING and 
-// //         printCount(commify($sumPaddedTargetLens), 'sumPaddedTargetLens', 'total bp covered by padded target regions');
-//     }
+    /// Get a list of on-target chromosomes as Vec<(chrom, index)>. 
+    /// If untargeted, return all nuclear chromosomes.
+    pub fn get_on_target_chroms(&self, chroms: &Chroms) -> Vec<(String, u8)> {
+        let on_target_chroms = if self.is_targeted {
+            &self.target_chroms
+        } else {
+            &chroms.nuclear
+        };
+        on_target_chroms.iter()
+            .map(|chrom| (chrom.to_string(), *chroms.index.get(chrom).unwrap()))
+            .collect()
+    }
 
     /// Find the target region containing a position, if any.
-    pub fn get_pos_target(&self, chrom: &str, pos1: usize) -> (TargetRegion, isize, String) {
+    pub fn get_pos_target(&self, chrom: &str, pos1: u32) -> (TargetRegion, i32, String) {
         if !self.is_targeted {
             (self.null_target_region.clone(), NULL_DISTANCE, ON_TARGET.to_string()) // always on target if not targeted
         } else if let Some((region, distance)) = self.get_pos_target_(chrom, pos1, &self.regions) {
@@ -211,12 +216,12 @@ impl TargetRegions {
         }
     }
     // internal function for position matching
-    fn get_pos_target_(&self, chrom: &str, pos1: usize, regions: &HashMap<String, Vec<TargetRegion>>) -> Option<(TargetRegion, isize)> {
+    fn get_pos_target_(&self, chrom: &str, pos1: u32, regions: &FxHashMap<String, Vec<TargetRegion>>) -> Option<(TargetRegion, i32)> {
         let regions = regions.get(chrom)?;
         let region = regions.iter().find(|region| { 
             pos1 >= region.start0 + 1 && pos1 <= region.end1
         })?;
-        Some((region.clone(), pos1 as isize - region.center as isize))
+        Some((region.clone(), pos1 as i32 - region.center as i32))
     }
 
     /// Find the target region matching an alignment, if any.
@@ -224,13 +229,13 @@ impl TargetRegions {
     /// There is a general presumption that alignments are short relative to target regions,
     /// such that the two ends of an alignment are unlikely to be in different targets.
     /// If they are, only the target region matching the leftmost position is reported
-    pub fn get_aln_target(&self, aln: &SamRecord) -> (usize, TargetRegion, usize, usize, bool) {
-        let left_pos1 = aln.pos1;
+    pub fn get_aln_target(&self, aln: &SamRecord) -> (u8, TargetRegion, u32, u32, bool) {
+        let left_pos1  = aln.pos1;
         let right_pos1 = aln.get_end1();
         if !self.is_targeted {
             return (self.target_classes[ON_ON_TARGET], self.null_target_region.clone(), left_pos1, right_pos1, true);
         }
-        let (region_left, _distance_left, target_type_left) = self.get_pos_target(&aln.rname, left_pos1);
+        let (region_left,  _distance_left,  target_type_left)  = self.get_pos_target(&aln.rname, left_pos1);
         let (region_right, _distance_right, target_type_right) = self.get_pos_target(&aln.rname, right_pos1);
         if region_left.chrom  != NULL_TARGET_NAME && 
            region_right.chrom != NULL_TARGET_NAME {
@@ -271,11 +276,11 @@ impl TargetRegions {
             let mut any_on_target = false;
             for aln in &mut *alns {
                 let (target_class, region, left_pos1, right_pos1, aln_on_target) = self.get_aln_target(aln);
-                let tag = region.target_i1 << 3 | target_class;
+                let tag = region.target_i1 << 3 | target_class as usize;
                 aln.tags.tags.push(format!("{}{}", class_prefix, tag));
-                let count_class = self.count_classes[target_class];
+                let count_class = self.count_classes[target_class as usize];
                 w.ctrs.increment_keyed(N_ALNS_BY_TARGET_CLASS, count_class);
-                w.ctrs.add_to_keyed(N_BASES_BY_TARGET_CLASS, count_class, right_pos1 - left_pos1 + 1);
+                w.ctrs.add_to_keyed(N_BASES_BY_TARGET_CLASS, count_class, (right_pos1 - left_pos1 + 1) as usize);
                 any_on_target |= aln_on_target;
             }
             // ONT adaptive requires 5' alignment to be on-target
@@ -284,11 +289,11 @@ impl TargetRegions {
                 is_on_target = any_on_target;
             }
         } else {
-            let tag: usize = region_5.target_i1 << 3 | target_class_5;
+            let tag: usize = region_5.target_i1 << 3 | target_class_5 as usize;
             alns[0].tags.tags.push(format!("{}{}", class_prefix, tag));
-            let count_class = self.count_classes[target_class_5];
+            let count_class = self.count_classes[target_class_5 as usize];
             w.ctrs.increment_keyed(N_ALNS_BY_TARGET_CLASS, count_class);
-            w.ctrs.add_to_keyed(N_BASES_BY_TARGET_CLASS, count_class, right_pos1_5 - left_pos1_5 + 1);
+            w.ctrs.add_to_keyed(N_BASES_BY_TARGET_CLASS, count_class, (right_pos1_5 - left_pos1_5 + 1) as usize);
         }
         if !is_on_target {
             for aln in alns {
@@ -297,27 +302,5 @@ impl TargetRegions {
         }
         is_on_target
     }
-
-    // sub getTargetRegions {
-    //     ($TARGETS_BED and $TARGETS_BED ne "null" and $TARGETS_BED ne "NA") or return [];
-    //     my @regions;
-    //     open my $inH, "<", $TARGETS_BED or die "could not open $TARGETS_BED: $!\n";
-    //     while(my $line = <$inH>){
-    //         chomp $line;
-    //         $line =~ s/\r//g;
-    //         my ($chr, $start, $end, $name) = split("\t", $line);
-    //         push @regions, {
-    //             name  => $name,
-    //             chr   => $chr,
-    //             start => $start,
-    //             end   => $end,
-    //             paddedStart  => $start - $REGION_PADDING, # all still half-open like the source BED
-    //             paddedEnd    => $end   + $REGION_PADDING,
-    //             paddedStart1 => $start - $REGION_PADDING + 1 # 1-referenced start, unlike above
-    //         };
-    //     }
-    //     close $inH;
-    //     return \@regions;
-    // }
 
 }

@@ -29,11 +29,11 @@ pub struct SamRecord { // a single SAM alignment record
     pub flag:  SamFlag, 
     // alignment-level fields
     pub rname: String,
-    pub pos1:  usize, 
+    pub pos1:  u32, 
     pub mapq:  u8,
     pub cigar: CigarString,
     pub rnext: String,
-    pub pnext: usize,
+    pub pnext: u32,
     // read level fields (assuming no hard clipping)
     pub tlen:  i32,
     pub seq:   String, // when streamed from STDIN, cannot used borrowed fields &str/Cow, must be DeserializeOwned
@@ -64,16 +64,16 @@ impl SamRecord {
     CigarString methods
     ------------------------------------------------------------------------- */
     /// Get the left clip length from a SamRecord's CIGAR string.
-    pub fn get_clip_left(&self) -> usize {
+    pub fn get_clip_left(&self) -> u32 {
         self.cigar.get_clip_left()
     }
     /// Get the right clip length from a SamRecord's CIGAR string.
-    pub fn get_clip_right(&self) -> usize {
+    pub fn get_clip_right(&self) -> u32 {
         self.cigar.get_clip_right()
     }
     /* ---------------------------------------------------------------------- */
     /// Get the PAF-like start of a SamRecord's alignment on the query sequence (0-based).
-    pub fn get_query_start0(&self) -> usize {
+    pub fn get_query_start0(&self) -> u32 {
         if self.check_flag_any(flag::UNMAPPED) { return 0; }
         if self.check_flag_any(flag::REVERSE) {
             self.get_clip_right()
@@ -82,8 +82,8 @@ impl SamRecord {
         }
     }
     /// Get the PAF-like end of a SamRecord's alignment on the query sequence (1-based).
-    pub fn get_query_end1(&self) -> usize {
-        let qlen = self.seq.len();
+    pub fn get_query_end1(&self) -> u32 {
+        let qlen = self.seq.len() as u32;
         if self.check_flag_any(flag::UNMAPPED) { return qlen; }
         if self.check_flag_any(flag::REVERSE) {
             qlen - self.get_clip_left()
@@ -94,7 +94,7 @@ impl SamRecord {
     /* ---------------------------------------------------------------------- */
     /// Get the rightmost mapped read position in the reference genome from
     /// a SamRecord's alignment (1-based).
-    pub fn get_end1(&self) -> usize {
+    pub fn get_end1(&self) -> u32 {
         let mut end1 = self.pos1 - 1;
         for cap in  self.cigar.get_operations() {
             if CigarString::is_reference_op(&cap[2]) {
@@ -105,11 +105,11 @@ impl SamRecord {
     }
     /* ---------------------------------------------------------------------- */
     /// Get the aligned size from a SamRecord's CIGAR string, i.e., the number of aligned bases.
-    pub fn get_aligned_size(&self) -> usize {
+    pub fn get_aligned_size(&self) -> u32 {
         self.cigar.get_aligned_size()
     }
     /// Get the reference span from a SamRecord's CIGAR string, i.e., the number of reference bases spanned.
-    pub fn get_ref_span(&self) -> usize {
+    pub fn get_ref_span(&self) -> u32 {
         self.cigar.get_ref_span()
     }
     /* -------------------------------------------------------------------------
@@ -132,8 +132,8 @@ impl SamRecord {
     /// otherwise it is reference-oriented and may have been reverse-complemented by the aligner.
     pub fn get_seq_aln(&self, as_sequenced: bool) -> Option<String> {
         if self.check_flag_any(flag::UNMAPPED) { return None; }
-        let qstart0 = self.get_query_start0();
-        let qend1 = self.get_query_end1();
+        let qstart0 = self.get_query_start0() as usize;
+        let qend1   = self.get_query_end1()   as usize;
         if self.check_flag_any(flag::REVERSE){
             let qlen = self.seq.len();
             let seq = &self.seq[qlen - qend1..qlen - qstart0];
@@ -157,8 +157,8 @@ impl SamRecord {
     /// Get the average per-base Phred QUAL for the aligned portion of a SamRecord.
     pub fn get_avg_qual_aln(&self) -> f64 {
         if self.check_flag_any(flag::UNMAPPED) { return 0.0; }
-        let qstart0 = self.get_query_start0();
-        let qend1 = self.get_query_end1();
+        let qstart0 = self.get_query_start0() as usize;
+        let qend1   = self.get_query_end1()   as usize;
         if self.check_flag_any(flag::REVERSE){
             let qlen = self.seq.len();
             return SamQual::get_avg_qual_str(&self.qual.qual[qlen - qend1..qlen - qstart0]);

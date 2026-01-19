@@ -24,13 +24,13 @@ impl SamRecord {
     pub fn set_to_null(&mut self, fields: &[&str]) {
         for field in fields {
             match *field {
-                FLAG  => self.flag = SamFlag::new(0),
+                FLAG  => self.flag  = SamFlag::new(0),
                 RNEXT => self.rnext = "*".to_string(),
                 PNEXT => self.pnext = 0,
-                TLEN  => self.tlen = 0,
-                SEQ   => self.seq = "*".to_string(),
-                QUAL  => self.qual = SamQual::new("*"),
-                TAGS  => self.tags = SamTags::new(vec![]),
+                TLEN  => self.tlen  = 0,
+                SEQ   => self.seq   = "*".to_string(),
+                QUAL  => self.qual  = SamQual::new("*"),
+                TAGS  => self.tags  = SamTags::new(vec![]),
                 _ => panic!("SamRecord::set_to_null unsupported field: {}", field),
             }
         }

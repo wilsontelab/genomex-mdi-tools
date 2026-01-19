@@ -7,6 +7,9 @@ authors = ["Thomas E. Wilson"]
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 regex = "1.12"
+rust-htslib = "0.51"
+rustc-hash = "2.1"
+
 # mdi = { git = "https://github.com/MiDataInt/mdi-pipelines-framework/tree/main/crates/mdi" }
 # mdi = { git = "https://github.com/wilsonte-umich/mdi-pipelines-framework/tree/main/crates/mdi" }
 mdi = { path = "/nfs/turbo/path-wilsonte-turbo/mdi/wilsontelab/HiFiRe3/mdi/frameworks/developer-forks/mdi-pipelines-framework/crates/mdi" }
