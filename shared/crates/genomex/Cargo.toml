@@ -11,5 +11,5 @@ regex = "1.12"
 rust-htslib = "0.51"
 rustc-hash = "2.1"
 
-# mdi = { path = "../../../../../../frameworks/definitive/mdi-pipelines-framework/crates/mdi" }
-mdi = { path = "../../../../../../frameworks/developer-forks/mdi-pipelines-framework/crates/mdi" }
+mdi = { path = "../../../../../../frameworks/definitive/mdi-pipelines-framework/crates/mdi" }
+# mdi = { path = "../../../../../../frameworks/developer-forks/mdi-pipelines-framework/crates/mdi" }
