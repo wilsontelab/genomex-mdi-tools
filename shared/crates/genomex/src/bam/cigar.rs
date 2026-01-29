@@ -27,8 +27,7 @@ pub fn get_query_start0(aln: &BamRecord) -> u32 {
     }
 }
 /// Get the PAF-like end of a SamRecord's alignment on the query sequence (1-based).
-pub fn get_query_end1(aln: &BamRecord) -> u32 {
-    let qlen = aln.seq_len() as u32;
+pub fn get_query_end1(aln: &BamRecord, qlen: u32) -> u32 {
     if aln.is_unmapped() { return qlen; }
     if aln.is_reverse() {
         qlen - get_clip_left(aln)

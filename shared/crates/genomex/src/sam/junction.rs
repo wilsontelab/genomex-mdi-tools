@@ -44,6 +44,19 @@ pub enum JunctionType {
     Inversion     = 4,
     Translocation = 8,
 }
+impl JunctionType {
+    /// Translate a JunctionType from u8 to a string representation.
+    pub fn str_from_u8(jxn_type: u8) -> &'static str {
+        match jxn_type {
+            x_ if x_ == Self::Proper        as u8 => "proper",
+            x_ if x_ == Self::Deletion      as u8 => "deletion",
+            x_ if x_ == Self::Duplication   as u8 => "duplication",
+            x_ if x_ == Self::Inversion     as u8 => "inversion",
+            x_ if x_ == Self::Translocation as u8 => "translocation",
+            _ => "mixed_types",
+        }
+    }
+}
 
 /// JunctionStrands describe the strand orientations 
 /// of two alignments ordered 5' to 3' along a sequenced read.
@@ -172,6 +185,7 @@ impl Junction {
         }
         self
     }
+
 }
 
 // implementation
@@ -331,7 +345,7 @@ impl SamRecord {
     ) -> isize {
         // 29 bits for position allows up to 536,870,911 1-based positions per chromosome
         let chrom_index = *chroms.index.get(chrom).or(Some(&0)).unwrap();
-        let chrom_index_shift29 = (chrom_index << 29) as isize;
+        let chrom_index_shift29 = (chrom_index as isize) << 29;
         let pos1 = pos1 & 0x1FFFFFFF;
         match is_reverse{
             true  => (chrom_index_shift29 + pos1 as isize) * -1,

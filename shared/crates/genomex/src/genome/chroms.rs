@@ -5,6 +5,7 @@ use rustc_hash::FxHashMap;
 use std::fs::read_to_string;
 use mdi::pub_key_constants;
 use mdi::workflow::Config;
+use mdi::OutputFile;
 
 // constants
 pub_key_constants!(
@@ -21,6 +22,8 @@ pub struct Chroms {
     pub is_composite_genome: bool,
     pub canonical:     Vec<String>,
     pub nuclear:       Vec<String>,
+    pub canonical_indices: Vec<u8>, // in number order
+    pub nuclear_indices:   Vec<u8>,
     pub index:         FxHashMap<String, u8>,
     pub rev_index:     FxHashMap<u8,     String>,
     pub nuclear_index: FxHashMap<String, u8>,
@@ -86,11 +89,16 @@ impl Chroms {
         let mut index:         FxHashMap<String, u8> = FxHashMap::default();
         let mut rev_index:     FxHashMap<u8, String> = FxHashMap::default();
         let mut nuclear_index: FxHashMap<String, u8> = FxHashMap::default();
+        let mut canonical_indices: Vec<u8> = vec![];
+        let mut nuclear_indices:   Vec<u8> = vec![];
         for (i, chrom) in canonical.iter().enumerate() {
-            index.insert(chrom.clone(), i as u8 + 1); // 1-referenced chrom indices, i.e., chr3 => 3
-            rev_index.insert(i as u8 + 1, chrom.clone());
+            let i1 = i as u8 + 1; // 1-referenced chrom indices, i.e., chr3 => 3
+            index.insert(chrom.clone(), i1);
+            rev_index.insert(i1, chrom.clone());
+            canonical_indices.push(i1);
             if nuclear.contains(chrom) {
-                nuclear_index.insert(chrom.clone(), i as u8 + 1);
+                nuclear_index.insert(chrom.clone(), i1);
+                nuclear_indices.push(i1);
             }
         }
         index.insert("*".to_string(), 99); // special handling of unmapped reads
@@ -122,6 +130,8 @@ impl Chroms {
             is_composite_genome,
             canonical,
             nuclear,
+            canonical_indices,
+            nuclear_indices,
             index,
             rev_index,
             nuclear_index,
@@ -166,16 +176,23 @@ impl Chroms {
     pub fn is_same_genome_suffix(&self, chrom1: &str, chrom2: &str) -> bool {
         self.get_genome_suffix(chrom1) == self.get_genome_suffix(chrom2)
     }
-}
 
-// sub writeChromsFile {
-//     my ($chromsFile, $genomeFasta) = @_;
-//     @canonicalChroms or setCanonicalChroms();
-//     my @chromSizes = getChromIndexSizes("$genomeFasta.fai");
-//     open my $chrH, ">", $chromsFile or die "could not open: $chromsFile: $!\n";
-//     foreach my $chrom(keys %chromIndex){
-//         my $chromIndex1 = $chromIndex{$chrom};
-//         print $chrH join("\t", $chrom, $chromIndex1, $chromSizes[$chromIndex1] || "NA"), "\n";
-//     }
-//     close $chrH;
-// }
+    /// Write a chroms file with essential chromosome metadata.
+    pub fn write_chroms_file(&self, filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut writer = OutputFile::open_file(
+            filepath, 
+            b'\t', 
+            Some(&["chrom", "chrom_index1", "chrom_size"]),
+        );
+        for chrom_index1 in &self.canonical_indices {
+            let chrom = self.rev_index.get(chrom_index1).unwrap();
+            let chrom_size = self.index_sizes.get(chrom_index1).unwrap_or(&0);
+            writer.write_record(vec![
+                chrom,
+                &chrom_index1.to_string(),
+                &chrom_size.to_string(),
+            ]);
+        }
+        Ok(())
+    }
+}

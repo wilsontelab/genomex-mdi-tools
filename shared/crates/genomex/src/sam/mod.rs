@@ -82,8 +82,7 @@ impl SamRecord {
         }
     }
     /// Get the PAF-like end of a SamRecord's alignment on the query sequence (1-based).
-    pub fn get_query_end1(&self) -> u32 {
-        let qlen = self.seq.len() as u32;
+    pub fn get_query_end1(&self, qlen: u32) -> u32 {
         if self.check_flag_any(flag::UNMAPPED) { return qlen; }
         if self.check_flag_any(flag::REVERSE) {
             qlen - self.get_clip_left()
@@ -132,10 +131,10 @@ impl SamRecord {
     /// otherwise it is reference-oriented and may have been reverse-complemented by the aligner.
     pub fn get_seq_aln(&self, as_sequenced: bool) -> Option<String> {
         if self.check_flag_any(flag::UNMAPPED) { return None; }
+        let qlen    = self.seq.len();
         let qstart0 = self.get_query_start0() as usize;
-        let qend1   = self.get_query_end1()   as usize;
+        let qend1   = self.get_query_end1(qlen as u32)   as usize;
         if self.check_flag_any(flag::REVERSE){
-            let qlen = self.seq.len();
             let seq = &self.seq[qlen - qend1..qlen - qstart0];
             if as_sequenced {
                 Some(rc_acgtn_str(&seq))
@@ -157,10 +156,10 @@ impl SamRecord {
     /// Get the average per-base Phred QUAL for the aligned portion of a SamRecord.
     pub fn get_avg_qual_aln(&self) -> f64 {
         if self.check_flag_any(flag::UNMAPPED) { return 0.0; }
+        let qlen = self.seq.len();
         let qstart0 = self.get_query_start0() as usize;
-        let qend1   = self.get_query_end1()   as usize;
+        let qend1   = self.get_query_end1(qlen as u32) as usize;
         if self.check_flag_any(flag::REVERSE){
-            let qlen = self.seq.len();
             return SamQual::get_avg_qual_str(&self.qual.qual[qlen - qend1..qlen - qstart0]);
         } else {
             return SamQual::get_avg_qual_str(&self.qual.qual[qstart0..qend1]);
