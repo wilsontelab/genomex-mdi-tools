@@ -36,18 +36,18 @@ impl CigarString {
     left and right alignment clips
     ------------------------------------------------------------------------- */
     /// Get the SAM left clip length from a CigarString.
-    pub fn get_clip_left(&self) -> usize {
+    pub fn get_clip_left(&self) -> u32 {
         clip_left_regex()
             .captures(&self.cigar)
             .and_then(|caps| caps.get(1))
-            .map_or(0, |m| m.as_str().parse::<usize>().unwrap_or(0))
+            .map_or(0, |m| m.as_str().parse::<u32>().unwrap_or(0))
     }
     /// Get the SAM right clip length from a CigarString.
-    pub fn get_clip_right(&self) -> usize {
+    pub fn get_clip_right(&self) -> u32 {
         clip_right_regex()
             .captures(&self.cigar)
             .and_then(|caps| caps.get(1))
-            .map_or(0, |m| m.as_str().parse::<usize>().unwrap_or(0))
+            .map_or(0, |m| m.as_str().parse::<u32>().unwrap_or(0))
     }
     /* -------------------------------------------------------------------------
     CIGAR string operations
@@ -93,7 +93,7 @@ impl CigarString {
     reference and query spans
     ------------------------------------------------------------------------- */
     /// Get the aligned size from a CigarString instance, i.e., the number of aligned bases.
-    pub fn get_aligned_size(&self) -> usize {
+    pub fn get_aligned_size(&self) -> u32 {
         let mut size = 0;
         for cap in self.get_operations() {
             if Self::is_query_op_aln(&cap[2]) {
@@ -103,7 +103,7 @@ impl CigarString {
         size
     }
     /// Get the reference span from a CigarString instance, i.e., the number of reference bases spanned.
-    pub fn get_ref_span(&self) -> usize {
+    pub fn get_ref_span(&self) -> u32 {
         let mut span = 0;
         for cap in self.get_operations() {
             if Self::is_reference_op(&cap[2]) {

@@ -14,6 +14,7 @@ pub fn rc_acgt_u8(seq: &[u8]) -> Vec<u8> {
         .map(|c| if c & 2 != 0 { c ^ 4 } else { c ^ 21 })
         .collect()
 }
+
 /// Reverse-complement a sequence containing only ACGT or acgt bases
 /// provided as a string slice, i.e., `&str`. Calls `rc_acgt_u8` internally.
 /// 
@@ -25,6 +26,7 @@ pub fn rc_acgt_str(seq: &str) -> String {
         .map(|&c| c as char)
         .collect()
 }
+
 /// Reverse-complement a sequence containing only ACGTN or acgtn bases
 /// provided as a string slice, i.e., `&str`.
 /// 
@@ -43,6 +45,7 @@ pub fn rc_acgtn_str(seq: &str) -> String {
             'g' => 'c',
             't' => 'a',
             'n' => 'n',
+            '*' => '*',
             _   => panic!("rc_acgtn_str encountered an invalid base character in sequence: {}", c),
         })
         .collect()

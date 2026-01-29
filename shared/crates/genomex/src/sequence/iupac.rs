@@ -17,18 +17,18 @@
 // . or -	gap
 
 // dependencies
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 // Data type with IUPAC base representation tables.
 pub struct Iupac {
-    pub base_matches:    HashMap<&'static str, char>,
-    pub base_mismatches: HashMap<&'static str, char>,
-    pub ryswkm_matches:  HashMap<&'static str, char>,
-    pub n_matches:       HashMap<&'static str, char>,
-    pub m_operations:    HashMap<&'static str, char>,
-    pub acgtn_matches:   HashMap<&'static str, char>,
-    pub no_indel_matches:HashMap<&'static str, char>,
-    pub space_matches:   HashMap<&'static str, char>,
+    pub base_matches:    FxHashMap<&'static str, char>,
+    pub base_mismatches: FxHashMap<&'static str, char>,
+    pub ryswkm_matches:  FxHashMap<&'static str, char>,
+    pub n_matches:       FxHashMap<&'static str, char>,
+    pub m_operations:    FxHashMap<&'static str, char>,
+    pub acgtn_matches:   FxHashMap<&'static str, char>,
+    pub no_indel_matches:FxHashMap<&'static str, char>,
+    pub space_matches:   FxHashMap<&'static str, char>,
 }
 
 /* ------------------------------------------------------------------
@@ -47,14 +47,14 @@ impl Iupac {
     pub fn new() -> Self {
         // paired base values for incoming raw bases (A C G T)
         // pairs full matchScore in SW
-        let base_matches = HashMap::from([
+        let base_matches = FxHashMap::from_iter([
             ("AA", 'A'),
             ("CC", 'C'),
             ("GG", 'G'),
             ("TT", 'T'),
         ]);
         // pairs with full mismatchPenalty in SW
-        let base_mismatches = HashMap::from([
+        let base_mismatches = FxHashMap::from_iter([
             ("AG", 'R'),
             ("GA", 'R'),
             ("CT", 'Y'),
@@ -70,7 +70,7 @@ impl Iupac {
         ]);
         // paired base values that include RYSWKM, i.e. partial degeneracy
         // pairs with half matchScore in SW
-        let ryswkm_matches = HashMap::from([
+        let ryswkm_matches = FxHashMap::from_iter([
             ("RR", 'R'),
             ("RA", 'R'),
             ("RG", 'R'),
@@ -105,7 +105,7 @@ impl Iupac {
         // paired base values for any combination that includes N, i.e. full degeneracy
         // score with neutral=0 in SW (neither penalize nor promote)
         // thus, a base previously declared uninformative is an M operation but has no alignment value
-        let n_matches = HashMap::from([
+        let n_matches = FxHashMap::from_iter([
             ("NN", 'N'),
             ("NA", 'N'),
             ("NC", 'N'),
@@ -130,20 +130,20 @@ impl Iupac {
         ]); 
         // all combinations that do not default to output base N
         // used to generate consensus sequences
-        let m_operations: HashMap<_, _> = base_matches.iter()
+        let m_operations: FxHashMap<_, _> = base_matches.iter()
             .chain(base_mismatches.iter())
             .chain(ryswkm_matches.iter())
             .map(|(&k, &v)| (k, v)).collect();
         // combinations for doing ungapped comparisons via fn no_indel_match
-        let acgtn_matches: HashMap<_, _> = base_matches.iter()
+        let acgtn_matches: FxHashMap<_, _> = base_matches.iter()
             .chain(n_matches.iter())
             .map(|(&k, &v)| (k, v)).collect();
-        let no_indel_matches: HashMap<_, _> = base_matches.iter()
+        let no_indel_matches: FxHashMap<_, _> = base_matches.iter()
             .chain(base_mismatches.iter())
             .chain(n_matches.iter())
             .map(|(&k, &v)| (k, v)).collect();
         // combinations for assembling consensuses with missing data
-        let space_matches = HashMap::from([
+        let space_matches = FxHashMap::from_iter([
             (" A", 'A'),
             (" C", 'C'),
             (" G", 'G'),
