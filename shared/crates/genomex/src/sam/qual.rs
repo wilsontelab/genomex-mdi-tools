@@ -42,7 +42,7 @@ impl SamQual {
     /// which creates undefined behavior if the input string is not valid ASCII.
     /// Please ensure that the input string is a valid SAM QUAL string.
     pub unsafe fn quantize_qual_scores(qual_str: &mut str) {
-        for byte in qual_str.as_bytes_mut().iter_mut() {
+        unsafe { for byte in qual_str.as_bytes_mut().iter_mut() {
             let x: u8 = match byte.saturating_sub(PHRED_OFFSET) {
                 0..=6 => 5,
                 7..=11 => 10,
@@ -54,6 +54,6 @@ impl SamQual {
                 _ => 40,
             };
             *byte = x + PHRED_OFFSET; // safe because we are converting from ASCII to ASCII
-        }
+        } }
     }
 }
