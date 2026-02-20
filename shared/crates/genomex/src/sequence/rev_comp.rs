@@ -50,3 +50,22 @@ pub fn rc_acgtn_str(seq: &str) -> String {
         })
         .collect()
 }
+
+/// Reverse-complement a single ACGTN or acgtn base
+/// provided and return as char.
+pub fn rc_acgtn_base(base: char) -> char {
+    match base {
+        'A' => 'T',
+        'C' => 'G',
+        'G' => 'C',
+        'T' => 'A',
+        'N' => 'N',
+        'a' => 't',
+        'c' => 'g',
+        'g' => 'c',
+        't' => 'a',
+        'n' => 'n',
+        '*' => '*',
+        _   => panic!("rc_acgtn_base encountered an invalid base character: {}", base),
+    }
+}

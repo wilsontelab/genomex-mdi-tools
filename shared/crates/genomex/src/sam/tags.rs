@@ -4,12 +4,11 @@
 use std::str::FromStr;
 use std::fmt;
 use serde::{Deserialize, Serialize};
-use mdi::RecordStreamer;
 
 /// SamFlag struct for working with SAM flag values.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SamTags{
-    #[serde(deserialize_with = "RecordStreamer::trailing_to_vec_string")]
+    #[serde(deserialize_with = "mdi::record::trailing_to_vec_string")]
     pub tags: Vec<String>,
 }
 impl SamTags {

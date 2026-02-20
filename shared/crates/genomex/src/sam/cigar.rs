@@ -112,4 +112,8 @@ impl CigarString {
         }
         span
     }
+    /// Get the total number of bases in a read from an alignment CIGAR string.
+    pub fn get_read_len(&self) -> u32 {
+        self.get_clip_left() + self.get_clip_right() + self.get_aligned_size()
+    }
 }
