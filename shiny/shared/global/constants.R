@@ -14,5 +14,7 @@ CONSTANTS$baseColors <- list( # generally follow IGV base color conventions
     X = NA,                 # X, treated as missing, no color
     '-' = rgb(0.1, 0.1, 0.1),     # deleted/missing = black
     '+' = rgb(0.75,   0,    0.75), # insertion = purple
+    D = rgb(0.1, 0.1, 0.1),     # deleted/missing = black
+    I = rgb(0.75,   0,    0.75), # insertion = purple
     ' ' = rgb(1,   1,   1)  # white-space
 )

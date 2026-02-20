@@ -80,6 +80,26 @@ pub struct Alignment {
     pub tgt_end0:   usize,
     pub qry_on_tgt: Vec<String>, // will be empty if alignment map is suppressed
 }
+impl Alignment{
+    /// Check that an alignment has a sufficiently high score relative to its length 
+    /// based on `max_score_diff_per_kb`. Return the results of `not_found()` 
+    /// if no single best alignment was found.
+    pub fn has_min_weighted_score<NF>(
+        &self, 
+        max_score_diff_per_kb: f64, 
+        not_found: NF,
+     ) -> bool where NF: Fn() -> bool {
+        if self.status != AlignmentStatus::AlignmentFound { 
+            return not_found()
+        } else {
+            let qry_len = self.qry_end0 - self.qry_start0 + 1;
+            let tgt_len = self.tgt_end0 - self.tgt_start0 + 1;
+            let perfect_score = qry_len.max(tgt_len) as f64;
+            let min_allowed_score = (perfect_score - max_score_diff_per_kb * perfect_score / 1000.0) as i32;
+            self.score >= min_allowed_score
+        }
+    }
+}
 
 /// Smith-Waterman / Needleman-Wunsch aligner.
 pub struct Aligner {

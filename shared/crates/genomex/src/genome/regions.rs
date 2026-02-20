@@ -440,7 +440,7 @@ impl GenomeRegions {
         Some((region, distances))
     }
 
-    /// Report whether a position falls within any  unpadded region.
+    /// Report whether a position falls within any unpadded region.
     /// 
     /// Returns `false` if not regions.has_data.
     pub fn pos_in_region(&self, chrom: &str, pos1: u32) -> bool {
@@ -454,8 +454,22 @@ impl GenomeRegions {
             false
         }
     }
-}
 
+    /// Report whether a span overlaps any unpadded region.
+    /// 
+    /// Returns `false` if not regions.has_data.
+    pub fn span_overlaps_region(&self, chrom: &str, start1: u32, end1: u32) -> bool {
+        if !self.has_data {
+            false
+        } else if let Some(chrom_regions) = self.regions.get(chrom) {
+            chrom_regions.iter().any(|region| { 
+                start1 <= region.end1 && end1 >= region.start0 + 1
+            })
+        } else {
+            false
+        }
+    }
+}
 
 /// BedGraphU16 structure for output regions
 /// with integer or other coverage values.

@@ -35,6 +35,21 @@ pub fn get_tag_u8(aln: &BamRecord, tag: &'static str) -> u8 {
         _ => panic!("{tag} tag is not u8: {:?}", aux),
     }
 }
+
+/// Parse the value of a specified 'XX:i:' tag from a BAM record as u16.
+/// Panic if tag is absent or cannot be parsed as requested.
+pub fn get_tag_u16(aln: &BamRecord, tag: &'static str) -> u16 {
+    let aux = get_tag_value(aln, tag);
+    match aux {
+        Aux::I32(v) => v as u16,
+        Aux::U16(v) => v,
+        Aux::U8(v)   => v as u16,
+        Aux::I16(v) => v as u16,
+        Aux::U32(v) => v as u16,
+        Aux::I8(v)   => v as u16,
+        _ => panic!("{tag} tag is not u16: {:?}", aux),
+    }
+}
 /// Parse the value of a specified 'XX:i:' tag from a BAM record as u32.
 /// Panic if tag is absent or cannot be parsed as requested.
 pub fn get_tag_u32(aln: &BamRecord, tag: &'static str) -> u32 {
@@ -161,6 +176,20 @@ pub fn get_tag_bool_default(aln: &BamRecord, tag: &'static str, default: bool) -
         Some(Aux::U8(v))   => v != 0,
         Some(_) => panic!("{tag} tag is not a bool-compatible type: {:?}", aux),
     }
+}
+/* --------------------------------------------------------------------
+type-specific methods that return None on missing tags
+--------------------------------------------------------------------- */
+/// Parse the value of a specified 'XX:Z:' tag from a BAM record as Option<String>.
+/// Return None if tag is absent. Panic if tag cannot be parsed as requested.
+pub fn get_tag_str_opt(aln: &BamRecord, tag: &'static str) -> Option<String> {
+    if let Some(aux) = aln.aux(tag.as_bytes()).ok() {
+        match aux {
+            Aux::String(v) => return Some(v.to_string()),
+            _ => panic!("{tag} tag is not a string: {:?}", aux),
+        }
+    }
+    None
 }
 /* ---------------------------------------------------------------------
 byte array tag methods
