@@ -7,3 +7,4 @@ pub mod chrom;
 pub mod cigar;
 pub mod tags;
 pub mod junction;
+pub mod qual;

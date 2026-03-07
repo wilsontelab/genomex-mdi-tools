@@ -2,6 +2,7 @@
 
 // dependencies
 use rust_htslib::bam::{Record as BamRecord};
+use crate::sam::cigar::CigarString;
 
 /* -------------------------------------------------------------------------
 left and right alignment clips
@@ -34,4 +35,12 @@ pub fn get_query_end1(aln: &BamRecord, qlen: u32) -> u32 {
     } else {
         qlen - get_clip_right(aln)
     }
+}
+/* -------------------------------------------------------------------------
+reference and query spans
+------------------------------------------------------------------------- */
+/// Get the total number of bases in a read from an alignment CIGAR string.
+pub fn get_read_len(aln: &BamRecord) -> u32 {
+    let cigar = CigarString::new(&aln.cigar().to_string());
+    cigar.get_read_len()
 }
