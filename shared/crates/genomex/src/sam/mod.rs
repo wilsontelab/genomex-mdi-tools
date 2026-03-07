@@ -156,14 +156,9 @@ impl SamRecord {
     /// Get the average per-base Phred QUAL for the aligned portion of a SamRecord.
     pub fn get_avg_qual_aln(&self) -> f64 {
         if self.check_flag_any(flag::UNMAPPED) { return 0.0; }
-        let qlen = self.seq.len();
-        let qstart0 = self.get_query_start0() as usize;
-        let qend1   = self.get_query_end1(qlen as u32) as usize;
-        if self.check_flag_any(flag::REVERSE){
-            return SamQual::get_avg_qual_str(&self.qual.qual[qlen - qend1..qlen - qstart0]);
-        } else {
-            return SamQual::get_avg_qual_str(&self.qual.qual[qstart0..qend1]);
-        }
+        let start0 = self.get_clip_left() as usize;
+        let end1   = self.qual.qual.len() - self.get_clip_right() as usize;
+        SamQual::get_avg_qual_str(&self.qual.qual[start0..end1])
     }
     /* -------------------------------------------------------------------------
     SamTags methods

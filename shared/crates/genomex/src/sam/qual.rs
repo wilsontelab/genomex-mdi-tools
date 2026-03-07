@@ -5,7 +5,8 @@
 use serde::{Deserialize, Serialize};
 
 // constants
-const PHRED_OFFSET: u8 = 33;
+const PHRED_OFFSET_USIZE: usize = 33;
+const PHRED_OFFSET_U8:    u8    = 33;
 
 /// SamQual struct for working with SAM QUAL values.
 #[derive(Serialize, Deserialize)]
@@ -28,7 +29,7 @@ impl SamQual {
     /// May be just a portion of a read as determined by the caller.
     pub fn get_avg_qual_str(qual: &str) -> f64 {
         if qual.is_empty() { return 0.0; }
-        let sum: usize = qual.bytes().map(|b| (b as usize).saturating_sub(33)).sum();
+        let sum: usize = qual.bytes().map(|b| (b as usize).saturating_sub(PHRED_OFFSET_USIZE)).sum();
         sum as f64 / qual.len() as f64
     }
     /* -------------------------------------------------------------------------
@@ -43,7 +44,7 @@ impl SamQual {
     /// Please ensure that the input string is a valid SAM QUAL string.
     pub unsafe fn quantize_qual_scores(qual_str: &mut str) {
         unsafe { for byte in qual_str.as_bytes_mut().iter_mut() {
-            let x: u8 = match byte.saturating_sub(PHRED_OFFSET) {
+            let x: u8 = match byte.saturating_sub(PHRED_OFFSET_U8) {
                 0..=6 => 5,
                 7..=11 => 10,
                 12..=16 => 15,
@@ -53,7 +54,7 @@ impl SamQual {
                 32..=36 => 35,
                 _ => 40,
             };
-            *byte = x + PHRED_OFFSET; // safe because we are converting from ASCII to ASCII
+            *byte = x + PHRED_OFFSET_U8; // safe because we are converting from ASCII to ASCII
         } }
     }
 }
