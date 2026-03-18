@@ -1,6 +1,5 @@
 [package]
 name = "genomex"
-version = "0.1.0"
 rust-version = "1.92"
 edition = "2024"
 authors = ["Thomas E. Wilson"]
