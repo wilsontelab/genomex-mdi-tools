@@ -31,27 +31,33 @@ pub struct Chroms {
     pub index_sizes:   FxHashMap<u8,     u32>,
 }
 impl Chroms {
-    /// Create a new Chroms instance from a genome FASTA .fai index file
-    /// as identified from environment variables.
-    pub fn new(cfg: &mut Config) -> Self {
 
-        // load config variables
-        cfg.set_string_env(&[GENOME, GENOME_FASTA, GENOME_CHROMS]);
-        cfg.set_bool_env(  &[USE_ALL_CHROMS, IS_COMPOSITE_GENOME]);
-        let is_composite_genome = *cfg.get_bool(IS_COMPOSITE_GENOME);
+    /// Create a new Chroms instance from a genome FASTA .fai index file
+    /// identified from passed variables. If requested, force a set of 
+    /// (non-canonical) chromosomes at the start or end of the canonical 
+    /// chromosomes list.
+    pub fn new_from_args(
+        genome:        &str,
+        genome_fasta:  &str,
+        genome_chroms: &str, // space delimited list of chroms
+        use_all_chroms:      bool,
+        is_composite_genome: bool,
+        force_to_start: Option<&[String]>,
+        force_to_end:   Option<&[String]> 
+    ) -> Self {
 
         // all placed chromosome sequences including chrM and chrEBV if present (but not chrXX_XX)
         // set by shared/modules/set_genome_vars.sh or similar script
-        let chroms: Vec<String> = cfg.get_string(GENOME_CHROMS)
+        let genome_chroms: Vec<String> = genome_chroms
             .split_whitespace()
             .map(|s| s.to_string())
             .collect();
 
         // parser for restricting work to properly ordered canonical chromosomes
-        let canonical = if *cfg.get_bool(USE_ALL_CHROMS) || is_composite_genome {
-            chroms // chroms used in fai indexed order
+        let mut canonical = if use_all_chroms || is_composite_genome {
+            genome_chroms.clone() // chroms used in fai indexed order
         } else {
-            let is_roman = cfg.get_string(GENOME_CHROMS).to_uppercase().contains("CHRI");
+            let is_roman = genome_chroms.iter().any(|s| s.to_uppercase() == "CHRI");
             let candidates: Vec<String> = if is_roman { // handle sacCer3, etc.
                 vec![
                     "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
@@ -72,11 +78,45 @@ impl Chroms {
             let candidates: Vec<String> = candidates.into_iter().map(|s| format!("chr{}", s)).collect();
             let mut matched: Vec<String> = vec![];
             for candidate in candidates {
-                if chroms.contains(&candidate) {
+                if genome_chroms.contains(&candidate) {
                     matched.push(candidate);
                 }
             }
             matched
+        };
+
+        // handle chromosome forcing
+        if let Some(forced_chroms) = force_to_start {
+            let mut forced: Vec<String> = vec![];
+            for chrom in forced_chroms {
+                if genome_chroms.contains(&chrom) {
+                    forced.push(chrom.clone());
+                } else {
+                    panic!("Error: forced chromosome {} not present in the genome chroms list.", chrom);
+                }
+            }
+            for chrom in canonical {
+                if !forced_chroms.contains(&chrom) {
+                    forced.push(chrom.clone());
+                }
+            }
+            canonical = forced;
+        };
+        if let Some(forced_chroms) = force_to_end {
+            let mut forced: Vec<String> = vec![];
+            for chrom in canonical {
+                if !forced_chroms.contains(&chrom) {
+                    forced.push(chrom.clone());
+                }
+            }
+            for chrom in forced_chroms {
+                if genome_chroms.contains(&chrom) {
+                    forced.push(chrom.clone());
+                } else {
+                    panic!("Error: forced chromosome {} not present in the genome chroms list.", chrom);
+                }
+            }
+            canonical = forced;
         };
 
         // nuclear chromosomes only
@@ -106,7 +146,7 @@ impl Chroms {
 
 
         // chromosome sizes from .fai index
-        let fai_file = format!("{}.fai", cfg.get_string(GENOME_FASTA));
+        let fai_file = format!("{}.fai", genome_fasta);
         let mut sizes:       FxHashMap<String, u32> = FxHashMap::default();
         let mut index_sizes: FxHashMap<u8,     u32> = FxHashMap::default();
         if let Ok(fai_content) = read_to_string(&fai_file) {
@@ -126,7 +166,7 @@ impl Chroms {
 
         // return the Chroms instance
         Chroms {
-            genome: cfg.get_string(GENOME).to_string(),
+            genome: genome.to_string(),
             is_composite_genome,
             canonical,
             nuclear,
@@ -138,6 +178,22 @@ impl Chroms {
             sizes,
             index_sizes,
         }
+    }
+
+    /// Create a new Chroms instance from a genome FASTA .fai index file
+    /// as identified from environment variables.
+    pub fn new(cfg: &mut Config) -> Self {
+        cfg.set_string_env(&[GENOME, GENOME_FASTA, GENOME_CHROMS]);
+        cfg.set_bool_env(  &[USE_ALL_CHROMS, IS_COMPOSITE_GENOME]);
+        Self::new_from_args(
+            cfg.get_string(GENOME),
+            cfg.get_string(GENOME_FASTA),
+            cfg.get_string(GENOME_CHROMS),
+            *cfg.get_bool(USE_ALL_CHROMS),
+            *cfg.get_bool(IS_COMPOSITE_GENOME),
+            None,
+            None
+        )
     }
 
     /// Report if a chromosome name is a canonical chromosome.
