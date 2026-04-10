@@ -5,5 +5,6 @@
 // modules
 pub mod sam;
 pub mod bam;
+pub mod paf;
 pub mod sequence;
 pub mod genome;

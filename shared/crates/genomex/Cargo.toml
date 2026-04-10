@@ -10,6 +10,6 @@ regex       = "1.12"
 serde       = { version = "1.0", features = ["derive"] }
 rust-htslib = { version = "1.0", features = ["static"] }
 
-mdi = { git = "https://github.com/MiDataInt/mdi-pipelines-framework", branch = "main" }
+# mdi = { git = "https://github.com/MiDataInt/mdi-pipelines-framework", branch = "main" }
 
-# mdi = { path = "../../../../../../frameworks/developer-forks/mdi-pipelines-framework/crates/mdi" }
+mdi = { path = "../../../../../../frameworks/developer-forks/mdi-pipelines-framework/crates/mdi" }
