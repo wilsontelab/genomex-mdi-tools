@@ -352,6 +352,21 @@ impl SamRecord {
             false =>  chrom_index_shift29 + pos1 as isize,
         }
     }
+    /// Encode a chrom_index, pos1, and strand into a signed 64-bit (isize) node.
+    /// Value is +|- chrom_index << 29 + position (1-based).
+    pub fn pack_signed_node_index(
+        chrom_index: u8, 
+        pos1:        u32, 
+        is_reverse:  bool, 
+    ) -> isize {
+        // 29 bits for position allows up to 536,870,911 1-based positions per chromosome
+        let chrom_index_shift29 = (chrom_index as isize) << 29;
+        let pos1 = pos1 & 0x1FFFFFFF;
+        match is_reverse{
+            true  => (chrom_index_shift29 + pos1 as isize) * -1,
+            false =>  chrom_index_shift29 + pos1 as isize,
+        }
+    }
     /// Extract the chromosome, chrom_index, position and strand (is_reverse) from a signed node
     /// provided as isize.
     pub fn unpack_signed_node(node: isize, chroms: &Chroms) -> (String, u8, u32, bool) {
