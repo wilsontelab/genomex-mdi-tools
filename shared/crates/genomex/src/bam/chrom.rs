@@ -25,3 +25,23 @@ pub fn get_chrom(
     });
     (chrom.to_string(), *chrom_index)
 }
+
+/// Convert a BAM Record chromosome ID (tid) to a chromosome index, 
+/// returning None if the chrom is not an indexed canonical chromosome.
+pub fn get_chrom_index(
+    aln:    &BamRecord, 
+    header: &HeaderView, 
+    chroms: &Chroms,
+    allow_unmapped: bool 
+) -> Option<u8> {
+    let tid = aln.tid();
+    if tid < 0 {
+        if allow_unmapped {
+            return Some(0);
+        } else {
+            panic!("BamRecord::get_chrom: alignment is unmapped (tid < 0)");
+        }
+    }
+    let chrom = unsafe { from_utf8_unchecked(header.tid2name(tid as u32)) };
+    chroms.index.get(chrom).copied()
+}
