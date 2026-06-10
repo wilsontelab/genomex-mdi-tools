@@ -74,7 +74,7 @@ buildSpanTrackImage <- function(track, coord, layout,
                                itemsList, itemNames, itemData,
                                stranded = TRUE, allowNeg = FALSE, ylab = NULL, ylim = NULL, yaxt = "s",
                                dataFamily = "Data", yAxisFamily = "Y_Axis", hLines = FALSE,
-                               overplotFn = NULL){
+                               overplotFn = NULL, legendNames = NULL){
     nItems <- length(itemNames)
 
     # set the plot frame
@@ -125,7 +125,8 @@ buildSpanTrackImage <- function(track, coord, layout,
         }
 
         # add a legend
-        trackLegend(track, coord, ylim, legend = itemNames, pch = 19, cex = 1, col = unlist(palette[I]))
+        legendNames <- if(!is.null(legendNames)) legendNames(track) else itemNames
+        trackLegend(track, coord, ylim, legend = legendNames, pch = 19, cex = 1, col = unlist(palette[I]))
     })
 
     # return the track's magick image and associated metadata

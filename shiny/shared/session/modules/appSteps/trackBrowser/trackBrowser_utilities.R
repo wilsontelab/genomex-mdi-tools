@@ -407,10 +407,14 @@ plotSpans.browserTrack <- function(track, d, color = NULL, family = "Plot_Option
     if(nrow(d) == 0) return()
     if(is.null(color)) color <- col(track, family = family) 
     Span_Line_Width <- getTrackSetting(track, family, "Span_Line_Width", 2)
-    for(i in 1:nrow(d)){
-        span <- d[i]
-        lines(c(span$x1 - 0.5, span$x2 + 0.5), rep(span$y, 2), col = color, lwd = Span_Line_Width)
-    }
+    segments(
+        x0  = d$x1 - 0.5, 
+        y0  = d$y, 
+        x1  = d$x2 + 0.5, 
+        y1  = d$y, 
+        col = color, 
+        lwd = Span_Line_Width
+    )
 }
 plotHeatMap.browserTrack <- function(track, d, color = NULL, exponent = 1, family = "Plot_Options", ...){
     if(is.null(color)) color <- col(track, family = family) 

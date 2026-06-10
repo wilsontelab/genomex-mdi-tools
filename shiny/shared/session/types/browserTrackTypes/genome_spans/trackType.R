@@ -42,19 +42,19 @@ getUnpackedSpans <- function(itemsList, itemData){
 # track build function
 build.genome_spans_track <- function(track, reference, coord, layout, dataFn, trackBuffer = NULL,
                                      spansFamily = "Spans", scoresFamily = "Scores", yAxisFamily = "Y_Axis",
-                                     scoreLabel = NULL, overplotSpansFn = NULL, defaultItems = NULL){
+                                     scoreLabel = NULL, overplotSpansFn = NULL, defaultItems = NULL,
+                                     legendNames = NULL){ # function(track)
 
     # collect all individual bed tracks
     itemsList <- getItemsData(track, reference, coord, dataFn, parseXY = FALSE, defaultItems = defaultItems)
     if(!itemsList$hasData) return(trackInfo(track, coord, layout, "no spans in region"))
     itemNames <- sub(".bed.bgz", "", sapply(names(itemsList$d), basename))
     nItems <- length(itemNames)
-
+    
     # parse the data into XY coordinates base on requested plot type
     Plot_Spans_As <- trimws(getTrackSetting(track, spansFamily, "Plot_Spans_As", "scores"))
     Stranded <- getTrackSetting(track, spansFamily, "Stranded", TRUE)
     nullStrand <- if(Stranded) "+" else "."
-
     # score plot types
     if(Plot_Spans_As == "heat_map"){
         Heat_Map_Bins <- getTrackSetting(track, spansFamily, "Heat_Map_Bins", 100) 
@@ -165,7 +165,8 @@ build.genome_spans_track <- function(track, reference, coord, layout, dataFn, tr
             ylim = c(itemsList$ymin, itemsList$ymax), yaxt = yaxt,
             dataFamily = spansFamily, yAxisFamily = yAxisFamily, 
             hLines = Plot_Spans_As == "scored_spans",
-            overplotFn = overplotSpansFn
+            overplotFn = overplotSpansFn,
+            legendNames = legendNames
         )
     }
 }

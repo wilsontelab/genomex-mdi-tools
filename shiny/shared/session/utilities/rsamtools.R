@@ -15,9 +15,10 @@ bgzipForTabix <- function(file){
 
 # read (and if needed, create) a tbi index file into an Rsamtools tabix object
 # cache it since the index load is relatively slow
-# expects at least BED3 format if we are to create the tabix index
+# defaults to BED3 format if we are to create the tabix index, but can be overridden
 # otherwise, getCachedTabix and getTabixRangeData enforce no requirements on column content
-getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, index = FALSE, force = FALSE, ttl = CONSTANTS$ttl$day){
+getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, index = FALSE, force = FALSE, 
+                           ttl = CONSTANTS$ttl$day, seq_col = 1, start_col = 2, end_col = 3){
     req(file.exists(bgzFile))
     tryCatch({
         startSpinner(session, message = "loading tabix")
@@ -37,9 +38,9 @@ getCachedTabix <- function(bgzFile, cacheDir = NULL, create = FALSE, index = FAL
                 startSpinner(session, message = "indexing bgz...")
                 Rsamtools::indexTabix(
                     bgzFile, 
-                    seq = 1,
-                    start = 2,
-                    end = 3
+                    seq   = seq_col,
+                    start = start_col,
+                    end   = end_col
                 )
             }
             startSpinner(session, message = "loading tabix...")
