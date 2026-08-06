@@ -8,7 +8,9 @@
 channels:
     - conda-forge
     - bioconda
-    - defaults
+    - nodefaults
+
+channel_priority: strict
 
 dependencies:
     - pigz=2.6 # parallel handling of gzip files
